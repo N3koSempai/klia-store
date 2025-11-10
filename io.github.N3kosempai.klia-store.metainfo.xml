@@ -12,21 +12,21 @@
   <developer id="io.github.N3kosempai">
     <name>N3koSempai</name>
   </developer>
-  <url type="homepage">https://github.com/N3koSempai/KliaStore</url>
-  <url type="bugtracker">https://github.com/N3koSempai/KliaStore/issues</url>
-  <url type="vcs-browser">https://github.com/N3koSempai/KliaStore</url>
+  <url type="homepage">https://github.com/N3koSempai/klia-store</url>
+  <url type="bugtracker">https://github.com/N3koSempai/klia-store/issues</url>
+  <url type="vcs-browser">https://github.com/N3koSempai/klia-store</url>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/N3koSempai/KliaStore/master/screenshots/screenshot1.png</image>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot1.png</image>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/N3koSempai/KliaStore/master/screenshots/screenshot2.png</image>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot2.png</image>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/N3koSempai/KliaStore/master/screenshots/screenshot3.png</image>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot3.png</image>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/N3koSempai/KliaStore/master/screenshots/screenshot4.png</image>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot4.png</image>
     </screenshot>
   </screenshots>
   <provides>

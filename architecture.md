@@ -12,7 +12,7 @@ KliaStore is a desktop application built with Tauri 2, React, and TanStack Query
 - **Vite**: Build tool and dev server
 - **Material UI v7**: Component library
 - **TanStack Query v5**: Data fetching and caching
-- **pnpm**: Package manager
+- **npm**: Package manager
 
 ### Key Tauri Plugins
 - `@tauri-apps/plugin-http`: HTTP client for API requests (with `unsafe-headers` feature enabled)
@@ -387,12 +387,12 @@ KliaStore can be distributed as a Flatpak package. The build process is complex 
 sudo apt install flatpak flatpak-builder
 
 # Install runtime and SDK
-flatpak install --user flathub org.gnome.Platform//48
-flatpak install --user flathub org.gnome.Sdk//48
+flatpak install --user flathub org.gnome.Platform//49
+flatpak install --user flathub org.gnome.Sdk//49
 
 # Install SDK extensions for Rust and Node
-flatpak install --user flathub org.freedesktop.Sdk.Extension.rust-stable//23.08
-flatpak install --user flathub org.freedesktop.Sdk.Extension.node20//23.08
+flatpak install --user flathub org.freedesktop.Sdk.Extension.rust-stable//25.08
+flatpak install --user flathub org.freedesktop.Sdk.Extension.node20//25.08
 ```
 
 #### Build Process
@@ -417,28 +417,59 @@ flatpak build-bundle ~/.local/share/flatpak/repo klia-store.flatpak io.github.N3
 #### Build Configuration
 
 The manifest uses:
-- **Runtime**: GNOME Platform 48
-- **SDK**: GNOME SDK 48
+- **Runtime**: GNOME Platform 49
+- **SDK**: GNOME SDK 49
 - **Node**: Node 20.x via SDK extension
 - **Rust**: Rust stable via SDK extension
-- **Package Manager**: pnpm 10.13.1
+- **Package Manager**: npm (migrated from pnpm for Flathub compatibility)
+
+#### Offline Build System for Flathub
+
+**IMPORTANT**: Flathub requires builds without network access. The project uses offline source generation:
+
+1. **Generate offline sources** (must be regenerated when dependencies change):
+   ```bash
+   # Install flatpak-builder-tools
+   git clone https://github.com/flatpak/flatpak-builder-tools.git /tmp/flatpak-builder-tools
+
+   # Setup Python venv and install dependencies
+   cd /tmp/flatpak-builder-tools/node
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install .
+
+   # Generate npm offline sources (--no-xdg-layout is CRITICAL)
+   python3 -m flatpak_node_generator --no-xdg-layout --no-requests-cache --retries 10 npm /path/to/package-lock.json -o generated-sources.json
+
+   # Generate Cargo offline sources
+   pip3 install tomlkit  # Required dependency
+   python3 /tmp/flatpak-builder-tools/cargo/flatpak-cargo-generator.py /path/to/Cargo.lock -o cargo-sources.json
+   ```
+
+2. **Critical npm cache configuration**:
+   - flatpak-builder downloads sources to `flatpak-node/npm-cache`
+   - npm must be configured to use this cache: `npm_config_cache: /run/build/klia-store/flatpak-node/npm-cache`
+   - **Without this path match, npm cannot find offline sources and build fails**
 
 #### Key Build Steps
 
-1. **Install pnpm**: Installed globally in a writable location (`/run/build/klia-store/npm-global`)
-2. **Install dependencies**: `pnpm install --frozen-lockfile --force`
-3. **Build application**: `pnpm tauri build --bundles deb`
+1. **Install dependencies**: `npm install --offline --no-save --include=dev`
+   - Uses offline sources from `generated-sources.json`
+   - Requires `npm_config_cache` pointing to `flatpak-node/npm-cache`
+2. **Build application**: `npm run tauri build -- --bundles deb`
    - Creates the binary executable
    - Generates a .deb package
-4. **Install files**: Binary, desktop file, icon, and metainfo to `/app/`
+3. **Install files**: Binary, desktop file, icon, and metainfo to `/app/`
 
 #### Important Environment Variables
 
 ```yaml
-CI: 'true'                      # Prevents interactive prompts
+CI: 'true'                                              # Prevents interactive prompts
 TAURI_PLATFORM_TYPE: 'Linux'
 TAURI_ENV_PRODUCTION: 'true'
-npm_config_prefix: /run/build/klia-store/npm-global  # Writable npm prefix
+npm_config_cache: /run/build/klia-store/flatpak-node/npm-cache  # MUST match flatpak-builder source path
+npm_config_prefix: /run/build/klia-store/npm-global    # Writable npm prefix
+CARGO_HOME: /run/build/klia-store/cargo                # Cargo dependencies cache
 ```
 
 ### Building .deb Package
@@ -462,27 +493,34 @@ sudo dpkg -i src-tauri/target/release/bundle/deb/klia-store_0.1.0_amd64.deb
 
 **Cause**: Building with `cargo build` directly instead of using Tauri CLI sets development flags.
 
-**Solution**: Always use `pnpm tauri build` which correctly sets production configuration flags.
+**Solution**: Always use `npm run tauri build` which correctly sets production configuration flags.
 
-#### Problem: "pnpm: command not found" during Flatpak build
-**Cause**: PATH not configured correctly or pnpm installed in read-only location.
+#### Problem: "npm error code ENOTCACHED" during Flatpak build
+**Symptoms**: `npm install --offline` fails with "cache mode is 'only-if-cached' but no cached response is available"
 
-**Solutions**:
-1. Set `npm_config_prefix` environment variable to writable location
-2. Add custom install directory to `append-path` in build-options
-3. Use `npm install -g pnpm@10.13.1` with custom prefix
+**Cause**: npm cache path mismatch. flatpak-builder downloads sources to `flatpak-node/npm-cache` but npm is looking elsewhere.
 
-#### Problem: "The modules directory will be removed and reinstalled" prompt hangs build
-**Cause**: pnpm prompting for user input in CI environment.
+**Solution**: Set `npm_config_cache: /run/build/klia-store/flatpak-node/npm-cache` in manifest build-options env to match where flatpak-builder stores sources.
 
-**Solution**: Set `CI: 'true'` environment variable and use `pnpm install --force` flag to skip prompts.
+#### Problem: Offline sources not working (npm cache empty)
+**Symptoms**: `npm cache verify` shows "Content verified: 0 (0 bytes)", build fails offline
+
+**Root Causes**:
+1. `generated-sources.json` created without `--no-xdg-layout` flag
+2. `npm_config_cache` environment variable pointing to wrong directory
+3. Using old `flatpak-npm-generator.py` instead of modern `flatpak_node_generator`
+
+**Solution**:
+1. Regenerate with: `python3 -m flatpak_node_generator --no-xdg-layout npm package-lock.json -o generated-sources.json`
+2. Ensure `npm_config_cache: /run/build/klia-store/flatpak-node/npm-cache` in manifest
+3. Include offline sources in manifest: `sources: [./generated-sources.json, ./cargo-sources.json]`
 
 #### Problem: Flatpak build fails on AppImage/RPM bundler
 **Cause**: Default Tauri builds include appimage and rpm bundles that require additional dependencies.
 
 **Solution**: Use `--bundles deb` flag to only create the binary and deb package:
 ```bash
-pnpm tauri build --bundles deb
+npm run tauri build -- --bundles deb
 ```
 
 #### Problem: MUI Grid2 type errors during build
@@ -503,19 +541,30 @@ pnpm tauri build --bundles deb
 
 **Solution**: Configure `npm_config_prefix` to point to writable build directory.
 
-#### Problem: Extensions not found (rust-stable//23.08/x86_64/48)
-**Cause**: Trying to use Freedesktop SDK 24.08 extensions with GNOME 48 runtime (which is based on Freedesktop SDK 23.08).
+#### Problem: Extensions not found (rust-stable//XX.XX/x86_64/XX)
+**Cause**: SDK extension version mismatch with GNOME runtime base.
 
 **Solution**: Match SDK extension versions to runtime base:
-- GNOME 48 → Use Freedesktop SDK 23.08 extensions
-- GNOME 49 → Use Freedesktop SDK 24.08 extensions
+- GNOME 48 → Freedesktop SDK 23.08 extensions
+- GNOME 49 → Freedesktop SDK 25.08 extensions
 
 #### Build Performance Tips
 
-1. **Use `--share=network`**: Allows downloading dependencies during build
-2. **Cache npm packages**: `npm_config_cache` environment variable
+1. **Offline sources**: Generate `generated-sources.json` and `cargo-sources.json` for builds without network access
+2. **Cache npm packages**: `npm_config_cache` environment variable must point to `flatpak-node/npm-cache`
 3. **Cargo cache**: Set `CARGO_HOME` to persist Rust dependencies
 4. **Clean builds**: Use `--force-clean` to ensure reproducible builds
+
+#### Flathub Submission Requirements
+
+For Flathub submission, the following are required:
+
+1. **No network access during build**: Use offline sources (`generated-sources.json`, `cargo-sources.json`)
+2. **Metadata files**:
+   - `flathub.json`: Justifications for special permissions (flatpak-spawn, system-talk, filesystem access)
+   - `io.github.N3kosempai.klia-store.metainfo.xml`: AppStream metadata with `<url type="vcs-browser">`
+3. **Manifest**: `io.github.N3kosempai.klia-store.yml` with offline sources included
+4. **Source files committed**: Both `generated-sources.json` and `cargo-sources.json` must be in repository
 
 ## Update Badge System
 
