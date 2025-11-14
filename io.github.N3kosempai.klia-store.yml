@@ -38,8 +38,11 @@ modules:
         TAURI_PLATFORM_TYPE: 'Linux'
         TAURI_ENV_PRODUCTION: 'true'
     build-commands:
-      # Install dependencies including devDependencies with npm using offline sources
-      - npm install --offline --no-save --include=dev
+      # Install dependencies with npm using offline sources (production only)
+      - npm install --offline --no-save --omit=dev
+
+      # Install only the build tools needed
+      - npm install --offline --no-save --no-optional @tauri-apps/cli vite typescript @vitejs/plugin-react
 
       # Build using Tauri CLI (creates binary and deb, skips appimage/rpm that fail)
       - npm run tauri build -- --bundles deb
