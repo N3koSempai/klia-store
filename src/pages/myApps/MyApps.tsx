@@ -10,9 +10,10 @@ import {
 	IconButton,
 	Typography,
 } from "@mui/material";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../components/CachedImage";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
@@ -65,6 +66,38 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	});
 	const [updateAllOutput, setUpdateAllOutput] = useState<string[]>([]);
 	const [showUpdateAllTerminal, setShowUpdateAllTerminal] = useState(false);
+
+	// Virtualization - Calculate items per row based on window width
+	const parentRef = useRef<HTMLDivElement>(null);
+	const [itemsPerRow, setItemsPerRow] = useState(5);
+
+	useEffect(() => {
+		const updateItemsPerRow = () => {
+			const width = window.innerWidth;
+			if (width >= 1536)
+				setItemsPerRow(5); // xl
+			else if (width >= 1200)
+				setItemsPerRow(4); // lg
+			else if (width >= 900)
+				setItemsPerRow(3); // md
+			else if (width >= 600)
+				setItemsPerRow(2); // sm
+			else setItemsPerRow(1); // xs
+		};
+
+		updateItemsPerRow();
+		window.addEventListener("resize", updateItemsPerRow);
+		return () => window.removeEventListener("resize", updateItemsPerRow);
+	}, []);
+
+	const rowCount = Math.ceil(installedApps.length / itemsPerRow);
+
+	const rowVirtualizer = useVirtualizer({
+		count: rowCount,
+		getScrollElement: () => parentRef.current,
+		estimateSize: () => 340, // Estimated height of each row (increased for more spacing)
+		overscan: 2,
+	});
 
 	const reloadInstalledApps = useCallback(async () => {
 		try {
@@ -403,193 +436,239 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					)}
 				</Box>
 
-				{/* Apps grid */}
+				{/* Apps grid with virtualization */}
 				{installedApps.length > 0 ? (
 					<Box
+						ref={parentRef}
 						sx={{
-							display: "grid",
-							gridTemplateColumns: {
-								xs: "1fr",
-								sm: "repeat(2, 1fr)",
-								md: "repeat(3, 1fr)",
-								lg: "repeat(4, 1fr)",
-								xl: "repeat(5, 1fr)",
-							},
-							gap: 2,
+							height: "calc(100vh - 200px)",
+							overflow: "auto",
 							width: "100%",
-							boxSizing: "border-box",
 						}}
 					>
-						{installedApps.map((app) => (
-							<Card
-								key={app.appId}
-								sx={{
-									height: "100%",
-									display: "flex",
-									flexDirection: "column",
-									boxSizing: "border-box",
-									minWidth: 0,
-									overflow: "hidden",
-									transition: "box-shadow 0.3s",
-									"&:hover": { boxShadow: 6 },
-								}}
-							>
-								<Box
-									sx={{
-										p: 2,
-										display: "flex",
-										flexDirection: "column",
-										alignItems: "center",
-										gap: 2,
-										minHeight: 150,
-										bgcolor: "background.paper",
-									}}
-								>
-									{/* App Icon */}
+						<Box
+							sx={{
+								height: `${rowVirtualizer.getTotalSize()}px`,
+								width: "100%",
+
+								position: "relative",
+							}}
+						>
+							{rowVirtualizer.getVirtualItems().map((virtualRow) => {
+								const startIndex = virtualRow.index * itemsPerRow;
+								const endIndex = Math.min(
+									startIndex + itemsPerRow,
+									installedApps.length,
+								);
+								const rowApps = installedApps.slice(startIndex, endIndex);
+
+								return (
 									<Box
+										key={virtualRow.key}
+										data-index={virtualRow.index}
+										ref={rowVirtualizer.measureElement}
 										sx={{
-											width: 80,
-											height: 80,
-											flexShrink: 0,
-											borderRadius: 2,
-											overflow: "hidden",
-											bgcolor: "grey.800",
-											display: "flex",
-											alignItems: "center",
-											justifyContent: "center",
+											position: "absolute",
+											top: 0,
+											left: 0,
+											width: "100%",
+											transform: `translateY(${virtualRow.start}px)`,
+											display: "grid",
+											gridTemplateColumns: {
+												xs: "1fr",
+												sm: "repeat(2, 1fr)",
+												md: "repeat(3, 1fr)",
+												lg: "repeat(4, 1fr)",
+												xl: "repeat(5, 1fr)",
+											},
+											gap: 2,
+											pb: 2, // Padding bottom to separate rows
 										}}
 									>
-										<CachedImage
-											appId={app.appId}
-											imageUrl={`https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${app.appId}.png`}
-											alt={app.name}
-											variant="rounded"
-											style={{
-												width: "100%",
-												height: "100%",
-												objectFit: "cover",
-											}}
-										/>
-									</Box>
-
-									{/* App Name */}
-									<Typography
-										variant="body1"
-										fontWeight="bold"
-										textAlign="center"
-										sx={{
-											overflow: "hidden",
-											textOverflow: "ellipsis",
-											display: "-webkit-box",
-											WebkitLineClamp: 2,
-											WebkitBoxOrient: "vertical",
-											minHeight: "2.5em",
-										}}
-									>
-										{app.name}
-									</Typography>
-								</Box>
-
-								<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-									{/* App ID */}
-									<Typography
-										variant="caption"
-										color="text.secondary"
-										sx={{
-											display: "block",
-											mb: 1,
-											overflow: "hidden",
-											textOverflow: "ellipsis",
-											whiteSpace: "nowrap",
-										}}
-									>
-										{app.appId}
-									</Typography>
-
-									{/* Version and Action Buttons */}
-									<Box
-										sx={{
-											display: "flex",
-											justifyContent: "space-between",
-											alignItems: "center",
-											gap: 1,
-										}}
-									>
-										<Typography
-											variant="caption"
-											color="primary"
-											sx={{
-												fontWeight: "bold",
-											}}
-										>
-											v{app.version}
-										</Typography>
-
-										<Box
-											sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-										>
-											{/* Release Notes Icon - only show if update available */}
-											{hasUpdate(app.appId) && (
-												<IconButton
-													size="small"
-													onClick={() => setSelectedAppForNotes(app.appId)}
-													sx={{
-														p: 0.5,
-														"&:hover": {
-															color: "primary.main",
-														},
-													}}
-												>
-													<Description fontSize="small" />
-												</IconButton>
-											)}
-
-											{/* Uninstall Icon */}
-											<IconButton
-												size="small"
-												onClick={() => handleUninstall(app.appId)}
-												disabled={isUninstalling && uninstallingApp === app.appId}
+										{rowApps.map((app) => (
+											<Card
+												key={app.appId}
 												sx={{
-													p: 0.5,
-													bgcolor: "error.main",
-													color: "white",
-													"&:hover": {
-														bgcolor: "error.dark",
-													},
-													"&.Mui-disabled": {
-														bgcolor: "grey.500",
-														color: "grey.300",
-													},
+													display: "flex",
+													flexDirection: "column",
+													boxSizing: "border-box",
+													minWidth: 0,
+													overflow: "hidden",
+													transition: "box-shadow 0.3s",
+													"&:hover": { boxShadow: 6 },
 												}}
 											>
-												<Delete fontSize="small" />
-											</IconButton>
-
-											{/* Update Button - only show if update available */}
-											{hasUpdate(app.appId) && (
-												<Button
-													variant="contained"
-													size="small"
-													onClick={() => handleUpdate(app.appId)}
-													disabled={isUpdating && updatingApp === app.appId}
+												<Box
 													sx={{
-														minWidth: "auto",
-														px: 1.5,
-														py: 0.5,
-														fontSize: "0.7rem",
-														textTransform: "none",
+														p: 2,
+														display: "flex",
+														flexDirection: "column",
+														alignItems: "center",
+														gap: 2,
+														minHeight: 150,
+														bgcolor: "background.paper",
 													}}
 												>
-													{isUpdating && updatingApp === app.appId
-														? t("appDetails.updating")
-														: t("appDetails.update")}
-												</Button>
-											)}
-										</Box>
+													{/* App Icon */}
+													<Box
+														sx={{
+															width: 80,
+															height: 80,
+															flexShrink: 0,
+															borderRadius: 2,
+															overflow: "hidden",
+															bgcolor: "grey.800",
+															display: "flex",
+															alignItems: "center",
+															justifyContent: "center",
+														}}
+													>
+														<CachedImage
+															appId={app.appId}
+															imageUrl={`https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${app.appId}.png`}
+															alt={app.name}
+															variant="rounded"
+															style={{
+																width: "100%",
+																height: "100%",
+																objectFit: "cover",
+															}}
+														/>
+													</Box>
+
+													{/* App Name */}
+													<Typography
+														variant="body1"
+														fontWeight="bold"
+														textAlign="center"
+														sx={{
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															display: "-webkit-box",
+															WebkitLineClamp: 2,
+															WebkitBoxOrient: "vertical",
+															minHeight: "2.5em",
+														}}
+													>
+														{app.name}
+													</Typography>
+												</Box>
+
+												<CardContent sx={{ flexGrow: 1, pt: 1 }}>
+													{/* App ID */}
+													<Typography
+														variant="caption"
+														color="text.secondary"
+														sx={{
+															display: "block",
+															mb: 1,
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															whiteSpace: "nowrap",
+														}}
+													>
+														{app.appId}
+													</Typography>
+
+													{/* Version and Action Buttons */}
+													<Box
+														sx={{
+															display: "flex",
+															justifyContent: "space-between",
+															alignItems: "center",
+															gap: 1,
+														}}
+													>
+														<Typography
+															variant="caption"
+															color="primary"
+															sx={{
+																fontWeight: "bold",
+															}}
+														>
+															v{app.version}
+														</Typography>
+
+														<Box
+															sx={{
+																display: "flex",
+																alignItems: "center",
+																gap: 0.5,
+															}}
+														>
+															{/* Release Notes Icon - only show if update available */}
+															{hasUpdate(app.appId) && (
+																<IconButton
+																	size="small"
+																	onClick={() =>
+																		setSelectedAppForNotes(app.appId)
+																	}
+																	sx={{
+																		p: 0.5,
+																		"&:hover": {
+																			color: "primary.main",
+																		},
+																	}}
+																>
+																	<Description fontSize="small" />
+																</IconButton>
+															)}
+
+															{/* Uninstall Icon */}
+															<IconButton
+																size="small"
+																onClick={() => handleUninstall(app.appId)}
+																disabled={
+																	isUninstalling &&
+																	uninstallingApp === app.appId
+																}
+																sx={{
+																	p: 0.5,
+																	bgcolor: "error.main",
+																	color: "white",
+																	"&:hover": {
+																		bgcolor: "error.dark",
+																	},
+																	"&.Mui-disabled": {
+																		bgcolor: "grey.500",
+																		color: "grey.300",
+																	},
+																}}
+															>
+																<Delete fontSize="small" />
+															</IconButton>
+
+															{/* Update Button - only show if update available */}
+															{hasUpdate(app.appId) && (
+																<Button
+																	variant="contained"
+																	size="small"
+																	onClick={() => handleUpdate(app.appId)}
+																	disabled={
+																		isUpdating && updatingApp === app.appId
+																	}
+																	sx={{
+																		minWidth: "auto",
+																		px: 1.5,
+																		py: 0.5,
+																		fontSize: "0.7rem",
+																		textTransform: "none",
+																	}}
+																>
+																	{isUpdating && updatingApp === app.appId
+																		? t("appDetails.updating")
+																		: t("appDetails.update")}
+																</Button>
+															)}
+														</Box>
+													</Box>
+												</CardContent>
+											</Card>
+										))}
 									</Box>
-								</CardContent>
-							</Card>
-						))}
+								);
+							})}
+						</Box>
 					</Box>
 				) : (
 					<Box
@@ -655,7 +734,10 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 						<Terminal output={uninstallOutput} isRunning={isUninstalling} />
 						{!isUninstalling && (
 							<Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-								<Button variant="contained" onClick={handleCloseUninstallDialog}>
+								<Button
+									variant="contained"
+									onClick={handleCloseUninstallDialog}
+								>
 									{t("myApps.closeButton")}
 								</Button>
 							</Box>

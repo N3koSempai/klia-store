@@ -1,4 +1,5 @@
-import { Skeleton } from "@mui/material";
+import { Box, Skeleton } from "@mui/material";
+import { BrokenImage } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import { imageCacheManager } from "../utils/imageCache";
 
@@ -24,7 +25,8 @@ export const CachedImage = ({
 	const [imageSrc, setImageSrc] = useState<string>("");
 	const [isLoading, setIsLoading] = useState(true);
 	const [imageLoaded, setImageLoaded] = useState(false);
-	const [error, setError] = useState(false);
+	const [hasError, setHasError] = useState(false);
+	const [retryCount, setRetryCount] = useState(0);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -33,7 +35,6 @@ export const CachedImage = ({
 			try {
 				setIsLoading(true);
 				setImageLoaded(false);
-				setError(false);
 
 				// Usar cacheKey si se proporciona, sino usar appId
 				const keyToUse = cacheKey || appId;
@@ -49,9 +50,14 @@ export const CachedImage = ({
 			} catch (err) {
 				console.error("Error loading cached image:", err);
 				if (isMounted) {
-					// Si falla el caché, usar la URL original
-					setImageSrc(imageUrl);
-					setError(true);
+					// Si falla el caché, intentar con la URL original una vez
+					if (retryCount === 0) {
+						setImageSrc(imageUrl);
+						setRetryCount(1);
+					} else {
+						// Ya intentamos con la URL original y falló, mostrar placeholder
+						setHasError(true);
+					}
 					setIsLoading(false);
 				}
 			}
@@ -59,12 +65,37 @@ export const CachedImage = ({
 
 		if (imageUrl) {
 			loadImage();
+		} else {
+			// No hay URL, mostrar error directamente
+			setHasError(true);
+			setIsLoading(false);
 		}
 
 		return () => {
 			isMounted = false;
 		};
-	}, [appId, imageUrl, cacheKey]);
+	}, [appId, imageUrl, cacheKey, retryCount]);
+
+	// Si hay error definitivo, mostrar placeholder
+	if (hasError) {
+		return (
+			<Box
+				sx={{
+					width: "100%",
+					height: "100%",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					bgcolor: "action.hover",
+					borderRadius: variant === "rounded" ? 2 : variant === "circular" ? "50%" : 0,
+					...style,
+				}}
+				className={className}
+			>
+				<BrokenImage sx={{ color: "text.disabled", fontSize: 40 }} />
+			</Box>
+		);
+	}
 
 	// Mostrar skeleton mientras se obtiene la ruta O mientras la imagen se carga en el navegador
 	if (isLoading || !imageLoaded) {
@@ -92,10 +123,14 @@ export const CachedImage = ({
 						className={className}
 						onLoad={() => setImageLoaded(true)}
 						onError={() => {
-							// Fallback a la URL original si falla cargar la imagen cacheada
-							if (!error) {
+							// Si falla cargar, incrementar retry para intentar con URL original
+							if (retryCount === 0) {
+								setRetryCount(1);
 								setImageSrc(imageUrl);
-								setError(true);
+							} else {
+								// Ya intentamos todo, mostrar error
+								setHasError(true);
+								setIsLoading(false);
 							}
 						}}
 					/>
@@ -111,12 +146,8 @@ export const CachedImage = ({
 			style={style}
 			className={className}
 			onError={() => {
-				// Fallback a la URL original si falla cargar la imagen cacheada
-				if (!error) {
-					setImageSrc(imageUrl);
-					setError(true);
-					setImageLoaded(false);
-				}
+				// Si falla cargar la imagen final, mostrar placeholder
+				setHasError(true);
 			}}
 		/>
 	);
