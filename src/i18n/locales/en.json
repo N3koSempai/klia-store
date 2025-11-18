@@ -68,6 +68,8 @@
     "noAppsInstalled": "No apps installed yet",
     "noUpdatesAvailable": "No updates available",
     "updateAll": "Update All",
+    "updateAllCount": "Update {{count}} app",
+    "updateAllCount_plural": "Update {{count}} apps",
     "checkingUpdates": "Checking for updates...",
     "updateAvailable": "Update available",
     "upToDate": "Up to date",
@@ -75,6 +77,12 @@
     "appsInstalled": "{{count}} apps installed",
     "updating": "Updating {{appId}}",
     "uninstalling": "Uninstalling {{appId}}",
+    "updatingAllApps": "Updating All Apps",
+    "overallProgress": "Overall Progress",
+    "currentApp": "Current App",
+    "waiting": "Waiting...",
+    "showDetails": "Show Technical Details",
+    "hideDetails": "Hide Technical Details",
     "closeButton": "Close",
     "updateCompletedSuccess": "✓ Update completed successfully.",
     "reloadingUpdateList": "Reloading update list...",
@@ -86,7 +94,9 @@
     "uninstallFailed": "✗ Uninstall failed with code: {{code}}",
     "errorInvokingCommand": "✗ Error invoking command: {{error}}",
     "noAppsInstalledMessage": "You don't have any apps installed",
-    "installAppsMessage": "Install apps from the store to see them here"
+    "installAppsMessage": "Install apps from the store to see them here",
+    "allUpdatesCompleted": "✓ All updates completed successfully!",
+    "updatesCompletedWithErrors": "Updates completed with some errors"
   },
   "categoryApps": {
     "title": "{{category}}",

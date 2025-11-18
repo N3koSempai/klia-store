@@ -1,4 +1,4 @@
-import { ArrowBack, Delete, Description } from "@mui/icons-material";
+import { ArrowBack, Delete, Description, Update } from "@mui/icons-material";
 import {
 	Box,
 	Button,
@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../components/CachedImage";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
+import { UpdateAllModal } from "../../components/UpdateAllModal";
 import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
@@ -39,8 +40,10 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		getUpdateInfo,
 		setAvailableUpdates,
 		setInstalledAppsInfo,
+		getUpdateCount,
 	} = useInstalledAppsStore();
 	const installedApps = getInstalledAppsInfo();
+	const updateCount = getUpdateCount();
 	const [selectedAppForNotes, setSelectedAppForNotes] = useState<string | null>(
 		null,
 	);
@@ -50,6 +53,18 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	const [uninstallingApp, setUninstallingApp] = useState<string | null>(null);
 	const [uninstallOutput, setUninstallOutput] = useState<string[]>([]);
 	const [isUninstalling, setIsUninstalling] = useState(false);
+
+	// Update All states
+	const [isUpdatingAll, setIsUpdatingAll] = useState(false);
+	const [updateAllModalOpen, setUpdateAllModalOpen] = useState(false);
+	const [updateAllProgress, setUpdateAllProgress] = useState({
+		totalApps: 0,
+		currentAppIndex: 0,
+		currentAppName: "",
+		currentAppProgress: 0,
+	});
+	const [updateAllOutput, setUpdateAllOutput] = useState<string[]>([]);
+	const [showUpdateAllTerminal, setShowUpdateAllTerminal] = useState(false);
 
 	const reloadInstalledApps = useCallback(async () => {
 		try {
@@ -84,16 +99,48 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	// Listen to update and uninstall events
 	useEffect(() => {
 		const unlistenOutput = listen<string>("install-output", (event) => {
+			const output = event.payload;
+
 			// Check which operation is active and only update that output
-			if (updatingApp) {
-				setUpdateOutput((prev) => [...prev, event.payload]);
+			if (isUpdatingAll) {
+				setUpdateAllOutput((prev) => [...prev, output]);
+
+				// Parse flatpak progress for individual app progress
+				// Format: "Actualizando X/Y…" or "Actualizando X/Y… ████ XX%"
+				const progressMatch = output.match(/Actualizando\s+(\d+)\/(\d+)/);
+				if (progressMatch) {
+					const currentPart = Number.parseInt(progressMatch[1]);
+					const totalParts = Number.parseInt(progressMatch[2]);
+
+					// Check if there's a percentage
+					const percentMatch = output.match(/(\d+)%/);
+					let progress = 0;
+
+					if (percentMatch) {
+						const partProgress = Number.parseInt(percentMatch[1]);
+						// Calculate overall progress: (completed parts + current part progress) / total parts
+						progress = ((currentPart - 1) * 100 + partProgress) / totalParts;
+					} else {
+						// No percentage, just use completed parts
+						progress = ((currentPart - 1) / totalParts) * 100;
+					}
+
+					setUpdateAllProgress((prev) => ({
+						...prev,
+						currentAppProgress: Math.min(100, Math.round(progress)),
+					}));
+				}
+			} else if (updatingApp) {
+				setUpdateOutput((prev) => [...prev, output]);
 			} else if (uninstallingApp) {
-				setUninstallOutput((prev) => [...prev, event.payload]);
+				setUninstallOutput((prev) => [...prev, output]);
 			}
 		});
 
 		const unlistenError = listen<string>("install-error", (event) => {
-			if (updatingApp) {
+			if (isUpdatingAll) {
+				setUpdateAllOutput((prev) => [...prev, `Error: ${event.payload}`]);
+			} else if (updatingApp) {
 				setUpdateOutput((prev) => [...prev, `Error: ${event.payload}`]);
 			} else if (uninstallingApp) {
 				setUninstallOutput((prev) => [...prev, `Error: ${event.payload}`]);
@@ -103,7 +150,10 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		const unlistenCompleted = listen<number>(
 			"install-completed",
 			async (event) => {
-				if (updatingApp) {
+				if (isUpdatingAll) {
+					// When updating all, individual app completion is handled by handleUpdateAll
+					setIsUpdating(false);
+				} else if (updatingApp) {
 					setIsUpdating(false);
 					if (event.payload === 0) {
 						setUpdateOutput((prev) => [
@@ -146,7 +196,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 			unlistenError.then((fn) => fn());
 			unlistenCompleted.then((fn) => fn());
 		};
-	}, [updatingApp, uninstallingApp, reloadAvailableUpdates, t]);
+	}, [updatingApp, uninstallingApp, isUpdatingAll, reloadAvailableUpdates, t]);
 
 	const handleCloseModal = () => {
 		setSelectedAppForNotes(null);
@@ -198,6 +248,110 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		await reloadInstalledApps();
 	};
 
+	const handleUpdateAll = async () => {
+		// Get all apps that need updates
+		const appsToUpdate = installedApps.filter((app) => hasUpdate(app.appId));
+
+		if (appsToUpdate.length === 0) return;
+
+		setUpdateAllModalOpen(true);
+		setIsUpdatingAll(true);
+		setUpdateAllOutput([]);
+		setUpdateAllProgress({
+			totalApps: appsToUpdate.length,
+			currentAppIndex: 0,
+			currentAppName: "",
+			currentAppProgress: 0,
+		});
+
+		let successCount = 0;
+		let errorCount = 0;
+
+		for (let i = 0; i < appsToUpdate.length; i++) {
+			const app = appsToUpdate[i];
+
+			// Update progress for current app
+			setUpdateAllProgress({
+				totalApps: appsToUpdate.length,
+				currentAppIndex: i,
+				currentAppName: app.name,
+				currentAppProgress: 0,
+			});
+
+			setUpdateAllOutput((prev) => [
+				...prev,
+				"",
+				`[${i + 1}/${appsToUpdate.length}] ${t("myApps.preparingUpdate", { appId: app.appId })}`,
+			]);
+
+			try {
+				// Set this app as currently updating
+				setUpdatingApp(app.appId);
+
+				// Start the update
+				await invoke("update_flatpak", { appId: app.appId });
+
+				// Wait for completion (the event listener will handle progress)
+				// This is a simple approach - in production you might want a promise-based approach
+				await new Promise((resolve) => {
+					const checkCompletion = setInterval(() => {
+						if (!isUpdating) {
+							clearInterval(checkCompletion);
+							resolve(undefined);
+						}
+					}, 100);
+				});
+
+				successCount++;
+				setUpdateAllOutput((prev) => [
+					...prev,
+					t("myApps.updateCompletedSuccess"),
+				]);
+			} catch (error) {
+				errorCount++;
+				setUpdateAllOutput((prev) => [
+					...prev,
+					t("myApps.errorInvokingCommand", { error }),
+				]);
+			} finally {
+				setUpdatingApp(null);
+			}
+
+			// Update progress
+			setUpdateAllProgress({
+				totalApps: appsToUpdate.length,
+				currentAppIndex: i + 1,
+				currentAppName: "",
+				currentAppProgress: 100,
+			});
+		}
+
+		// All updates completed
+		setIsUpdatingAll(false);
+		if (errorCount === 0) {
+			setUpdateAllOutput((prev) => [
+				...prev,
+				"",
+				t("myApps.allUpdatesCompleted"),
+			]);
+		} else {
+			setUpdateAllOutput((prev) => [
+				...prev,
+				"",
+				t("myApps.updatesCompletedWithErrors"),
+			]);
+		}
+
+		// Reload updates list
+		await reloadAvailableUpdates();
+	};
+
+	const handleCloseUpdateAllModal = () => {
+		setUpdateAllModalOpen(false);
+		setUpdateAllOutput([]);
+		setShowUpdateAllTerminal(false);
+	};
+
 	// Get selected app info for modal
 	const selectedApp = installedApps.find(
 		(app) => app.appId === selectedAppForNotes,
@@ -219,12 +373,35 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					</Typography>
 				</Box>
 
-				{/* Installed apps count */}
-				<Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-					{installedApps.length === 1
-						? t("myApps.appInstalled", { count: installedApps.length })
-						: t("myApps.appsInstalled", { count: installedApps.length })}
-				</Typography>
+				{/* Installed apps count and Update All button */}
+				<Box
+					sx={{
+						mb: 4,
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+					}}
+				>
+					<Typography variant="body1" color="text.secondary">
+						{installedApps.length === 1
+							? t("myApps.appInstalled", { count: installedApps.length })
+							: t("myApps.appsInstalled", { count: installedApps.length })}
+					</Typography>
+
+					{updateCount > 0 && (
+						<Button
+							variant="contained"
+							color="primary"
+							startIcon={<Update />}
+							onClick={handleUpdateAll}
+							disabled={isUpdatingAll}
+						>
+							{updateCount === 1
+								? t("myApps.updateAllCount", { count: updateCount })
+								: t("myApps.updateAllCount_plural", { count: updateCount })}
+						</Button>
+					)}
+				</Box>
 
 				{/* Apps grid */}
 				{installedApps.length > 0 ? (
@@ -485,6 +662,22 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 						)}
 					</DialogContent>
 				</Dialog>
+
+				{/* Update All Modal */}
+				<UpdateAllModal
+					open={updateAllModalOpen}
+					totalApps={updateAllProgress.totalApps}
+					currentAppIndex={updateAllProgress.currentAppIndex}
+					currentAppName={updateAllProgress.currentAppName}
+					currentAppProgress={updateAllProgress.currentAppProgress}
+					output={updateAllOutput}
+					isUpdating={isUpdatingAll}
+					onClose={handleCloseUpdateAllModal}
+					showTerminal={showUpdateAllTerminal}
+					onToggleTerminal={() =>
+						setShowUpdateAllTerminal(!showUpdateAllTerminal)
+					}
+				/>
 			</Box>
 		</Container>
 	);
