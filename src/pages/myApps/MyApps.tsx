@@ -97,6 +97,11 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		getScrollElement: () => parentRef.current,
 		estimateSize: () => 340, // Estimated height of each row (increased for more spacing)
 		overscan: 2,
+		measureElement:
+			typeof window !== "undefined" &&
+			navigator.userAgent.indexOf("Firefox") === -1
+				? undefined
+				: () => 340, // Use fixed size to avoid scroll jumps
 	});
 
 	const reloadInstalledApps = useCallback(async () => {
@@ -466,12 +471,12 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 									<Box
 										key={virtualRow.key}
 										data-index={virtualRow.index}
-										ref={rowVirtualizer.measureElement}
 										sx={{
 											position: "absolute",
 											top: 0,
 											left: 0,
 											width: "100%",
+											height: 340,
 											transform: `translateY(${virtualRow.start}px)`,
 											display: "grid",
 											gridTemplateColumns: {
