@@ -1,4 +1,4 @@
-import { ArrowBack, Description } from "@mui/icons-material";
+import { ArrowBack, Delete, Description } from "@mui/icons-material";
 import {
 	Box,
 	Button,
@@ -17,8 +17,15 @@ import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../components/CachedImage";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
+import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
+
+interface InstalledAppRust {
+	app_id: string;
+	name: string;
+	version: string;
+}
 
 interface MyAppsProps {
 	onBack: () => void;
@@ -31,6 +38,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		hasUpdate,
 		getUpdateInfo,
 		setAvailableUpdates,
+		setInstalledAppsInfo,
 	} = useInstalledAppsStore();
 	const installedApps = getInstalledAppsInfo();
 	const [selectedAppForNotes, setSelectedAppForNotes] = useState<string | null>(
@@ -39,6 +47,30 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	const [updatingApp, setUpdatingApp] = useState<string | null>(null);
 	const [updateOutput, setUpdateOutput] = useState<string[]>([]);
 	const [isUpdating, setIsUpdating] = useState(false);
+	const [uninstallingApp, setUninstallingApp] = useState<string | null>(null);
+	const [uninstallOutput, setUninstallOutput] = useState<string[]>([]);
+	const [isUninstalling, setIsUninstalling] = useState(false);
+
+	const reloadInstalledApps = useCallback(async () => {
+		try {
+			const apps = await invoke<InstalledAppRust[]>("get_installed_flatpaks");
+
+			// Convert from Rust format to TypeScript format
+			const installedAppsInfo: InstalledAppInfo[] = apps.map((app) => ({
+				appId: app.app_id,
+				name: app.name,
+				version: app.version,
+			}));
+
+			setInstalledAppsInfo(installedAppsInfo);
+
+			// After loading installed apps, check for available updates
+			const updates = await checkAvailableUpdates();
+			setAvailableUpdates(updates);
+		} catch (error) {
+			console.error("Error reloading installed apps:", error);
+		}
+	}, [setInstalledAppsInfo, setAvailableUpdates]);
 
 	const reloadAvailableUpdates = useCallback(async () => {
 		try {
@@ -49,37 +81,62 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		}
 	}, [setAvailableUpdates]);
 
-	// Listen to update events
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Event listeners should only be set up once on mount
+	// Listen to update and uninstall events
 	useEffect(() => {
 		const unlistenOutput = listen<string>("install-output", (event) => {
-			setUpdateOutput((prev) => [...prev, event.payload]);
+			// Check which operation is active and only update that output
+			if (updatingApp) {
+				setUpdateOutput((prev) => [...prev, event.payload]);
+			} else if (uninstallingApp) {
+				setUninstallOutput((prev) => [...prev, event.payload]);
+			}
 		});
 
 		const unlistenError = listen<string>("install-error", (event) => {
-			setUpdateOutput((prev) => [...prev, `Error: ${event.payload}`]);
+			if (updatingApp) {
+				setUpdateOutput((prev) => [...prev, `Error: ${event.payload}`]);
+			} else if (uninstallingApp) {
+				setUninstallOutput((prev) => [...prev, `Error: ${event.payload}`]);
+			}
 		});
 
 		const unlistenCompleted = listen<number>(
 			"install-completed",
 			async (event) => {
-				setIsUpdating(false);
-				if (event.payload === 0) {
-					setUpdateOutput((prev) => [
-						...prev,
-						"",
-						t("myApps.updateCompletedSuccess"),
-						t("myApps.reloadingUpdateList"),
-					]);
-					// Reload available updates after successful update
-					await reloadAvailableUpdates();
-					setUpdateOutput((prev) => [...prev, t("myApps.listUpdated")]);
-				} else {
-					setUpdateOutput((prev) => [
-						...prev,
-						"",
-						t("myApps.updateFailed", { code: event.payload }),
-					]);
+				if (updatingApp) {
+					setIsUpdating(false);
+					if (event.payload === 0) {
+						setUpdateOutput((prev) => [
+							...prev,
+							"",
+							t("myApps.updateCompletedSuccess"),
+							t("myApps.reloadingUpdateList"),
+						]);
+						// Reload available updates after successful update
+						await reloadAvailableUpdates();
+						setUpdateOutput((prev) => [...prev, t("myApps.listUpdated")]);
+					} else {
+						setUpdateOutput((prev) => [
+							...prev,
+							"",
+							t("myApps.updateFailed", { code: event.payload }),
+						]);
+					}
+				} else if (uninstallingApp) {
+					setIsUninstalling(false);
+					if (event.payload === 0) {
+						setUninstallOutput((prev) => [
+							...prev,
+							"",
+							t("myApps.uninstallCompletedSuccess"),
+						]);
+					} else {
+						setUninstallOutput((prev) => [
+							...prev,
+							"",
+							t("myApps.uninstallFailed", { code: event.payload }),
+						]);
+					}
 				}
 			},
 		);
@@ -89,7 +146,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 			unlistenError.then((fn) => fn());
 			unlistenCompleted.then((fn) => fn());
 		};
-	}, []);
+	}, [updatingApp, uninstallingApp, reloadAvailableUpdates, t]);
 
 	const handleCloseModal = () => {
 		setSelectedAppForNotes(null);
@@ -115,6 +172,30 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	const handleCloseUpdateDialog = () => {
 		setUpdatingApp(null);
 		setUpdateOutput([]);
+	};
+
+	const handleUninstall = async (appId: string) => {
+		setUninstallingApp(appId);
+		setIsUninstalling(true);
+		setUninstallOutput([t("myApps.preparingUninstall", { appId }), ""]);
+
+		try {
+			await invoke("uninstall_flatpak", { appId });
+		} catch (error) {
+			setIsUninstalling(false);
+			setUninstallOutput((prev) => [
+				...prev,
+				"",
+				t("myApps.errorInvokingCommand", { error }),
+			]);
+		}
+	};
+
+	const handleCloseUninstallDialog = async () => {
+		setUninstallingApp(null);
+		setUninstallOutput([]);
+		// Reload installed apps list after uninstall
+		await reloadInstalledApps();
 	};
 
 	// Get selected app info for modal
@@ -248,7 +329,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 										{app.appId}
 									</Typography>
 
-									{/* Version and Update Button */}
+									{/* Version and Action Buttons */}
 									<Box
 										sx={{
 											display: "flex",
@@ -267,11 +348,11 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 											v{app.version}
 										</Typography>
 
-										{hasUpdate(app.appId) && (
-											<Box
-												sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-											>
-												{/* Release Notes Icon */}
+										<Box
+											sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+										>
+											{/* Release Notes Icon - only show if update available */}
+											{hasUpdate(app.appId) && (
 												<IconButton
 													size="small"
 													onClick={() => setSelectedAppForNotes(app.appId)}
@@ -284,8 +365,31 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 												>
 													<Description fontSize="small" />
 												</IconButton>
+											)}
 
-												{/* Update Button */}
+											{/* Uninstall Icon */}
+											<IconButton
+												size="small"
+												onClick={() => handleUninstall(app.appId)}
+												disabled={isUninstalling && uninstallingApp === app.appId}
+												sx={{
+													p: 0.5,
+													bgcolor: "error.main",
+													color: "white",
+													"&:hover": {
+														bgcolor: "error.dark",
+													},
+													"&.Mui-disabled": {
+														bgcolor: "grey.500",
+														color: "grey.300",
+													},
+												}}
+											>
+												<Delete fontSize="small" />
+											</IconButton>
+
+											{/* Update Button - only show if update available */}
+											{hasUpdate(app.appId) && (
 												<Button
 													variant="contained"
 													size="small"
@@ -303,8 +407,8 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 														? t("appDetails.updating")
 														: t("appDetails.update")}
 												</Button>
-											</Box>
-										)}
+											)}
+										</Box>
 									</Box>
 								</CardContent>
 							</Card>
@@ -353,6 +457,28 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 						{!isUpdating && (
 							<Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
 								<Button variant="contained" onClick={handleCloseUpdateDialog}>
+									{t("myApps.closeButton")}
+								</Button>
+							</Box>
+						)}
+					</DialogContent>
+				</Dialog>
+
+				{/* Uninstall Dialog */}
+				<Dialog
+					open={uninstallingApp !== null}
+					onClose={!isUninstalling ? handleCloseUninstallDialog : undefined}
+					maxWidth="md"
+					fullWidth
+				>
+					<DialogContent>
+						<Typography variant="h6" gutterBottom>
+							{t("myApps.uninstalling", { appId: uninstallingApp })}
+						</Typography>
+						<Terminal output={uninstallOutput} isRunning={isUninstalling} />
+						{!isUninstalling && (
+							<Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+								<Button variant="contained" onClick={handleCloseUninstallDialog}>
 									{t("myApps.closeButton")}
 								</Button>
 							</Box>
