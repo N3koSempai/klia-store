@@ -9,9 +9,15 @@ interface CachedImageProps {
 	alt: string;
 	style?: React.CSSProperties;
 	className?: string;
-	cacheKey?: string; // Si se proporciona, se usa en lugar de appId para el caché
+	cacheKey?: string; // If provided, used instead of appId for cache
 	variant?: "rectangular" | "circular" | "rounded";
+	showErrorPlaceholder?: boolean; // If false, keeps loading skeleton instead of showing error
+	maxRetries?: number; // Maximum number of retries (default: 1)
 }
+
+// In-memory cache to remember failed images across component mounts/unmounts
+const failedImagesCache = new Set<string>();
+const loadedImagesCache = new Map<string, string>();
 
 export const CachedImage = ({
 	appId,
@@ -21,23 +27,43 @@ export const CachedImage = ({
 	className,
 	cacheKey,
 	variant = "rectangular",
+	showErrorPlaceholder = true,
+	maxRetries = 1,
 }: CachedImageProps) => {
-	const [imageSrc, setImageSrc] = useState<string>("");
-	const [isLoading, setIsLoading] = useState(true);
-	const [imageLoaded, setImageLoaded] = useState(false);
-	const [hasError, setHasError] = useState(false);
+	const keyToUse = cacheKey || appId;
+
+	// Check cache first before setting initial state
+	const cachedSrc = loadedImagesCache.get(keyToUse);
+	const cachedError = failedImagesCache.has(keyToUse);
+
+	const [imageSrc, setImageSrc] = useState<string>(cachedSrc || "");
+	const [isLoading, setIsLoading] = useState(!cachedSrc && !cachedError);
+	const [imageLoaded, setImageLoaded] = useState(!!cachedSrc);
+	const [hasError, setHasError] = useState(cachedError);
 	const [retryCount, setRetryCount] = useState(0);
 
 	useEffect(() => {
 		let isMounted = true;
+
+		// If already in cache, skip loading
+		if (failedImagesCache.has(keyToUse)) {
+			setHasError(true);
+			setIsLoading(false);
+			return;
+		}
+
+		if (loadedImagesCache.has(keyToUse)) {
+			setImageSrc(loadedImagesCache.get(keyToUse)!);
+			setImageLoaded(true);
+			setIsLoading(false);
+			return;
+		}
 
 		const loadImage = async () => {
 			try {
 				setIsLoading(true);
 				setImageLoaded(false);
 
-				// Usar cacheKey si se proporciona, sino usar appId
-				const keyToUse = cacheKey || appId;
 				const cachedPath = await imageCacheManager.getOrCacheImage(
 					keyToUse,
 					imageUrl,
@@ -45,18 +71,22 @@ export const CachedImage = ({
 
 				if (isMounted) {
 					setImageSrc(cachedPath);
+					loadedImagesCache.set(keyToUse, cachedPath);
 					setIsLoading(false);
 				}
 			} catch (err) {
 				console.error("Error loading cached image:", err);
 				if (isMounted) {
-					// Si falla el caché, intentar con la URL original una vez
-					if (retryCount === 0) {
+					// If cache fails, try with original URL
+					if (retryCount < maxRetries) {
 						setImageSrc(imageUrl);
-						setRetryCount(1);
+						setRetryCount(retryCount + 1);
 					} else {
-						// Ya intentamos con la URL original y falló, mostrar placeholder
-						setHasError(true);
+						// Max retries reached
+						if (showErrorPlaceholder) {
+							setHasError(true);
+							failedImagesCache.add(keyToUse);
+						}
 					}
 					setIsLoading(false);
 				}
@@ -66,17 +96,20 @@ export const CachedImage = ({
 		if (imageUrl) {
 			loadImage();
 		} else {
-			// No hay URL, mostrar error directamente
-			setHasError(true);
+			// No URL provided, show error directly
+			if (showErrorPlaceholder) {
+				setHasError(true);
+				failedImagesCache.add(keyToUse);
+			}
 			setIsLoading(false);
 		}
 
 		return () => {
 			isMounted = false;
 		};
-	}, [appId, imageUrl, cacheKey, retryCount]);
+	}, [appId, imageUrl, cacheKey, keyToUse, retryCount, maxRetries, showErrorPlaceholder]);
 
-	// Si hay error definitivo, mostrar placeholder
+	// If there's a definitive error, show placeholder
 	if (hasError) {
 		return (
 			<Box
@@ -97,7 +130,7 @@ export const CachedImage = ({
 		);
 	}
 
-	// Mostrar skeleton mientras se obtiene la ruta O mientras la imagen se carga en el navegador
+	// Show skeleton while fetching path OR while image is loading in browser
 	if (isLoading || !imageLoaded) {
 		return (
 			<>
@@ -121,15 +154,21 @@ export const CachedImage = ({
 							display: imageLoaded ? "block" : "none",
 						}}
 						className={className}
-						onLoad={() => setImageLoaded(true)}
+						onLoad={() => {
+							setImageLoaded(true);
+							loadedImagesCache.set(keyToUse, imageSrc);
+						}}
 						onError={() => {
-							// Si falla cargar, incrementar retry para intentar con URL original
-							if (retryCount === 0) {
-								setRetryCount(1);
+							// If loading fails, retry with original URL
+							if (retryCount < maxRetries) {
+								setRetryCount(retryCount + 1);
 								setImageSrc(imageUrl);
 							} else {
-								// Ya intentamos todo, mostrar error
-								setHasError(true);
+								// Max retries reached
+								if (showErrorPlaceholder) {
+									setHasError(true);
+									failedImagesCache.add(keyToUse);
+								}
 								setIsLoading(false);
 							}
 						}}
@@ -146,8 +185,11 @@ export const CachedImage = ({
 			style={style}
 			className={className}
 			onError={() => {
-				// Si falla cargar la imagen final, mostrar placeholder
-				setHasError(true);
+				// If final image fails to load, show placeholder
+				if (showErrorPlaceholder) {
+					setHasError(true);
+					failedImagesCache.add(keyToUse);
+				}
 			}}
 		/>
 	);

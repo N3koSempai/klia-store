@@ -391,6 +391,8 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 													alt={`Screenshot ${index + 1}`}
 													cacheKey={`${app.id}:::${index + 1}`}
 													variant="rounded"
+													showErrorPlaceholder={false}
+													maxRetries={3}
 													style={{
 														width: "100%",
 														height: "100%",
