@@ -302,7 +302,6 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 			currentAppProgress: 0,
 		});
 
-		let successCount = 0;
 		let errorCount = 0;
 
 		for (let i = 0; i < appsToUpdate.length; i++) {
@@ -340,7 +339,6 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					}, 100);
 				});
 
-				successCount++;
 				setUpdateAllOutput((prev) => [
 					...prev,
 					t("myApps.updateCompletedSuccess"),

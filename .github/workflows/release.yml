@@ -123,6 +123,50 @@ jobs:
         with:
           name: flatpak-package
 
+      - name: Extract release notes from metainfo
+        id: extract_notes
+        run: |
+          VERSION="${{ needs.check-release.outputs.version }}"
+
+          # Extract the description for the current version from metainfo.xml
+          NOTES=$(python3 << 'EOF'
+          import xml.etree.ElementTree as ET
+          import sys
+
+          try:
+              tree = ET.parse('io.github.N3kosempai.klia-store.metainfo.xml')
+              root = tree.getroot()
+              version = "${{ needs.check-release.outputs.version }}"
+
+              # Find the release with matching version
+              for release in root.findall('.//release'):
+                  if release.get('version') == version:
+                      desc = release.find('description')
+                      if desc is not None:
+                          # Extract text content from description
+                          lines = []
+                          for elem in desc.iter():
+                              if elem.text and elem.text.strip():
+                                  lines.append(elem.text.strip())
+                              if elem.tail and elem.tail.strip():
+                                  lines.append(elem.tail.strip())
+                          print('\n'.join(lines))
+                          break
+          except Exception as e:
+              print(f"Error: {e}", file=sys.stderr)
+          EOF
+          )
+
+          # If extraction fails, use commit message as fallback
+          if [ -z "$NOTES" ]; then
+            NOTES="${{ github.event.head_commit.message }}"
+          fi
+
+          # Save to output (handle multiline)
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -132,6 +176,9 @@ jobs:
           prerelease: false
           body: |
             ## Klia Store ${{ needs.check-release.outputs.version }}
+
+            ### What's New
+            ${{ steps.extract_notes.outputs.notes }}
 
             ### Installation
 
@@ -145,9 +192,6 @@ jobs:
             flatpak install Klia-Store-${{ needs.check-release.outputs.version }}.flatpak
             flatpak run io.github.N3kosempai.klia-store
             ```
-
-            ### Changes
-            ${{ github.event.head_commit.message }}
           files: |
             Klia-Store-*.deb
             Klia-Store-*.flatpak
