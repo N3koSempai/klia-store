@@ -1,4 +1,4 @@
-import { ArrowBack, Description } from "@mui/icons-material";
+import { ArrowBack, Delete, Description, Update } from "@mui/icons-material";
 import {
 	Box,
 	Button,
@@ -10,15 +10,24 @@ import {
 	IconButton,
 	Typography,
 } from "@mui/material";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../components/CachedImage";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
+import { UpdateAllModal } from "../../components/UpdateAllModal";
+import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
+
+interface InstalledAppRust {
+	app_id: string;
+	name: string;
+	version: string;
+}
 
 interface MyAppsProps {
 	onBack: () => void;
@@ -31,14 +40,90 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		hasUpdate,
 		getUpdateInfo,
 		setAvailableUpdates,
+		setInstalledAppsInfo,
+		getUpdateCount,
 	} = useInstalledAppsStore();
 	const installedApps = getInstalledAppsInfo();
+	const updateCount = getUpdateCount();
 	const [selectedAppForNotes, setSelectedAppForNotes] = useState<string | null>(
 		null,
 	);
 	const [updatingApp, setUpdatingApp] = useState<string | null>(null);
 	const [updateOutput, setUpdateOutput] = useState<string[]>([]);
 	const [isUpdating, setIsUpdating] = useState(false);
+	const [uninstallingApp, setUninstallingApp] = useState<string | null>(null);
+	const [uninstallOutput, setUninstallOutput] = useState<string[]>([]);
+	const [isUninstalling, setIsUninstalling] = useState(false);
+
+	// Update All states
+	const [isUpdatingAll, setIsUpdatingAll] = useState(false);
+	const [updateAllModalOpen, setUpdateAllModalOpen] = useState(false);
+	const [updateAllProgress, setUpdateAllProgress] = useState({
+		totalApps: 0,
+		currentAppIndex: 0,
+		currentAppName: "",
+		currentAppProgress: 0,
+	});
+	const [updateAllOutput, setUpdateAllOutput] = useState<string[]>([]);
+	const [showUpdateAllTerminal, setShowUpdateAllTerminal] = useState(false);
+
+	// Virtualization - Calculate items per row based on window width
+	const parentRef = useRef<HTMLDivElement>(null);
+	const [itemsPerRow, setItemsPerRow] = useState(5);
+
+	useEffect(() => {
+		const updateItemsPerRow = () => {
+			const width = window.innerWidth;
+			if (width >= 1536)
+				setItemsPerRow(5); // xl
+			else if (width >= 1200)
+				setItemsPerRow(4); // lg
+			else if (width >= 900)
+				setItemsPerRow(3); // md
+			else if (width >= 600)
+				setItemsPerRow(2); // sm
+			else setItemsPerRow(1); // xs
+		};
+
+		updateItemsPerRow();
+		window.addEventListener("resize", updateItemsPerRow);
+		return () => window.removeEventListener("resize", updateItemsPerRow);
+	}, []);
+
+	const rowCount = Math.ceil(installedApps.length / itemsPerRow);
+
+	const rowVirtualizer = useVirtualizer({
+		count: rowCount,
+		getScrollElement: () => parentRef.current,
+		estimateSize: () => 340, // Estimated height of each row (increased for more spacing)
+		overscan: 2,
+		measureElement:
+			typeof window !== "undefined" &&
+			navigator.userAgent.indexOf("Firefox") === -1
+				? undefined
+				: () => 340, // Use fixed size to avoid scroll jumps
+	});
+
+	const reloadInstalledApps = useCallback(async () => {
+		try {
+			const apps = await invoke<InstalledAppRust[]>("get_installed_flatpaks");
+
+			// Convert from Rust format to TypeScript format
+			const installedAppsInfo: InstalledAppInfo[] = apps.map((app) => ({
+				appId: app.app_id,
+				name: app.name,
+				version: app.version,
+			}));
+
+			setInstalledAppsInfo(installedAppsInfo);
+
+			// After loading installed apps, check for available updates
+			const updates = await checkAvailableUpdates();
+			setAvailableUpdates(updates);
+		} catch (error) {
+			console.error("Error reloading installed apps:", error);
+		}
+	}, [setInstalledAppsInfo, setAvailableUpdates]);
 
 	const reloadAvailableUpdates = useCallback(async () => {
 		try {
@@ -49,37 +134,97 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		}
 	}, [setAvailableUpdates]);
 
-	// Listen to update events
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Event listeners should only be set up once on mount
+	// Listen to update and uninstall events
 	useEffect(() => {
 		const unlistenOutput = listen<string>("install-output", (event) => {
-			setUpdateOutput((prev) => [...prev, event.payload]);
+			const output = event.payload;
+
+			// Check which operation is active and only update that output
+			if (isUpdatingAll) {
+				setUpdateAllOutput((prev) => [...prev, output]);
+
+				// Parse flatpak progress for individual app progress
+				// Format: "Actualizando X/Y…" or "Actualizando X/Y… ████ XX%"
+				const progressMatch = output.match(/Actualizando\s+(\d+)\/(\d+)/);
+				if (progressMatch) {
+					const currentPart = Number.parseInt(progressMatch[1]);
+					const totalParts = Number.parseInt(progressMatch[2]);
+
+					// Check if there's a percentage
+					const percentMatch = output.match(/(\d+)%/);
+					let progress = 0;
+
+					if (percentMatch) {
+						const partProgress = Number.parseInt(percentMatch[1]);
+						// Calculate overall progress: (completed parts + current part progress) / total parts
+						progress = ((currentPart - 1) * 100 + partProgress) / totalParts;
+					} else {
+						// No percentage, just use completed parts
+						progress = ((currentPart - 1) / totalParts) * 100;
+					}
+
+					setUpdateAllProgress((prev) => ({
+						...prev,
+						currentAppProgress: Math.min(100, Math.round(progress)),
+					}));
+				}
+			} else if (updatingApp) {
+				setUpdateOutput((prev) => [...prev, output]);
+			} else if (uninstallingApp) {
+				setUninstallOutput((prev) => [...prev, output]);
+			}
 		});
 
 		const unlistenError = listen<string>("install-error", (event) => {
-			setUpdateOutput((prev) => [...prev, `Error: ${event.payload}`]);
+			if (isUpdatingAll) {
+				setUpdateAllOutput((prev) => [...prev, `Error: ${event.payload}`]);
+			} else if (updatingApp) {
+				setUpdateOutput((prev) => [...prev, `Error: ${event.payload}`]);
+			} else if (uninstallingApp) {
+				setUninstallOutput((prev) => [...prev, `Error: ${event.payload}`]);
+			}
 		});
 
 		const unlistenCompleted = listen<number>(
 			"install-completed",
 			async (event) => {
-				setIsUpdating(false);
-				if (event.payload === 0) {
-					setUpdateOutput((prev) => [
-						...prev,
-						"",
-						t("myApps.updateCompletedSuccess"),
-						t("myApps.reloadingUpdateList"),
-					]);
-					// Reload available updates after successful update
-					await reloadAvailableUpdates();
-					setUpdateOutput((prev) => [...prev, t("myApps.listUpdated")]);
-				} else {
-					setUpdateOutput((prev) => [
-						...prev,
-						"",
-						t("myApps.updateFailed", { code: event.payload }),
-					]);
+				if (isUpdatingAll) {
+					// When updating all, individual app completion is handled by handleUpdateAll
+					setIsUpdating(false);
+				} else if (updatingApp) {
+					setIsUpdating(false);
+					if (event.payload === 0) {
+						setUpdateOutput((prev) => [
+							...prev,
+							"",
+							t("myApps.updateCompletedSuccess"),
+							t("myApps.reloadingUpdateList"),
+						]);
+						// Reload available updates after successful update
+						await reloadAvailableUpdates();
+						setUpdateOutput((prev) => [...prev, t("myApps.listUpdated")]);
+					} else {
+						setUpdateOutput((prev) => [
+							...prev,
+							"",
+							t("myApps.updateFailed", { code: event.payload }),
+						]);
+					}
+				} else if (uninstallingApp) {
+					setIsUninstalling(false);
+					if (event.payload === 0) {
+						setUninstallOutput((prev) => [
+							...prev,
+							"",
+							t("myApps.uninstallCompletedSuccess"),
+						]);
+					} else {
+						setUninstallOutput((prev) => [
+							...prev,
+							"",
+							t("myApps.uninstallFailed", { code: event.payload }),
+						]);
+					}
 				}
 			},
 		);
@@ -89,7 +234,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 			unlistenError.then((fn) => fn());
 			unlistenCompleted.then((fn) => fn());
 		};
-	}, []);
+	}, [updatingApp, uninstallingApp, isUpdatingAll, reloadAvailableUpdates, t]);
 
 	const handleCloseModal = () => {
 		setSelectedAppForNotes(null);
@@ -117,6 +262,132 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		setUpdateOutput([]);
 	};
 
+	const handleUninstall = async (appId: string) => {
+		setUninstallingApp(appId);
+		setIsUninstalling(true);
+		setUninstallOutput([t("myApps.preparingUninstall", { appId }), ""]);
+
+		try {
+			await invoke("uninstall_flatpak", { appId });
+		} catch (error) {
+			setIsUninstalling(false);
+			setUninstallOutput((prev) => [
+				...prev,
+				"",
+				t("myApps.errorInvokingCommand", { error }),
+			]);
+		}
+	};
+
+	const handleCloseUninstallDialog = async () => {
+		setUninstallingApp(null);
+		setUninstallOutput([]);
+		// Reload installed apps list after uninstall
+		await reloadInstalledApps();
+	};
+
+	const handleUpdateAll = async () => {
+		// Get all apps that need updates
+		const appsToUpdate = installedApps.filter((app) => hasUpdate(app.appId));
+
+		if (appsToUpdate.length === 0) return;
+
+		setUpdateAllModalOpen(true);
+		setIsUpdatingAll(true);
+		setUpdateAllOutput([]);
+		setUpdateAllProgress({
+			totalApps: appsToUpdate.length,
+			currentAppIndex: 0,
+			currentAppName: "",
+			currentAppProgress: 0,
+		});
+
+		let errorCount = 0;
+
+		for (let i = 0; i < appsToUpdate.length; i++) {
+			const app = appsToUpdate[i];
+
+			// Update progress for current app
+			setUpdateAllProgress({
+				totalApps: appsToUpdate.length,
+				currentAppIndex: i,
+				currentAppName: app.name,
+				currentAppProgress: 0,
+			});
+
+			setUpdateAllOutput((prev) => [
+				...prev,
+				"",
+				`[${i + 1}/${appsToUpdate.length}] ${t("myApps.preparingUpdate", { appId: app.appId })}`,
+			]);
+
+			try {
+				// Set this app as currently updating
+				setUpdatingApp(app.appId);
+
+				// Start the update
+				await invoke("update_flatpak", { appId: app.appId });
+
+				// Wait for completion (the event listener will handle progress)
+				// This is a simple approach - in production you might want a promise-based approach
+				await new Promise((resolve) => {
+					const checkCompletion = setInterval(() => {
+						if (!isUpdating) {
+							clearInterval(checkCompletion);
+							resolve(undefined);
+						}
+					}, 100);
+				});
+
+				setUpdateAllOutput((prev) => [
+					...prev,
+					t("myApps.updateCompletedSuccess"),
+				]);
+			} catch (error) {
+				errorCount++;
+				setUpdateAllOutput((prev) => [
+					...prev,
+					t("myApps.errorInvokingCommand", { error }),
+				]);
+			} finally {
+				setUpdatingApp(null);
+			}
+
+			// Update progress
+			setUpdateAllProgress({
+				totalApps: appsToUpdate.length,
+				currentAppIndex: i + 1,
+				currentAppName: "",
+				currentAppProgress: 100,
+			});
+		}
+
+		// All updates completed
+		setIsUpdatingAll(false);
+		if (errorCount === 0) {
+			setUpdateAllOutput((prev) => [
+				...prev,
+				"",
+				t("myApps.allUpdatesCompleted"),
+			]);
+		} else {
+			setUpdateAllOutput((prev) => [
+				...prev,
+				"",
+				t("myApps.updatesCompletedWithErrors"),
+			]);
+		}
+
+		// Reload updates list
+		await reloadAvailableUpdates();
+	};
+
+	const handleCloseUpdateAllModal = () => {
+		setUpdateAllModalOpen(false);
+		setUpdateAllOutput([]);
+		setShowUpdateAllTerminal(false);
+	};
+
 	// Get selected app info for modal
 	const selectedApp = installedApps.find(
 		(app) => app.appId === selectedAppForNotes,
@@ -138,177 +409,269 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					</Typography>
 				</Box>
 
-				{/* Installed apps count */}
-				<Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-					{installedApps.length === 1
-						? t("myApps.appInstalled", { count: installedApps.length })
-						: t("myApps.appsInstalled", { count: installedApps.length })}
-				</Typography>
+				{/* Installed apps count and Update All button */}
+				<Box
+					sx={{
+						mb: 4,
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+					}}
+				>
+					<Typography variant="body1" color="text.secondary">
+						{installedApps.length === 1
+							? t("myApps.appInstalled", { count: installedApps.length })
+							: t("myApps.appsInstalled", { count: installedApps.length })}
+					</Typography>
 
-				{/* Apps grid */}
+					{updateCount > 0 && (
+						<Button
+							variant="contained"
+							color="primary"
+							startIcon={<Update />}
+							onClick={handleUpdateAll}
+							disabled={isUpdatingAll}
+						>
+							{updateCount === 1
+								? t("myApps.updateAllCount", { count: updateCount })
+								: t("myApps.updateAllCount_plural", { count: updateCount })}
+						</Button>
+					)}
+				</Box>
+
+				{/* Apps grid with virtualization */}
 				{installedApps.length > 0 ? (
 					<Box
+						ref={parentRef}
 						sx={{
-							display: "grid",
-							gridTemplateColumns: {
-								xs: "1fr",
-								sm: "repeat(2, 1fr)",
-								md: "repeat(3, 1fr)",
-								lg: "repeat(4, 1fr)",
-								xl: "repeat(5, 1fr)",
-							},
-							gap: 2,
+							height: "calc(100vh - 200px)",
+							overflow: "auto",
 							width: "100%",
-							boxSizing: "border-box",
 						}}
 					>
-						{installedApps.map((app) => (
-							<Card
-								key={app.appId}
-								sx={{
-									height: "100%",
-									display: "flex",
-									flexDirection: "column",
-									boxSizing: "border-box",
-									minWidth: 0,
-									overflow: "hidden",
-									transition: "box-shadow 0.3s",
-									"&:hover": { boxShadow: 6 },
-								}}
-							>
-								<Box
-									sx={{
-										p: 2,
-										display: "flex",
-										flexDirection: "column",
-										alignItems: "center",
-										gap: 2,
-										minHeight: 150,
-										bgcolor: "background.paper",
-									}}
-								>
-									{/* App Icon */}
+						<Box
+							sx={{
+								height: `${rowVirtualizer.getTotalSize()}px`,
+								width: "100%",
+
+								position: "relative",
+							}}
+						>
+							{rowVirtualizer.getVirtualItems().map((virtualRow) => {
+								const startIndex = virtualRow.index * itemsPerRow;
+								const endIndex = Math.min(
+									startIndex + itemsPerRow,
+									installedApps.length,
+								);
+								const rowApps = installedApps.slice(startIndex, endIndex);
+
+								return (
 									<Box
+										key={virtualRow.key}
+										data-index={virtualRow.index}
 										sx={{
-											width: 80,
-											height: 80,
-											flexShrink: 0,
-											borderRadius: 2,
-											overflow: "hidden",
-											bgcolor: "grey.800",
-											display: "flex",
-											alignItems: "center",
-											justifyContent: "center",
+											position: "absolute",
+											top: 0,
+											left: 0,
+											width: "100%",
+											height: 340,
+											transform: `translateY(${virtualRow.start}px)`,
+											display: "grid",
+											gridTemplateColumns: {
+												xs: "1fr",
+												sm: "repeat(2, 1fr)",
+												md: "repeat(3, 1fr)",
+												lg: "repeat(4, 1fr)",
+												xl: "repeat(5, 1fr)",
+											},
+											gap: 2,
+											pb: 2, // Padding bottom to separate rows
 										}}
 									>
-										<CachedImage
-											appId={app.appId}
-											imageUrl={`https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${app.appId}.png`}
-											alt={app.name}
-											variant="rounded"
-											style={{
-												width: "100%",
-												height: "100%",
-												objectFit: "cover",
-											}}
-										/>
-									</Box>
-
-									{/* App Name */}
-									<Typography
-										variant="body1"
-										fontWeight="bold"
-										textAlign="center"
-										sx={{
-											overflow: "hidden",
-											textOverflow: "ellipsis",
-											display: "-webkit-box",
-											WebkitLineClamp: 2,
-											WebkitBoxOrient: "vertical",
-											minHeight: "2.5em",
-										}}
-									>
-										{app.name}
-									</Typography>
-								</Box>
-
-								<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-									{/* App ID */}
-									<Typography
-										variant="caption"
-										color="text.secondary"
-										sx={{
-											display: "block",
-											mb: 1,
-											overflow: "hidden",
-											textOverflow: "ellipsis",
-											whiteSpace: "nowrap",
-										}}
-									>
-										{app.appId}
-									</Typography>
-
-									{/* Version and Update Button */}
-									<Box
-										sx={{
-											display: "flex",
-											justifyContent: "space-between",
-											alignItems: "center",
-											gap: 1,
-										}}
-									>
-										<Typography
-											variant="caption"
-											color="primary"
-											sx={{
-												fontWeight: "bold",
-											}}
-										>
-											v{app.version}
-										</Typography>
-
-										{hasUpdate(app.appId) && (
-											<Box
-												sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+										{rowApps.map((app) => (
+											<Card
+												key={app.appId}
+												sx={{
+													display: "flex",
+													flexDirection: "column",
+													boxSizing: "border-box",
+													minWidth: 0,
+													overflow: "hidden",
+													transition: "box-shadow 0.3s",
+													"&:hover": { boxShadow: 6 },
+												}}
 											>
-												{/* Release Notes Icon */}
-												<IconButton
-													size="small"
-													onClick={() => setSelectedAppForNotes(app.appId)}
+												<Box
 													sx={{
-														p: 0.5,
-														"&:hover": {
-															color: "primary.main",
-														},
+														p: 2,
+														display: "flex",
+														flexDirection: "column",
+														alignItems: "center",
+														gap: 2,
+														minHeight: 150,
+														bgcolor: "background.paper",
 													}}
 												>
-													<Description fontSize="small" />
-												</IconButton>
+													{/* App Icon */}
+													<Box
+														sx={{
+															width: 80,
+															height: 80,
+															flexShrink: 0,
+															borderRadius: 2,
+															overflow: "hidden",
+															bgcolor: "grey.800",
+															display: "flex",
+															alignItems: "center",
+															justifyContent: "center",
+														}}
+													>
+														<CachedImage
+															appId={app.appId}
+															imageUrl={`https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${app.appId}.png`}
+															alt={app.name}
+															variant="rounded"
+															style={{
+																width: "100%",
+																height: "100%",
+																objectFit: "cover",
+															}}
+														/>
+													</Box>
 
-												{/* Update Button */}
-												<Button
-													variant="contained"
-													size="small"
-													onClick={() => handleUpdate(app.appId)}
-													disabled={isUpdating && updatingApp === app.appId}
-													sx={{
-														minWidth: "auto",
-														px: 1.5,
-														py: 0.5,
-														fontSize: "0.7rem",
-														textTransform: "none",
-													}}
-												>
-													{isUpdating && updatingApp === app.appId
-														? t("appDetails.updating")
-														: t("appDetails.update")}
-												</Button>
-											</Box>
-										)}
+													{/* App Name */}
+													<Typography
+														variant="body1"
+														fontWeight="bold"
+														textAlign="center"
+														sx={{
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															display: "-webkit-box",
+															WebkitLineClamp: 2,
+															WebkitBoxOrient: "vertical",
+															minHeight: "2.5em",
+														}}
+													>
+														{app.name}
+													</Typography>
+												</Box>
+
+												<CardContent sx={{ flexGrow: 1, pt: 1 }}>
+													{/* App ID */}
+													<Typography
+														variant="caption"
+														color="text.secondary"
+														sx={{
+															display: "block",
+															mb: 1,
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															whiteSpace: "nowrap",
+														}}
+													>
+														{app.appId}
+													</Typography>
+
+													{/* Version and Action Buttons */}
+													<Box
+														sx={{
+															display: "flex",
+															justifyContent: "space-between",
+															alignItems: "center",
+															gap: 1,
+														}}
+													>
+														<Typography
+															variant="caption"
+															color="primary"
+															sx={{
+																fontWeight: "bold",
+															}}
+														>
+															v{app.version}
+														</Typography>
+
+														<Box
+															sx={{
+																display: "flex",
+																alignItems: "center",
+																gap: 0.5,
+															}}
+														>
+															{/* Release Notes Icon - only show if update available */}
+															{hasUpdate(app.appId) && (
+																<IconButton
+																	size="small"
+																	onClick={() =>
+																		setSelectedAppForNotes(app.appId)
+																	}
+																	sx={{
+																		p: 0.5,
+																		"&:hover": {
+																			color: "primary.main",
+																		},
+																	}}
+																>
+																	<Description fontSize="small" />
+																</IconButton>
+															)}
+
+															{/* Uninstall Icon */}
+															<IconButton
+																size="small"
+																onClick={() => handleUninstall(app.appId)}
+																disabled={
+																	isUninstalling &&
+																	uninstallingApp === app.appId
+																}
+																sx={{
+																	p: 0.5,
+																	bgcolor: "error.main",
+																	color: "white",
+																	"&:hover": {
+																		bgcolor: "error.dark",
+																	},
+																	"&.Mui-disabled": {
+																		bgcolor: "grey.500",
+																		color: "grey.300",
+																	},
+																}}
+															>
+																<Delete fontSize="small" />
+															</IconButton>
+
+															{/* Update Button - only show if update available */}
+															{hasUpdate(app.appId) && (
+																<Button
+																	variant="contained"
+																	size="small"
+																	onClick={() => handleUpdate(app.appId)}
+																	disabled={
+																		isUpdating && updatingApp === app.appId
+																	}
+																	sx={{
+																		minWidth: "auto",
+																		px: 1.5,
+																		py: 0.5,
+																		fontSize: "0.7rem",
+																		textTransform: "none",
+																	}}
+																>
+																	{isUpdating && updatingApp === app.appId
+																		? t("appDetails.updating")
+																		: t("appDetails.update")}
+																</Button>
+															)}
+														</Box>
+													</Box>
+												</CardContent>
+											</Card>
+										))}
 									</Box>
-								</CardContent>
-							</Card>
-						))}
+								);
+							})}
+						</Box>
 					</Box>
 				) : (
 					<Box
@@ -359,6 +722,47 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 						)}
 					</DialogContent>
 				</Dialog>
+
+				{/* Uninstall Dialog */}
+				<Dialog
+					open={uninstallingApp !== null}
+					onClose={!isUninstalling ? handleCloseUninstallDialog : undefined}
+					maxWidth="md"
+					fullWidth
+				>
+					<DialogContent>
+						<Typography variant="h6" gutterBottom>
+							{t("myApps.uninstalling", { appId: uninstallingApp })}
+						</Typography>
+						<Terminal output={uninstallOutput} isRunning={isUninstalling} />
+						{!isUninstalling && (
+							<Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+								<Button
+									variant="contained"
+									onClick={handleCloseUninstallDialog}
+								>
+									{t("myApps.closeButton")}
+								</Button>
+							</Box>
+						)}
+					</DialogContent>
+				</Dialog>
+
+				{/* Update All Modal */}
+				<UpdateAllModal
+					open={updateAllModalOpen}
+					totalApps={updateAllProgress.totalApps}
+					currentAppIndex={updateAllProgress.currentAppIndex}
+					currentAppName={updateAllProgress.currentAppName}
+					currentAppProgress={updateAllProgress.currentAppProgress}
+					output={updateAllOutput}
+					isUpdating={isUpdatingAll}
+					onClose={handleCloseUpdateAllModal}
+					showTerminal={showUpdateAllTerminal}
+					onToggleTerminal={() =>
+						setShowUpdateAllTerminal(!showUpdateAllTerminal)
+					}
+				/>
 			</Box>
 		</Container>
 	);

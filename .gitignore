@@ -34,3 +34,5 @@ src-tauri/target/
 
 # Build logs
 build.log
+flathub-pr/
+repo
