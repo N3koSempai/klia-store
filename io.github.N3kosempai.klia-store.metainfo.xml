@@ -38,6 +38,7 @@
         <p>New features and improvements:</p>
         <ul>
           <li>Added "Update All" feature to update multiple apps at once</li>
+          <li>Added "Uninstall" feature to uninstall apps</li>
           <li>Improved app list performance with virtualization</li>
           <li>Fixed scroll behavior in My Apps section</li>
           <li>Fixed screenshot loading errors in app details</li>
