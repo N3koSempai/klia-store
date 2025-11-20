@@ -1,9 +1,7 @@
-import { ArrowBack, Delete, Description, Update } from "@mui/icons-material";
+import { ArrowBack, Update } from "@mui/icons-material";
 import {
 	Box,
 	Button,
-	Card,
-	CardContent,
 	Container,
 	Dialog,
 	DialogContent,
@@ -15,18 +13,19 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CachedImage } from "../../components/CachedImage";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
 import { UpdateAllModal } from "../../components/UpdateAllModal";
 import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
+import { InstalledAppCard } from "./components/InstalledAppCard";
 
 interface InstalledAppRust {
 	app_id: string;
 	name: string;
 	version: string;
+	summary?: string;
 }
 
 interface MyAppsProps {
@@ -71,6 +70,11 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	const parentRef = useRef<HTMLDivElement>(null);
 	const [itemsPerRow, setItemsPerRow] = useState(5);
 
+	// Fixed card height for consistent rendering
+	const CARD_HEIGHT = 300;
+	const ROW_GAP = 16; // 2 * 8px (gap: 2 in MUI)
+	const ROW_HEIGHT = CARD_HEIGHT + ROW_GAP;
+
 	useEffect(() => {
 		const updateItemsPerRow = () => {
 			const width = window.innerWidth;
@@ -95,13 +99,8 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	const rowVirtualizer = useVirtualizer({
 		count: rowCount,
 		getScrollElement: () => parentRef.current,
-		estimateSize: () => 340, // Estimated height of each row (increased for more spacing)
-		overscan: 2,
-		measureElement:
-			typeof window !== "undefined" &&
-			navigator.userAgent.indexOf("Firefox") === -1
-				? undefined
-				: () => 340, // Use fixed size to avoid scroll jumps
+		estimateSize: () => ROW_HEIGHT,
+		overscan: 5, // Increased for smoother scrolling
 	});
 
 	const reloadInstalledApps = useCallback(async () => {
@@ -113,6 +112,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 				appId: app.app_id,
 				name: app.name,
 				version: app.version,
+				summary: app.summary,
 			}));
 
 			setInstalledAppsInfo(installedAppsInfo);
@@ -474,7 +474,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 											top: 0,
 											left: 0,
 											width: "100%",
-											height: 340,
+											height: CARD_HEIGHT,
 											transform: `translateY(${virtualRow.start}px)`,
 											display: "grid",
 											gridTemplateColumns: {
@@ -485,188 +485,25 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 												xl: "repeat(5, 1fr)",
 											},
 											gap: 2,
-											pb: 2, // Padding bottom to separate rows
+											mb: 2, // Margin bottom to separate rows
 										}}
 									>
 										{rowApps.map((app) => (
-											<Card
+											<InstalledAppCard
 												key={app.appId}
-												sx={{
-													display: "flex",
-													flexDirection: "column",
-													boxSizing: "border-box",
-													minWidth: 0,
-													overflow: "hidden",
-													transition: "box-shadow 0.3s",
-													"&:hover": { boxShadow: 6 },
-												}}
-											>
-												<Box
-													sx={{
-														p: 2,
-														display: "flex",
-														flexDirection: "column",
-														alignItems: "center",
-														gap: 2,
-														minHeight: 150,
-														bgcolor: "background.paper",
-													}}
-												>
-													{/* App Icon */}
-													<Box
-														sx={{
-															width: 80,
-															height: 80,
-															flexShrink: 0,
-															borderRadius: 2,
-															overflow: "hidden",
-															bgcolor: "grey.800",
-															display: "flex",
-															alignItems: "center",
-															justifyContent: "center",
-														}}
-													>
-														<CachedImage
-															appId={app.appId}
-															imageUrl={`https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${app.appId}.png`}
-															alt={app.name}
-															variant="rounded"
-															style={{
-																width: "100%",
-																height: "100%",
-																objectFit: "cover",
-															}}
-														/>
-													</Box>
-
-													{/* App Name */}
-													<Typography
-														variant="body1"
-														fontWeight="bold"
-														textAlign="center"
-														sx={{
-															overflow: "hidden",
-															textOverflow: "ellipsis",
-															display: "-webkit-box",
-															WebkitLineClamp: 2,
-															WebkitBoxOrient: "vertical",
-															minHeight: "2.5em",
-														}}
-													>
-														{app.name}
-													</Typography>
-												</Box>
-
-												<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-													{/* App ID */}
-													<Typography
-														variant="caption"
-														color="text.secondary"
-														sx={{
-															display: "block",
-															mb: 1,
-															overflow: "hidden",
-															textOverflow: "ellipsis",
-															whiteSpace: "nowrap",
-														}}
-													>
-														{app.appId}
-													</Typography>
-
-													{/* Version and Action Buttons */}
-													<Box
-														sx={{
-															display: "flex",
-															justifyContent: "space-between",
-															alignItems: "center",
-															gap: 1,
-														}}
-													>
-														<Typography
-															variant="caption"
-															color="primary"
-															sx={{
-																fontWeight: "bold",
-															}}
-														>
-															v{app.version}
-														</Typography>
-
-														<Box
-															sx={{
-																display: "flex",
-																alignItems: "center",
-																gap: 0.5,
-															}}
-														>
-															{/* Release Notes Icon - only show if update available */}
-															{hasUpdate(app.appId) && (
-																<IconButton
-																	size="small"
-																	onClick={() =>
-																		setSelectedAppForNotes(app.appId)
-																	}
-																	sx={{
-																		p: 0.5,
-																		"&:hover": {
-																			color: "primary.main",
-																		},
-																	}}
-																>
-																	<Description fontSize="small" />
-																</IconButton>
-															)}
-
-															{/* Uninstall Icon */}
-															<IconButton
-																size="small"
-																onClick={() => handleUninstall(app.appId)}
-																disabled={
-																	isUninstalling &&
-																	uninstallingApp === app.appId
-																}
-																sx={{
-																	p: 0.5,
-																	bgcolor: "error.main",
-																	color: "white",
-																	"&:hover": {
-																		bgcolor: "error.dark",
-																	},
-																	"&.Mui-disabled": {
-																		bgcolor: "grey.500",
-																		color: "grey.300",
-																	},
-																}}
-															>
-																<Delete fontSize="small" />
-															</IconButton>
-
-															{/* Update Button - only show if update available */}
-															{hasUpdate(app.appId) && (
-																<Button
-																	variant="contained"
-																	size="small"
-																	onClick={() => handleUpdate(app.appId)}
-																	disabled={
-																		isUpdating && updatingApp === app.appId
-																	}
-																	sx={{
-																		minWidth: "auto",
-																		px: 1.5,
-																		py: 0.5,
-																		fontSize: "0.7rem",
-																		textTransform: "none",
-																	}}
-																>
-																	{isUpdating && updatingApp === app.appId
-																		? t("appDetails.updating")
-																		: t("appDetails.update")}
-																</Button>
-															)}
-														</Box>
-													</Box>
-												</CardContent>
-											</Card>
+												app={app}
+												hasUpdate={hasUpdate(app.appId)}
+												isUpdating={isUpdating && updatingApp === app.appId}
+												isUninstalling={
+													isUninstalling && uninstallingApp === app.appId
+												}
+												cardHeight={CARD_HEIGHT}
+												onUpdate={() => handleUpdate(app.appId)}
+												onUninstall={() => handleUninstall(app.appId)}
+												onShowReleaseNotes={() =>
+													setSelectedAppForNotes(app.appId)
+												}
+											/>
 										))}
 									</Box>
 								);
