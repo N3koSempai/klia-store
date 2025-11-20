@@ -4,6 +4,7 @@ export interface InstalledAppInfo {
 	appId: string;
 	name: string;
 	version: string;
+	summary?: string;
 }
 
 export interface UpdateAvailableInfo {

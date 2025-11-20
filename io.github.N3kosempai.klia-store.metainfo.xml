@@ -33,16 +33,12 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="1.1.0" date="2025-01-18">
+    <release version="1.2.0" date="2025-01-18">
       <description>
         <p>New features and improvements:</p>
         <ul>
-          <li>Added "Update All" feature to update multiple apps at once</li>
-          <li>Added "Uninstall" feature to uninstall apps</li>
-          <li>Improved app list performance with virtualization</li>
-          <li>Fixed scroll behavior in My Apps section</li>
-          <li>Fixed screenshot loading errors in app details</li>
-          <li>Enhanced uninstall process with better feedback</li>
+        <li> better performance in my Apps.</li>
+        <li> added sumarize to every app on my Apps.</li>
         </ul>
       </description>
     </release>

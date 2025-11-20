@@ -9,6 +9,7 @@ struct InstalledApp {
     app_id: String,
     name: String,
     version: String,
+    summary: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -337,7 +338,7 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<Vec<InstalledAp
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "list", "--app", "--columns=application,name,version"])
+            .args(["--host", "flatpak", "list", "--app", "--columns=application,name,version,description"])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
@@ -345,7 +346,7 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<Vec<InstalledAp
         // Outside flatpak, use flatpak directly
         shell
             .command("flatpak")
-            .args(["list", "--app", "--columns=application,name,version"])
+            .args(["list", "--app", "--columns=application,name,version,description"])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak: {}", e))?
@@ -367,6 +368,11 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<Vec<InstalledAp
                     app_id: parts[0].trim().to_string(),
                     name: parts[1].trim().to_string(),
                     version: parts[2].trim().to_string(),
+                    summary: if parts.len() >= 4 && !parts[3].trim().is_empty() {
+                        Some(parts[3].trim().to_string())
+                    } else {
+                        None
+                    },
                 })
             } else {
                 None

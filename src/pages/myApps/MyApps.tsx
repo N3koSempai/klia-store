@@ -1,50 +1,104 @@
-import { ArrowBack, Delete, Description, Update } from "@mui/icons-material";
+import { ArrowBack, Update } from "@mui/icons-material";
 import {
 	Box,
 	Button,
-	Card,
-	CardContent,
 	Container,
 	Dialog,
 	DialogContent,
 	IconButton,
 	Typography,
 } from "@mui/material";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CachedImage } from "../../components/CachedImage";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
 import { UpdateAllModal } from "../../components/UpdateAllModal";
 import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
+import { InstalledAppCard } from "./components/InstalledAppCard";
 
 interface InstalledAppRust {
 	app_id: string;
 	name: string;
 	version: string;
+	summary?: string;
 }
 
 interface MyAppsProps {
 	onBack: () => void;
 }
 
+// Memoized wrapper for app card to prevent recreating callbacks
+interface AppCardWrapperProps {
+	app: InstalledAppInfo;
+	hasUpdate: boolean;
+	isUpdating: boolean;
+	isUninstalling: boolean;
+	cardHeight: number;
+	onUpdate: (appId: string) => void;
+	onUninstall: (appId: string) => void;
+	onShowReleaseNotes: (appId: string) => void;
+}
+
+const AppCardWrapper = memo(
+	({
+		app,
+		hasUpdate,
+		isUpdating,
+		isUninstalling,
+		cardHeight,
+		onUpdate,
+		onUninstall,
+		onShowReleaseNotes,
+	}: AppCardWrapperProps) => {
+		const handleUpdate = useCallback(
+			() => onUpdate(app.appId),
+			[onUpdate, app.appId],
+		);
+		const handleUninstall = useCallback(
+			() => onUninstall(app.appId),
+			[onUninstall, app.appId],
+		);
+		const handleShowReleaseNotes = useCallback(
+			() => onShowReleaseNotes(app.appId),
+			[onShowReleaseNotes, app.appId],
+		);
+
+		return (
+			<InstalledAppCard
+				app={app}
+				hasUpdate={hasUpdate}
+				isUpdating={isUpdating}
+				isUninstalling={isUninstalling}
+				cardHeight={cardHeight}
+				onUpdate={handleUpdate}
+				onUninstall={handleUninstall}
+				onShowReleaseNotes={handleShowReleaseNotes}
+			/>
+		);
+	},
+);
+
 export const MyApps = ({ onBack }: MyAppsProps) => {
 	const { t } = useTranslation();
-	const {
-		getInstalledAppsInfo,
-		hasUpdate,
-		getUpdateInfo,
-		setAvailableUpdates,
-		setInstalledAppsInfo,
-		getUpdateCount,
-	} = useInstalledAppsStore();
-	const installedApps = getInstalledAppsInfo();
-	const updateCount = getUpdateCount();
+
+	// Access store state directly to ensure reactivity
+	const installedApps = useInstalledAppsStore(
+		(state) => state.installedAppsInfo,
+	);
+	const updateCount = useInstalledAppsStore((state) => state.updateCount);
+	const hasUpdate = useInstalledAppsStore((state) => state.hasUpdate);
+	const getUpdateInfo = useInstalledAppsStore((state) => state.getUpdateInfo);
+	const setAvailableUpdates = useInstalledAppsStore(
+		(state) => state.setAvailableUpdates,
+	);
+	const setInstalledAppsInfo = useInstalledAppsStore(
+		(state) => state.setInstalledAppsInfo,
+	);
+
 	const [selectedAppForNotes, setSelectedAppForNotes] = useState<string | null>(
 		null,
 	);
@@ -67,42 +121,8 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	const [updateAllOutput, setUpdateAllOutput] = useState<string[]>([]);
 	const [showUpdateAllTerminal, setShowUpdateAllTerminal] = useState(false);
 
-	// Virtualization - Calculate items per row based on window width
-	const parentRef = useRef<HTMLDivElement>(null);
-	const [itemsPerRow, setItemsPerRow] = useState(5);
-
-	useEffect(() => {
-		const updateItemsPerRow = () => {
-			const width = window.innerWidth;
-			if (width >= 1536)
-				setItemsPerRow(5); // xl
-			else if (width >= 1200)
-				setItemsPerRow(4); // lg
-			else if (width >= 900)
-				setItemsPerRow(3); // md
-			else if (width >= 600)
-				setItemsPerRow(2); // sm
-			else setItemsPerRow(1); // xs
-		};
-
-		updateItemsPerRow();
-		window.addEventListener("resize", updateItemsPerRow);
-		return () => window.removeEventListener("resize", updateItemsPerRow);
-	}, []);
-
-	const rowCount = Math.ceil(installedApps.length / itemsPerRow);
-
-	const rowVirtualizer = useVirtualizer({
-		count: rowCount,
-		getScrollElement: () => parentRef.current,
-		estimateSize: () => 340, // Estimated height of each row (increased for more spacing)
-		overscan: 2,
-		measureElement:
-			typeof window !== "undefined" &&
-			navigator.userAgent.indexOf("Firefox") === -1
-				? undefined
-				: () => 340, // Use fixed size to avoid scroll jumps
-	});
+	// Fixed card height for consistent rendering
+	const CARD_HEIGHT = 300;
 
 	const reloadInstalledApps = useCallback(async () => {
 		try {
@@ -113,6 +133,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 				appId: app.app_id,
 				name: app.name,
 				version: app.version,
+				summary: app.summary,
 			}));
 
 			setInstalledAppsInfo(installedAppsInfo);
@@ -147,15 +168,15 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 				// Format: "Actualizando X/Y…" or "Actualizando X/Y… ████ XX%"
 				const progressMatch = output.match(/Actualizando\s+(\d+)\/(\d+)/);
 				if (progressMatch) {
-					const currentPart = Number.parseInt(progressMatch[1]);
-					const totalParts = Number.parseInt(progressMatch[2]);
+					const currentPart = Number.parseInt(progressMatch[1], 10);
+					const totalParts = Number.parseInt(progressMatch[2], 10);
 
 					// Check if there's a percentage
 					const percentMatch = output.match(/(\d+)%/);
 					let progress = 0;
 
 					if (percentMatch) {
-						const partProgress = Number.parseInt(percentMatch[1]);
+						const partProgress = Number.parseInt(percentMatch[1], 10);
 						// Calculate overall progress: (completed parts + current part progress) / total parts
 						progress = ((currentPart - 1) * 100 + partProgress) / totalParts;
 					} else {
@@ -236,57 +257,67 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		};
 	}, [updatingApp, uninstallingApp, isUpdatingAll, reloadAvailableUpdates, t]);
 
-	const handleCloseModal = () => {
+	const handleCloseModal = useCallback(() => {
 		setSelectedAppForNotes(null);
-	};
+	}, []);
 
-	const handleUpdate = async (appId: string) => {
-		setUpdatingApp(appId);
-		setIsUpdating(true);
-		setUpdateOutput([t("myApps.preparingUpdate", { appId }), ""]);
+	const handleShowReleaseNotes = useCallback((appId: string) => {
+		setSelectedAppForNotes(appId);
+	}, []);
 
-		try {
-			await invoke("update_flatpak", { appId });
-		} catch (error) {
-			setIsUpdating(false);
-			setUpdateOutput((prev) => [
-				...prev,
-				"",
-				t("myApps.errorInvokingCommand", { error }),
-			]);
-		}
-	};
+	const handleUpdate = useCallback(
+		async (appId: string) => {
+			setUpdatingApp(appId);
+			setIsUpdating(true);
+			setUpdateOutput([t("myApps.preparingUpdate", { appId }), ""]);
 
-	const handleCloseUpdateDialog = () => {
+			try {
+				await invoke("update_flatpak", { appId });
+			} catch (error) {
+				setIsUpdating(false);
+				setUpdateOutput((prev) => [
+					...prev,
+					"",
+					t("myApps.errorInvokingCommand", { error }),
+				]);
+			}
+		},
+		[t],
+	);
+
+	const handleCloseUpdateDialog = useCallback(() => {
 		setUpdatingApp(null);
 		setUpdateOutput([]);
-	};
+	}, []);
 
-	const handleUninstall = async (appId: string) => {
-		setUninstallingApp(appId);
-		setIsUninstalling(true);
-		setUninstallOutput([t("myApps.preparingUninstall", { appId }), ""]);
+	const handleUninstall = useCallback(
+		async (appId: string) => {
+			setUninstallingApp(appId);
+			setIsUninstalling(true);
+			setUninstallOutput([t("myApps.preparingUninstall", { appId }), ""]);
 
-		try {
-			await invoke("uninstall_flatpak", { appId });
-		} catch (error) {
-			setIsUninstalling(false);
-			setUninstallOutput((prev) => [
-				...prev,
-				"",
-				t("myApps.errorInvokingCommand", { error }),
-			]);
-		}
-	};
+			try {
+				await invoke("uninstall_flatpak", { appId });
+			} catch (error) {
+				setIsUninstalling(false);
+				setUninstallOutput((prev) => [
+					...prev,
+					"",
+					t("myApps.errorInvokingCommand", { error }),
+				]);
+			}
+		},
+		[t],
+	);
 
-	const handleCloseUninstallDialog = async () => {
+	const handleCloseUninstallDialog = useCallback(async () => {
 		setUninstallingApp(null);
 		setUninstallOutput([]);
 		// Reload installed apps list after uninstall
 		await reloadInstalledApps();
-	};
+	}, [reloadInstalledApps]);
 
-	const handleUpdateAll = async () => {
+	const handleUpdateAll = useCallback(async () => {
 		// Get all apps that need updates
 		const appsToUpdate = installedApps.filter((app) => hasUpdate(app.appId));
 
@@ -380,21 +411,28 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 
 		// Reload updates list
 		await reloadAvailableUpdates();
-	};
+	}, [installedApps, hasUpdate, isUpdating, reloadAvailableUpdates, t]);
 
-	const handleCloseUpdateAllModal = () => {
+	const handleCloseUpdateAllModal = useCallback(() => {
 		setUpdateAllModalOpen(false);
 		setUpdateAllOutput([]);
 		setShowUpdateAllTerminal(false);
-	};
+	}, []);
 
-	// Get selected app info for modal
-	const selectedApp = installedApps.find(
-		(app) => app.appId === selectedAppForNotes,
+	const handleToggleUpdateAllTerminal = useCallback(() => {
+		setShowUpdateAllTerminal((prev) => !prev);
+	}, []);
+
+	// Get selected app info for modal - memoized
+	const selectedApp = useMemo(
+		() => installedApps.find((app) => app.appId === selectedAppForNotes),
+		[installedApps, selectedAppForNotes],
 	);
-	const updateInfo = selectedAppForNotes
-		? getUpdateInfo(selectedAppForNotes)
-		: undefined;
+	const updateInfo = useMemo(
+		() =>
+			selectedAppForNotes ? getUpdateInfo(selectedAppForNotes) : undefined,
+		[selectedAppForNotes, getUpdateInfo],
+	);
 
 	return (
 		<Container maxWidth="xl">
@@ -439,239 +477,36 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					)}
 				</Box>
 
-				{/* Apps grid with virtualization */}
+				{/* Apps grid - simple CSS grid for better performance */}
 				{installedApps.length > 0 ? (
 					<Box
-						ref={parentRef}
 						sx={{
-							height: "calc(100vh - 200px)",
-							overflow: "auto",
+							display: "grid",
+							gridTemplateColumns: {
+								xs: "1fr",
+								sm: "repeat(2, 1fr)",
+								md: "repeat(3, 1fr)",
+								lg: "repeat(4, 1fr)",
+								xl: "repeat(5, 1fr)",
+							},
+							gap: 2,
 							width: "100%",
+							boxSizing: "border-box",
 						}}
 					>
-						<Box
-							sx={{
-								height: `${rowVirtualizer.getTotalSize()}px`,
-								width: "100%",
-
-								position: "relative",
-							}}
-						>
-							{rowVirtualizer.getVirtualItems().map((virtualRow) => {
-								const startIndex = virtualRow.index * itemsPerRow;
-								const endIndex = Math.min(
-									startIndex + itemsPerRow,
-									installedApps.length,
-								);
-								const rowApps = installedApps.slice(startIndex, endIndex);
-
-								return (
-									<Box
-										key={virtualRow.key}
-										data-index={virtualRow.index}
-										sx={{
-											position: "absolute",
-											top: 0,
-											left: 0,
-											width: "100%",
-											height: 340,
-											transform: `translateY(${virtualRow.start}px)`,
-											display: "grid",
-											gridTemplateColumns: {
-												xs: "1fr",
-												sm: "repeat(2, 1fr)",
-												md: "repeat(3, 1fr)",
-												lg: "repeat(4, 1fr)",
-												xl: "repeat(5, 1fr)",
-											},
-											gap: 2,
-											pb: 2, // Padding bottom to separate rows
-										}}
-									>
-										{rowApps.map((app) => (
-											<Card
-												key={app.appId}
-												sx={{
-													display: "flex",
-													flexDirection: "column",
-													boxSizing: "border-box",
-													minWidth: 0,
-													overflow: "hidden",
-													transition: "box-shadow 0.3s",
-													"&:hover": { boxShadow: 6 },
-												}}
-											>
-												<Box
-													sx={{
-														p: 2,
-														display: "flex",
-														flexDirection: "column",
-														alignItems: "center",
-														gap: 2,
-														minHeight: 150,
-														bgcolor: "background.paper",
-													}}
-												>
-													{/* App Icon */}
-													<Box
-														sx={{
-															width: 80,
-															height: 80,
-															flexShrink: 0,
-															borderRadius: 2,
-															overflow: "hidden",
-															bgcolor: "grey.800",
-															display: "flex",
-															alignItems: "center",
-															justifyContent: "center",
-														}}
-													>
-														<CachedImage
-															appId={app.appId}
-															imageUrl={`https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${app.appId}.png`}
-															alt={app.name}
-															variant="rounded"
-															style={{
-																width: "100%",
-																height: "100%",
-																objectFit: "cover",
-															}}
-														/>
-													</Box>
-
-													{/* App Name */}
-													<Typography
-														variant="body1"
-														fontWeight="bold"
-														textAlign="center"
-														sx={{
-															overflow: "hidden",
-															textOverflow: "ellipsis",
-															display: "-webkit-box",
-															WebkitLineClamp: 2,
-															WebkitBoxOrient: "vertical",
-															minHeight: "2.5em",
-														}}
-													>
-														{app.name}
-													</Typography>
-												</Box>
-
-												<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-													{/* App ID */}
-													<Typography
-														variant="caption"
-														color="text.secondary"
-														sx={{
-															display: "block",
-															mb: 1,
-															overflow: "hidden",
-															textOverflow: "ellipsis",
-															whiteSpace: "nowrap",
-														}}
-													>
-														{app.appId}
-													</Typography>
-
-													{/* Version and Action Buttons */}
-													<Box
-														sx={{
-															display: "flex",
-															justifyContent: "space-between",
-															alignItems: "center",
-															gap: 1,
-														}}
-													>
-														<Typography
-															variant="caption"
-															color="primary"
-															sx={{
-																fontWeight: "bold",
-															}}
-														>
-															v{app.version}
-														</Typography>
-
-														<Box
-															sx={{
-																display: "flex",
-																alignItems: "center",
-																gap: 0.5,
-															}}
-														>
-															{/* Release Notes Icon - only show if update available */}
-															{hasUpdate(app.appId) && (
-																<IconButton
-																	size="small"
-																	onClick={() =>
-																		setSelectedAppForNotes(app.appId)
-																	}
-																	sx={{
-																		p: 0.5,
-																		"&:hover": {
-																			color: "primary.main",
-																		},
-																	}}
-																>
-																	<Description fontSize="small" />
-																</IconButton>
-															)}
-
-															{/* Uninstall Icon */}
-															<IconButton
-																size="small"
-																onClick={() => handleUninstall(app.appId)}
-																disabled={
-																	isUninstalling &&
-																	uninstallingApp === app.appId
-																}
-																sx={{
-																	p: 0.5,
-																	bgcolor: "error.main",
-																	color: "white",
-																	"&:hover": {
-																		bgcolor: "error.dark",
-																	},
-																	"&.Mui-disabled": {
-																		bgcolor: "grey.500",
-																		color: "grey.300",
-																	},
-																}}
-															>
-																<Delete fontSize="small" />
-															</IconButton>
-
-															{/* Update Button - only show if update available */}
-															{hasUpdate(app.appId) && (
-																<Button
-																	variant="contained"
-																	size="small"
-																	onClick={() => handleUpdate(app.appId)}
-																	disabled={
-																		isUpdating && updatingApp === app.appId
-																	}
-																	sx={{
-																		minWidth: "auto",
-																		px: 1.5,
-																		py: 0.5,
-																		fontSize: "0.7rem",
-																		textTransform: "none",
-																	}}
-																>
-																	{isUpdating && updatingApp === app.appId
-																		? t("appDetails.updating")
-																		: t("appDetails.update")}
-																</Button>
-															)}
-														</Box>
-													</Box>
-												</CardContent>
-											</Card>
-										))}
-									</Box>
-								);
-							})}
-						</Box>
+						{installedApps.map((app) => (
+							<AppCardWrapper
+								key={app.appId}
+								app={app}
+								hasUpdate={hasUpdate(app.appId)}
+								isUpdating={isUpdating && updatingApp === app.appId}
+								isUninstalling={isUninstalling && uninstallingApp === app.appId}
+								cardHeight={CARD_HEIGHT}
+								onUpdate={handleUpdate}
+								onUninstall={handleUninstall}
+								onShowReleaseNotes={handleShowReleaseNotes}
+							/>
+						))}
 					</Box>
 				) : (
 					<Box
@@ -759,9 +594,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					isUpdating={isUpdatingAll}
 					onClose={handleCloseUpdateAllModal}
 					showTerminal={showUpdateAllTerminal}
-					onToggleTerminal={() =>
-						setShowUpdateAllTerminal(!showUpdateAllTerminal)
-					}
+					onToggleTerminal={handleToggleUpdateAllTerminal}
 				/>
 			</Box>
 		</Container>
