@@ -499,6 +499,63 @@ async fn update_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), Str
 }
 
 #[tauri::command]
+async fn update_system_flatpaks(app: tauri::AppHandle) -> Result<(), String> {
+    app.emit(
+        "install-output",
+        "Iniciando actualización de paquetes del sistema...",
+    )
+    .map_err(|e| format!("Failed to emit: {}", e))?;
+
+    let shell = app.shell();
+
+    // Detect if we're running inside a flatpak
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    let (mut rx, _child) = if is_flatpak {
+        // Inside flatpak, use flatpak-spawn to execute on the host
+        shell
+            .command("flatpak-spawn")
+            .args(["--host", "flatpak", "update", "-y"])
+            .spawn()
+            .map_err(|e| format!("Failed to spawn flatpak-spawn: {}", e))?
+    } else {
+        // Outside flatpak, use flatpak directly
+        shell
+            .command("flatpak")
+            .args(["update", "-y"])
+            .spawn()
+            .map_err(|e| format!("Failed to spawn flatpak: {}", e))?
+    };
+
+    // Read output in real-time
+    while let Some(event) = rx.recv().await {
+        match event {
+            tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
+                let output = String::from_utf8_lossy(&line);
+                app.emit("install-output", output.to_string())
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
+            }
+            tauri_plugin_shell::process::CommandEvent::Stderr(_line) => {
+                // Flatpak sends normal output to stderr, ignore it to avoid duplicates
+                // Real errors will be caught by the Error event or exit code
+            }
+            tauri_plugin_shell::process::CommandEvent::Error(err) => {
+                app.emit("install-error", err)
+                    .map_err(|e| format!("Failed to emit error: {}", e))?;
+            }
+            tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                app.emit("install-completed", payload.code.unwrap_or(-1))
+                    .map_err(|e| format!("Failed to emit completion: {}", e))?;
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), String> {
     app.emit(
         "install-output",
@@ -580,6 +637,7 @@ pub fn run() {
             get_installed_flatpaks,
             get_available_updates,
             update_flatpak,
+            update_system_flatpaks,
             uninstall_flatpak
         ])
         .run(tauri::generate_context!())

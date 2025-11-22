@@ -120,6 +120,9 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	});
 	const [updateAllOutput, setUpdateAllOutput] = useState<string[]>([]);
 	const [showUpdateAllTerminal, setShowUpdateAllTerminal] = useState(false);
+	const [systemUpdatesCount, setSystemUpdatesCount] = useState(0);
+	const [isUpdatingSystem, setIsUpdatingSystem] = useState(false);
+	const [systemUpdateProgress, setSystemUpdateProgress] = useState(0);
 
 	// Fixed card height for consistent rendering
 	const CARD_HEIGHT = 300;
@@ -156,6 +159,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	}, [setAvailableUpdates]);
 
 	// Listen to update and uninstall events
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Event listeners should not re-register on every state change
 	useEffect(() => {
 		const unlistenOutput = listen<string>("install-output", (event) => {
 			const output = event.payload;
@@ -184,12 +188,17 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 						progress = ((currentPart - 1) / totalParts) * 100;
 					}
 
-					setUpdateAllProgress((prev) => ({
-						...prev,
-						currentAppProgress: Math.min(100, Math.round(progress)),
-					}));
+					// If updating system, update system progress, otherwise update app progress
+					if (isUpdatingSystem) {
+						setSystemUpdateProgress(Math.min(100, Math.round(progress)));
+					} else {
+						setUpdateAllProgress((prev) => ({
+							...prev,
+							currentAppProgress: Math.min(100, Math.round(progress)),
+						}));
+					}
 				}
-			} else if (updatingApp) {
+			} else if (updatingApp && updatingApp !== "system") {
 				setUpdateOutput((prev) => [...prev, output]);
 			} else if (uninstallingApp) {
 				setUninstallOutput((prev) => [...prev, output]);
@@ -320,12 +329,15 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	const handleUpdateAll = useCallback(async () => {
 		// Get all apps that need updates
 		const appsToUpdate = installedApps.filter((app) => hasUpdate(app.appId));
+		const initialSystemUpdates = updateCount - appsToUpdate.length;
 
-		if (appsToUpdate.length === 0) return;
+		if (appsToUpdate.length === 0 && initialSystemUpdates === 0) return;
 
 		setUpdateAllModalOpen(true);
 		setIsUpdatingAll(true);
 		setUpdateAllOutput([]);
+		setSystemUpdatesCount(initialSystemUpdates);
+		setIsUpdatingSystem(false);
 		setUpdateAllProgress({
 			totalApps: appsToUpdate.length,
 			currentAppIndex: 0,
@@ -335,6 +347,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 
 		let errorCount = 0;
 
+		// First, update user apps
 		for (let i = 0; i < appsToUpdate.length; i++) {
 			const app = appsToUpdate[i];
 
@@ -384,13 +397,95 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 				setUpdatingApp(null);
 			}
 
-			// Update progress
+			// Update progress - keep last app info until system updates start
 			setUpdateAllProgress({
 				totalApps: appsToUpdate.length,
 				currentAppIndex: i + 1,
-				currentAppName: "",
+				currentAppName: app.name,
 				currentAppProgress: 100,
 			});
+		}
+
+		// Now update system packages if there were any initially
+		if (initialSystemUpdates > 0) {
+			let currentSystemUpdates = initialSystemUpdates;
+
+			// Only reload updates if we updated user apps (they might have updated some runtimes)
+			if (appsToUpdate.length > 0) {
+				const updates = await checkAvailableUpdates();
+				const currentUserAppUpdates = installedApps.filter((app) =>
+					updates.some((u) => u.appId === app.appId),
+				).length;
+				currentSystemUpdates = updates.length - currentUserAppUpdates;
+
+				// Update the system updates count with the current value
+				setSystemUpdatesCount(currentSystemUpdates);
+			}
+
+			if (currentSystemUpdates > 0) {
+				// Set system updating flag BEFORE clearing app name
+				setIsUpdatingSystem(true);
+				setSystemUpdateProgress(0);
+				setUpdateAllOutput((prev) => [
+					...prev,
+					"",
+					t("myApps.preparingSystemUpdates", { count: currentSystemUpdates }),
+				]);
+
+				try {
+					// Set as system updating
+					setUpdatingApp("system");
+
+					// Start system update
+					await invoke("update_system_flatpaks");
+
+					// Wait for completion
+					await new Promise((resolve) => {
+						const checkCompletion = setInterval(() => {
+							if (!isUpdating) {
+								clearInterval(checkCompletion);
+								resolve(undefined);
+							}
+						}, 100);
+					});
+
+					setUpdateAllOutput((prev) => [
+						...prev,
+						t("myApps.systemUpdatesCompleted"),
+					]);
+					setSystemUpdateProgress(100);
+				} catch (error) {
+					errorCount++;
+					setUpdateAllOutput((prev) => [
+						...prev,
+						t("myApps.errorInvokingCommand", { error }),
+					]);
+				} finally {
+					setUpdatingApp(null);
+				}
+
+				// Mark system updates as complete by incrementing currentAppIndex
+				setUpdateAllProgress((prev) => ({
+					...prev,
+					currentAppIndex: prev.totalApps + 1,
+				}));
+				setIsUpdatingSystem(false);
+			} else {
+				// All system updates were already installed during user app updates
+				setIsUpdatingSystem(true);
+				setSystemUpdateProgress(100);
+				setUpdateAllOutput((prev) => [
+					...prev,
+					"",
+					t("myApps.systemUpdatesAlreadyInstalled"),
+				]);
+				// Mark system updates as complete
+				setUpdateAllProgress((prev) => ({
+					...prev,
+					currentAppIndex: prev.totalApps + 1,
+				}));
+				setIsUpdatingSystem(false);
+			}
 		}
 
 		// All updates completed
@@ -411,13 +506,22 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 
 		// Reload updates list
 		await reloadAvailableUpdates();
-	}, [installedApps, hasUpdate, isUpdating, reloadAvailableUpdates, t]);
+	}, [
+		installedApps,
+		hasUpdate,
+		updateCount,
+		isUpdating,
+		reloadAvailableUpdates,
+		t,
+	]);
 
-	const handleCloseUpdateAllModal = useCallback(() => {
+	const handleCloseUpdateAllModal = useCallback(async () => {
 		setUpdateAllModalOpen(false);
 		setUpdateAllOutput([]);
 		setShowUpdateAllTerminal(false);
-	}, []);
+		// Reload available updates after closing modal
+		await reloadAvailableUpdates();
+	}, [reloadAvailableUpdates]);
 
 	const handleToggleUpdateAllTerminal = useCallback(() => {
 		setShowUpdateAllTerminal((prev) => !prev);
@@ -463,17 +567,41 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					</Typography>
 
 					{updateCount > 0 && (
-						<Button
-							variant="contained"
-							color="primary"
-							startIcon={<Update />}
-							onClick={handleUpdateAll}
-							disabled={isUpdatingAll}
+						<Box
+							sx={{
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								gap: 0.5,
+							}}
 						>
-							{updateCount === 1
-								? t("myApps.updateAllCount", { count: updateCount })
-								: t("myApps.updateAllCount_plural", { count: updateCount })}
-						</Button>
+							<Button
+								variant="contained"
+								color="primary"
+								startIcon={<Update />}
+								onClick={handleUpdateAll}
+								disabled={isUpdatingAll}
+							>
+								{updateCount === 1
+									? t("myApps.updateAllCount", { count: updateCount })
+									: t("myApps.updateAllCount_plural", { count: updateCount })}
+							</Button>
+							{(() => {
+								const userAppUpdates = installedApps.filter((app) =>
+									hasUpdate(app.appId),
+								).length;
+								const systemUpdates = updateCount - userAppUpdates;
+								return systemUpdates > 0 ? (
+									<Typography
+										variant="caption"
+										color="text.secondary"
+										sx={{ fontSize: "0.75rem" }}
+									>
+										{t("myApps.systemUpdates", { count: systemUpdates })}
+									</Typography>
+								) : null;
+							})()}
+						</Box>
 					)}
 				</Box>
 
@@ -496,7 +624,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					>
 						{installedApps.map((app) => (
 							<AppCardWrapper
-								key={app.appId}
+								key={`${app.appId}-${app.name}`}
 								app={app}
 								hasUpdate={hasUpdate(app.appId)}
 								isUpdating={isUpdating && updatingApp === app.appId}
@@ -595,6 +723,9 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					onClose={handleCloseUpdateAllModal}
 					showTerminal={showUpdateAllTerminal}
 					onToggleTerminal={handleToggleUpdateAllTerminal}
+					systemUpdatesCount={systemUpdatesCount}
+					isUpdatingSystem={isUpdatingSystem}
+					systemUpdateProgress={systemUpdateProgress}
 				/>
 			</Box>
 		</Container>

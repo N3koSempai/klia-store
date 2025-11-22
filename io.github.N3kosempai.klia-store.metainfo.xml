@@ -33,12 +33,12 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="1.2.0" date="2025-01-18">
+    <release version="1.2.1" date="2025-01-18">
       <description>
         <p>New features and improvements:</p>
         <ul>
-        <li> better performance in my Apps.</li>
-        <li> added sumarize to every app on my Apps.</li>
+        <li>Update all modal now distinguishes between system apps and user apps.</li>
+        <li>Improved performance related to update all workflow.</li>
         </ul>
       </description>
     </release>

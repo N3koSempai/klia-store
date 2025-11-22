@@ -96,7 +96,12 @@
     "noAppsInstalledMessage": "You don't have any apps installed",
     "installAppsMessage": "Install apps from the store to see them here",
     "allUpdatesCompleted": "✓ All updates completed successfully!",
-    "updatesCompletedWithErrors": "Updates completed with some errors"
+    "updatesCompletedWithErrors": "Updates completed with some errors",
+    "systemUpdates": "{{count}} are system updates",
+    "systemAndRuntimeUpdates": "System and runtime updates",
+    "preparingSystemUpdates": "Preparing system updates ({{count}} packages)...",
+    "systemUpdatesCompleted": "✓ System updates completed successfully.",
+    "systemUpdatesAlreadyInstalled": "✓ System packages already up to date."
   },
   "categoryApps": {
     "title": "{{category}}",

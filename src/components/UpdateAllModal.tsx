@@ -20,6 +20,9 @@ interface UpdateAllModalProps {
 	onClose: () => void;
 	showTerminal: boolean;
 	onToggleTerminal: () => void;
+	systemUpdatesCount: number;
+	isUpdatingSystem: boolean;
+	systemUpdateProgress: number;
 }
 
 export const UpdateAllModal = ({
@@ -33,12 +36,25 @@ export const UpdateAllModal = ({
 	onClose,
 	showTerminal,
 	onToggleTerminal,
+	systemUpdatesCount,
+	isUpdatingSystem,
+	systemUpdateProgress,
 }: UpdateAllModalProps) => {
 	const { t } = useTranslation();
 
 	// Calculate overall progress
+	// Total items = user apps + 1 (system updates as one unit)
+	const totalItems = totalApps + (systemUpdatesCount > 0 ? 1 : 0);
 	const overallProgress =
-		totalApps > 0 ? ((currentAppIndex / totalApps) * 100) : 0;
+		totalItems > 0 ? ((currentAppIndex / totalItems) * 100) : 0;
+
+	// Use system progress if updating system, otherwise use app progress
+	const displayProgress = isUpdatingSystem ? systemUpdateProgress : currentAppProgress;
+
+	// Determine what to display for current app
+	const displayName = isUpdatingSystem
+		? t("myApps.systemAndRuntimeUpdates")
+		: (currentAppName || t("myApps.waiting"));
 
 	return (
 		<Dialog
@@ -65,7 +81,7 @@ export const UpdateAllModal = ({
 							{t("myApps.overallProgress")}
 						</Typography>
 						<Typography variant="body2" color="text.secondary">
-							{currentAppIndex} / {totalApps}
+							{currentAppIndex} / {totalItems}
 						</Typography>
 					</Box>
 					<LinearProgress
@@ -92,12 +108,12 @@ export const UpdateAllModal = ({
 							color="primary"
 							sx={{ fontWeight: "bold" }}
 						>
-							{currentAppName || t("myApps.waiting")}
+							{displayName}
 						</Typography>
 					</Box>
 					<LinearProgress
-						variant={currentAppProgress >= 0 ? "determinate" : "indeterminate"}
-						value={currentAppProgress}
+						variant={displayProgress >= 0 ? "determinate" : "indeterminate"}
+						value={displayProgress}
 						sx={{ height: 8, borderRadius: 1 }}
 					/>
 				</Box>
