@@ -37,12 +37,14 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="1.2.1" date="2025-01-18">
+    <release version="1.2.2" date="2025-01-22">
       <description>
-        <p>New features and improvements:</p>
+        <p>Bug fixes and performance improvements:</p>
         <ul>
-        <li>Update all modal now distinguishes between system apps and user apps.</li>
-        <li>Improved performance related to update all workflow.</li>
+        <li>Fixed progress bars not updating correctly during app updates.</li>
+        <li>Resolved issue where progress would jump from 0% to 100% unexpectedly.</li>
+        <li>Improved reliability of update operations with better error handling.</li>
+        <li>Enhanced real-time feedback during installation and update processes.</li>
         </ul>
       </description>
     </release>

@@ -9,12 +9,14 @@ import {
 	Typography,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
 import { UpdateAllModal } from "../../components/UpdateAllModal";
+import { useUninstallApp } from "../../hooks/useUninstallApp";
+import { useUpdateAll } from "../../hooks/useUpdateAll";
+import { useUpdateApp } from "../../hooks/useUpdateApp";
 import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
@@ -102,30 +104,41 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	const [selectedAppForNotes, setSelectedAppForNotes] = useState<string | null>(
 		null,
 	);
-	const [updatingApp, setUpdatingApp] = useState<string | null>(null);
-	const [updateOutput, setUpdateOutput] = useState<string[]>([]);
-	const [isUpdating, setIsUpdating] = useState(false);
-	const [uninstallingApp, setUninstallingApp] = useState<string | null>(null);
-	const [uninstallOutput, setUninstallOutput] = useState<string[]>([]);
-	const [isUninstalling, setIsUninstalling] = useState(false);
-
-	// Update All states
-	const [isUpdatingAll, setIsUpdatingAll] = useState(false);
-	const [updateAllModalOpen, setUpdateAllModalOpen] = useState(false);
-	const [updateAllProgress, setUpdateAllProgress] = useState({
-		totalApps: 0,
-		currentAppIndex: 0,
-		currentAppName: "",
-		currentAppProgress: 0,
-	});
-	const [updateAllOutput, setUpdateAllOutput] = useState<string[]>([]);
-	const [showUpdateAllTerminal, setShowUpdateAllTerminal] = useState(false);
-	const [systemUpdatesCount, setSystemUpdatesCount] = useState(0);
-	const [isUpdatingSystem, setIsUpdatingSystem] = useState(false);
-	const [systemUpdateProgress, setSystemUpdateProgress] = useState(0);
 
 	// Fixed card height for consistent rendering
 	const CARD_HEIGHT = 300;
+
+	// Update All modal state
+	const [updateAllModalOpen, setUpdateAllModalOpen] = useState(false);
+	const [showUpdateAllTerminal, setShowUpdateAllTerminal] = useState(false);
+
+	// Use custom hooks for operations
+	const {
+		updateApp,
+		updatingApp,
+		isUpdating,
+		updateOutput,
+		clearUpdate,
+	} = useUpdateApp();
+
+	const {
+		uninstallApp,
+		uninstallingApp,
+		isUninstalling,
+		uninstallOutput,
+		clearUninstall,
+	} = useUninstallApp();
+
+	const {
+		updateAll,
+		isUpdatingAll,
+		updateAllProgress,
+		updateAllOutput,
+		systemUpdatesCount,
+		isUpdatingSystem,
+		systemUpdateProgress,
+		clearUpdateAll,
+	} = useUpdateAll();
 
 	const reloadInstalledApps = useCallback(async () => {
 		try {
@@ -158,114 +171,6 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		}
 	}, [setAvailableUpdates]);
 
-	// Listen to update and uninstall events
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Event listeners should not re-register on every state change
-	useEffect(() => {
-		const unlistenOutput = listen<string>("install-output", (event) => {
-			const output = event.payload;
-
-			// Check which operation is active and only update that output
-			if (isUpdatingAll) {
-				setUpdateAllOutput((prev) => [...prev, output]);
-
-				// Parse flatpak progress for individual app progress
-				// Format: "Actualizando X/Y…" or "Actualizando X/Y… ████ XX%"
-				const progressMatch = output.match(/Actualizando\s+(\d+)\/(\d+)/);
-				if (progressMatch) {
-					const currentPart = Number.parseInt(progressMatch[1], 10);
-					const totalParts = Number.parseInt(progressMatch[2], 10);
-
-					// Check if there's a percentage
-					const percentMatch = output.match(/(\d+)%/);
-					let progress = 0;
-
-					if (percentMatch) {
-						const partProgress = Number.parseInt(percentMatch[1], 10);
-						// Calculate overall progress: (completed parts + current part progress) / total parts
-						progress = ((currentPart - 1) * 100 + partProgress) / totalParts;
-					} else {
-						// No percentage, just use completed parts
-						progress = ((currentPart - 1) / totalParts) * 100;
-					}
-
-					// If updating system, update system progress, otherwise update app progress
-					if (isUpdatingSystem) {
-						setSystemUpdateProgress(Math.min(100, Math.round(progress)));
-					} else {
-						setUpdateAllProgress((prev) => ({
-							...prev,
-							currentAppProgress: Math.min(100, Math.round(progress)),
-						}));
-					}
-				}
-			} else if (updatingApp && updatingApp !== "system") {
-				setUpdateOutput((prev) => [...prev, output]);
-			} else if (uninstallingApp) {
-				setUninstallOutput((prev) => [...prev, output]);
-			}
-		});
-
-		const unlistenError = listen<string>("install-error", (event) => {
-			if (isUpdatingAll) {
-				setUpdateAllOutput((prev) => [...prev, `Error: ${event.payload}`]);
-			} else if (updatingApp) {
-				setUpdateOutput((prev) => [...prev, `Error: ${event.payload}`]);
-			} else if (uninstallingApp) {
-				setUninstallOutput((prev) => [...prev, `Error: ${event.payload}`]);
-			}
-		});
-
-		const unlistenCompleted = listen<number>(
-			"install-completed",
-			async (event) => {
-				if (isUpdatingAll) {
-					// When updating all, individual app completion is handled by handleUpdateAll
-					setIsUpdating(false);
-				} else if (updatingApp) {
-					setIsUpdating(false);
-					if (event.payload === 0) {
-						setUpdateOutput((prev) => [
-							...prev,
-							"",
-							t("myApps.updateCompletedSuccess"),
-							t("myApps.reloadingUpdateList"),
-						]);
-						// Reload available updates after successful update
-						await reloadAvailableUpdates();
-						setUpdateOutput((prev) => [...prev, t("myApps.listUpdated")]);
-					} else {
-						setUpdateOutput((prev) => [
-							...prev,
-							"",
-							t("myApps.updateFailed", { code: event.payload }),
-						]);
-					}
-				} else if (uninstallingApp) {
-					setIsUninstalling(false);
-					if (event.payload === 0) {
-						setUninstallOutput((prev) => [
-							...prev,
-							"",
-							t("myApps.uninstallCompletedSuccess"),
-						]);
-					} else {
-						setUninstallOutput((prev) => [
-							...prev,
-							"",
-							t("myApps.uninstallFailed", { code: event.payload }),
-						]);
-					}
-				}
-			},
-		);
-
-		return () => {
-			unlistenOutput.then((fn) => fn());
-			unlistenError.then((fn) => fn());
-			unlistenCompleted.then((fn) => fn());
-		};
-	}, [updatingApp, uninstallingApp, isUpdatingAll, reloadAvailableUpdates, t]);
-
 	const handleCloseModal = useCallback(() => {
 		setSelectedAppForNotes(null);
 	}, []);
@@ -276,55 +181,34 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 
 	const handleUpdate = useCallback(
 		async (appId: string) => {
-			setUpdatingApp(appId);
-			setIsUpdating(true);
-			setUpdateOutput([t("myApps.preparingUpdate", { appId }), ""]);
+			const app = installedApps.find((a) => a.appId === appId);
+			const success = await updateApp(appId, app?.name);
 
-			try {
-				await invoke("update_flatpak", { appId });
-			} catch (error) {
-				setIsUpdating(false);
-				setUpdateOutput((prev) => [
-					...prev,
-					"",
-					t("myApps.errorInvokingCommand", { error }),
-				]);
+			if (success) {
+				// Reload available updates after successful update
+				await reloadAvailableUpdates();
 			}
 		},
-		[t],
+		[updateApp, installedApps, reloadAvailableUpdates],
 	);
 
 	const handleCloseUpdateDialog = useCallback(() => {
-		setUpdatingApp(null);
-		setUpdateOutput([]);
-	}, []);
+		clearUpdate();
+	}, [clearUpdate]);
 
 	const handleUninstall = useCallback(
 		async (appId: string) => {
-			setUninstallingApp(appId);
-			setIsUninstalling(true);
-			setUninstallOutput([t("myApps.preparingUninstall", { appId }), ""]);
-
-			try {
-				await invoke("uninstall_flatpak", { appId });
-			} catch (error) {
-				setIsUninstalling(false);
-				setUninstallOutput((prev) => [
-					...prev,
-					"",
-					t("myApps.errorInvokingCommand", { error }),
-				]);
-			}
+			const app = installedApps.find((a) => a.appId === appId);
+			await uninstallApp(appId, app?.name);
 		},
-		[t],
+		[uninstallApp, installedApps],
 	);
 
 	const handleCloseUninstallDialog = useCallback(async () => {
-		setUninstallingApp(null);
-		setUninstallOutput([]);
+		clearUninstall();
 		// Reload installed apps list after uninstall
 		await reloadInstalledApps();
-	}, [reloadInstalledApps]);
+	}, [clearUninstall, reloadInstalledApps]);
 
 	const handleUpdateAll = useCallback(async () => {
 		// Get all apps that need updates
@@ -333,195 +217,21 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 
 		if (appsToUpdate.length === 0 && initialSystemUpdates === 0) return;
 
+		// Open modal
 		setUpdateAllModalOpen(true);
-		setIsUpdatingAll(true);
-		setUpdateAllOutput([]);
-		setSystemUpdatesCount(initialSystemUpdates);
-		setIsUpdatingSystem(false);
-		setUpdateAllProgress({
-			totalApps: appsToUpdate.length,
-			currentAppIndex: 0,
-			currentAppName: "",
-			currentAppProgress: 0,
-		});
 
-		let errorCount = 0;
+		// Execute update all using the hook
+		await updateAll(appsToUpdate, initialSystemUpdates);
 
-		// First, update user apps
-		for (let i = 0; i < appsToUpdate.length; i++) {
-			const app = appsToUpdate[i];
-
-			// Update progress for current app
-			setUpdateAllProgress({
-				totalApps: appsToUpdate.length,
-				currentAppIndex: i,
-				currentAppName: app.name,
-				currentAppProgress: 0,
-			});
-
-			setUpdateAllOutput((prev) => [
-				...prev,
-				"",
-				`[${i + 1}/${appsToUpdate.length}] ${t("myApps.preparingUpdate", { appId: app.appId })}`,
-			]);
-
-			try {
-				// Set this app as currently updating
-				setUpdatingApp(app.appId);
-
-				// Start the update
-				await invoke("update_flatpak", { appId: app.appId });
-
-				// Wait for completion (the event listener will handle progress)
-				// This is a simple approach - in production you might want a promise-based approach
-				await new Promise((resolve) => {
-					const checkCompletion = setInterval(() => {
-						if (!isUpdating) {
-							clearInterval(checkCompletion);
-							resolve(undefined);
-						}
-					}, 100);
-				});
-
-				setUpdateAllOutput((prev) => [
-					...prev,
-					t("myApps.updateCompletedSuccess"),
-				]);
-			} catch (error) {
-				errorCount++;
-				setUpdateAllOutput((prev) => [
-					...prev,
-					t("myApps.errorInvokingCommand", { error }),
-				]);
-			} finally {
-				setUpdatingApp(null);
-			}
-
-			// Update progress - keep last app info until system updates start
-			setUpdateAllProgress({
-				totalApps: appsToUpdate.length,
-				currentAppIndex: i + 1,
-				currentAppName: app.name,
-				currentAppProgress: 100,
-			});
-		}
-
-		// Now update system packages if there were any initially
-		if (initialSystemUpdates > 0) {
-			let currentSystemUpdates = initialSystemUpdates;
-
-			// Only reload updates if we updated user apps (they might have updated some runtimes)
-			if (appsToUpdate.length > 0) {
-				const updates = await checkAvailableUpdates();
-				const currentUserAppUpdates = installedApps.filter((app) =>
-					updates.some((u) => u.appId === app.appId),
-				).length;
-				currentSystemUpdates = updates.length - currentUserAppUpdates;
-
-				// Update the system updates count with the current value
-				setSystemUpdatesCount(currentSystemUpdates);
-			}
-
-			if (currentSystemUpdates > 0) {
-				// Set system updating flag BEFORE clearing app name
-				setIsUpdatingSystem(true);
-				setSystemUpdateProgress(0);
-				setUpdateAllOutput((prev) => [
-					...prev,
-					"",
-					t("myApps.preparingSystemUpdates", { count: currentSystemUpdates }),
-				]);
-
-				try {
-					// Set as system updating
-					setUpdatingApp("system");
-
-					// Start system update
-					await invoke("update_system_flatpaks");
-
-					// Wait for completion
-					await new Promise((resolve) => {
-						const checkCompletion = setInterval(() => {
-							if (!isUpdating) {
-								clearInterval(checkCompletion);
-								resolve(undefined);
-							}
-						}, 100);
-					});
-
-					setUpdateAllOutput((prev) => [
-						...prev,
-						t("myApps.systemUpdatesCompleted"),
-					]);
-					setSystemUpdateProgress(100);
-				} catch (error) {
-					errorCount++;
-					setUpdateAllOutput((prev) => [
-						...prev,
-						t("myApps.errorInvokingCommand", { error }),
-					]);
-				} finally {
-					setUpdatingApp(null);
-				}
-
-				// Mark system updates as complete by incrementing currentAppIndex
-				setUpdateAllProgress((prev) => ({
-					...prev,
-					currentAppIndex: prev.totalApps + 1,
-				}));
-				setIsUpdatingSystem(false);
-			} else {
-				// All system updates were already installed during user app updates
-				setIsUpdatingSystem(true);
-				setSystemUpdateProgress(100);
-				setUpdateAllOutput((prev) => [
-					...prev,
-					"",
-					t("myApps.systemUpdatesAlreadyInstalled"),
-				]);
-				// Mark system updates as complete
-				setUpdateAllProgress((prev) => ({
-					...prev,
-					currentAppIndex: prev.totalApps + 1,
-				}));
-				setIsUpdatingSystem(false);
-			}
-		}
-
-		// All updates completed
-		setIsUpdatingAll(false);
-		if (errorCount === 0) {
-			setUpdateAllOutput((prev) => [
-				...prev,
-				"",
-				t("myApps.allUpdatesCompleted"),
-			]);
-		} else {
-			setUpdateAllOutput((prev) => [
-				...prev,
-				"",
-				t("myApps.updatesCompletedWithErrors"),
-			]);
-		}
-
-		// Reload updates list
+		// Reload updates list after completion
 		await reloadAvailableUpdates();
-	}, [
-		installedApps,
-		hasUpdate,
-		updateCount,
-		isUpdating,
-		reloadAvailableUpdates,
-		t,
-	]);
+	}, [installedApps, hasUpdate, updateCount, updateAll, reloadAvailableUpdates]);
 
-	const handleCloseUpdateAllModal = useCallback(async () => {
+	const handleCloseUpdateAllModal = useCallback(() => {
 		setUpdateAllModalOpen(false);
-		setUpdateAllOutput([]);
 		setShowUpdateAllTerminal(false);
-		// Reload available updates after closing modal
-		await reloadAvailableUpdates();
-	}, [reloadAvailableUpdates]);
+		clearUpdateAll();
+	}, [clearUpdateAll]);
 
 	const handleToggleUpdateAllTerminal = useCallback(() => {
 		setShowUpdateAllTerminal((prev) => !prev);
@@ -666,7 +376,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 
 				{/* Update Dialog */}
 				<Dialog
-					open={updatingApp !== null && !isUpdatingAll}
+					open={updatingApp !== null}
 					onClose={!isUpdating ? handleCloseUpdateDialog : undefined}
 					maxWidth="md"
 					fullWidth
