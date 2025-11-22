@@ -666,7 +666,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 
 				{/* Update Dialog */}
 				<Dialog
-					open={updatingApp !== null}
+					open={updatingApp !== null && !isUpdatingAll}
 					onClose={!isUpdating ? handleCloseUpdateDialog : undefined}
 					maxWidth="md"
 					fullWidth
