@@ -52,11 +52,12 @@ const InstalledAppCardComponent = ({
 				border: "1px solid",
 				borderColor: "rgba(255, 255, 255, 0.1)",
 				transition: "all 0.3s ease-in-out",
-				overflow: "visible",
+				willChange: "transform, box-shadow, border-color",
 				"&:hover": {
 					transform: "translateY(-5px)",
 					borderColor: "primary.main",
 					boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
+					zIndex: 1,
 				},
 			}}
 		>

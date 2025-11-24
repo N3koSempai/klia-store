@@ -1,5 +1,8 @@
 import { createTheme } from "@mui/material/styles";
 
+// Import IBM Plex Sans Variable Font
+import IBMPlexSansVariable from "../assets/fonts/IBMPlexSans-VariableFont_wdth,wght.ttf";
+
 export const theme = createTheme({
 	palette: {
 		mode: "dark",
@@ -24,13 +27,25 @@ export const theme = createTheme({
 			main: "#58A6FF",
 		},
 	},
+	typography: {
+		fontFamily: '"IBM Plex Sans", "Roboto", "Helvetica", "Arial", sans-serif',
+	},
 	components: {
 		MuiCssBaseline: {
-			styleOverrides: {
-				body: {
-					backgroundColor: "#0D1117",
-				},
-			},
+			styleOverrides: `
+				@font-face {
+					font-family: 'IBM Plex Sans';
+					font-style: normal;
+					font-display: swap;
+					font-weight: 100 700;
+					font-stretch: 75% 125%;
+					src: url(${IBMPlexSansVariable}) format('truetype-variations');
+				}
+
+				body {
+					backgroundColor: #0D1117;
+				}
+			`,
 		},
 	},
 });
