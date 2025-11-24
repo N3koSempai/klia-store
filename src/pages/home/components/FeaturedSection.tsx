@@ -1,9 +1,13 @@
 import {
 	Box,
 	Card,
+	CardActionArea,
 	CardContent,
+	Chip,
+	Grid,
 	Skeleton,
 	Typography,
+	alpha,
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,37 +47,27 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 
 	if (isLoading) {
 		return (
-			<Box sx={{ mb: 4 }}>
-				<Typography variant="h5" gutterBottom>
-					Spotlight
-				</Typography>
+			<Box sx={{ mb: 6 }}>
 				<Card
 					sx={{
-						height: 300,
-						borderRadius: 2,
-						display: "flex",
+						borderRadius: 4,
 						overflow: "hidden",
+						border: "1px solid rgba(255,255,255,0.1)",
 					}}
 				>
-					<Skeleton
-						variant="rectangular"
-						width={200}
-						height={300}
-						sx={{ flexShrink: 0 }}
-					/>
-					<CardContent
-						sx={{
-							flex: 1,
-							display: "flex",
-							flexDirection: "column",
-							justifyContent: "center",
-						}}
-					>
-						<Skeleton variant="text" width="30%" height={24} sx={{ mb: 1 }} />
-						<Skeleton variant="text" width="70%" height={48} sx={{ mb: 2 }} />
-						<Skeleton variant="text" width="90%" />
-						<Skeleton variant="text" width="85%" />
-					</CardContent>
+					<Box sx={{ p: 5 }}>
+						<Grid container spacing={4} alignItems="center">
+							<Grid item>
+								<Skeleton variant="rectangular" width={140} height={140} sx={{ borderRadius: 3 }} />
+							</Grid>
+							<Grid item xs>
+								<Skeleton variant="text" width="30%" height={24} sx={{ mb: 2 }} />
+								<Skeleton variant="text" width="70%" height={48} sx={{ mb: 2 }} />
+								<Skeleton variant="text" width="90%" />
+								<Skeleton variant="text" width="85%" />
+							</Grid>
+						</Grid>
+					</Box>
 				</Card>
 			</Box>
 		);
@@ -81,15 +75,13 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 
 	if (error) {
 		return (
-			<Box sx={{ mb: 4 }}>
-				<Typography variant="h5" gutterBottom>
-					Spotlight
-				</Typography>
+			<Box sx={{ mb: 6 }}>
 				<Box
 					sx={{
 						height: 300,
-						bgcolor: "grey.200",
-						borderRadius: 2,
+						bgcolor: "background.paper",
+						borderRadius: 4,
+						border: "1px solid rgba(255,255,255,0.1)",
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "center",
@@ -106,77 +98,90 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const currentSlide = slides[activeSlide];
 
 	return (
-		<Box sx={{ mb: 4 }}>
-			<Typography variant="h5" gutterBottom>
-				Spotlight
-			</Typography>
-
-			{/* Carousel Card */}
+		<Box sx={{ mb: 6 }}>
+			{/* Hero Card */}
 			{currentSlide && (
 				<Card
-					onClick={() => {
-						const appStream = currentSlide.type === 'backend'
-							? currentSlide.data.appStream
-							: currentSlide.data.appStream;
-						if (appStream) onAppSelect(appStream);
-					}}
 					sx={{
-						height: 300,
-						borderRadius: 2,
-						display: "flex",
-						position: "relative",
-						overflow: "hidden",
-						cursor: "pointer",
-						"&:hover": { boxShadow: 3 },
+						position: 'relative',
+						overflow: 'hidden',
+						bgcolor: "background.paper",
+						border: "1px solid rgba(255,255,255,0.1)",
+						borderRadius: 4,
+						transition: "border-color 0.3s",
+						"&:hover": {
+							borderColor: "primary.main",
+							boxShadow: "0 4px 30px rgba(0,0,0,0.4)"
+						}
 					}}
 				>
-					{/* Image section with key to force remount on slide change */}
-					<Box
-						key={currentSlide.type === 'backend' ? currentSlide.data.app_id : currentSlide.data.appId}
-						sx={{
-							width: 200,
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							p: 2,
+					<CardActionArea
+						onClick={() => {
+							const appStream = currentSlide.type === 'backend'
+								? currentSlide.data.appStream
+								: currentSlide.data.appStream;
+							if (appStream) onAppSelect(appStream);
 						}}
+						sx={{ p: 5 }}
 					>
-						<CachedImage
-							appId={currentSlide.type === 'backend' ? currentSlide.data.app_id : currentSlide.data.appId}
-							imageUrl={currentSlide.type === 'backend' ? currentSlide.data.icon : currentSlide.data.icon}
-							alt={currentSlide.type === 'backend' ? (currentSlide.data.name || currentSlide.data.app_id) : currentSlide.data.name}
-							style={{
-								width: "100%",
-								height: "100%",
-								objectFit: "contain",
-							}}
-						/>
-					</Box>
+						<Grid container spacing={4} alignItems="center">
+							{/* Image / Icon */}
+							<Grid item>
+								<Box
+									key={currentSlide.type === 'backend' ? currentSlide.data.app_id : currentSlide.data.appId}
+									sx={{
+										width: 140,
+										height: 140,
+										bgcolor: "#21262d",
+										borderRadius: 3,
+										display: 'flex',
+										alignItems: 'center',
+										justifyContent: 'center',
+										boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+										overflow: 'hidden'
+									}}
+								>
+									<CachedImage
+										appId={currentSlide.type === 'backend' ? currentSlide.data.app_id : currentSlide.data.appId}
+										imageUrl={currentSlide.type === 'backend' ? currentSlide.data.icon : currentSlide.data.icon}
+										alt={currentSlide.type === 'backend' ? (currentSlide.data.name || currentSlide.data.app_id) : currentSlide.data.name}
+										style={{
+											width: "100%",
+											height: "100%",
+											objectFit: "contain",
+										}}
+									/>
+								</Box>
+							</Grid>
 
-					<CardContent
-						sx={{
-							flex: 1,
-							display: "flex",
-							flexDirection: "column",
-							justifyContent: "center",
-						}}
-					>
-						<Typography variant="overline" color="primary" gutterBottom>
-							{currentSlide.type === 'backend' ? t("home.appOfTheDay") : "Promoted"}
-						</Typography>
-						<Typography variant="h4" component="div" gutterBottom>
-							{currentSlide.type === 'backend'
-								? (currentSlide.data.name || currentSlide.data.app_id)
-								: currentSlide.data.name
-							}
-						</Typography>
-						<Typography variant="body1" color="text.secondary">
-							{currentSlide.type === 'backend'
-								? currentSlide.data.appStream?.summary
-								: currentSlide.data.summary
-							}
-						</Typography>
-					</CardContent>
+							{/* Text */}
+							<Grid item xs>
+								<Chip
+									label={currentSlide.type === 'backend' ? t("home.appOfTheDay").toUpperCase() : "PROMOTED"}
+									sx={{
+										bgcolor: alpha("#4A86CF", 0.15),
+										color: "primary.main",
+										fontWeight: 800,
+										fontSize: '0.7rem',
+										mb: 2,
+										borderRadius: 1
+									}}
+								/>
+								<Typography variant="h3" sx={{ fontFamily: 'IBM Plex Sans', fontWeight: 700, mb: 1, letterSpacing: '-0.5px' }}>
+									{currentSlide.type === 'backend'
+										? (currentSlide.data.name || currentSlide.data.app_id)
+										: currentSlide.data.name
+									}
+								</Typography>
+								<Typography variant="h6" sx={{ color: "text.secondary", fontWeight: 400, lineHeight: 1.5, maxWidth: '80%' }}>
+									{currentSlide.type === 'backend'
+										? currentSlide.data.appStream?.summary
+										: currentSlide.data.summary
+									}
+								</Typography>
+							</Grid>
+						</Grid>
+					</CardActionArea>
 				</Card>
 			)}
 

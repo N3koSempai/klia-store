@@ -1,10 +1,10 @@
 import {
 	Box,
-	Card,
-	CardContent,
 	Grid,
+	Paper,
 	Skeleton,
 	Typography,
+	alpha,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
@@ -21,8 +21,8 @@ export const CategoriesSection = ({
 	const { data: categories, isLoading, error } = useCategories();
 
 	return (
-		<Box sx={{ mb: 4 }}>
-			<Typography variant="h5" gutterBottom>
+		<Box>
+			<Typography variant="h5" sx={{ mb: 3, fontFamily: 'IBM Plex Sans', fontWeight: 600 }}>
 				{t("home.categories")}
 			</Typography>
 
@@ -35,43 +35,54 @@ export const CategoriesSection = ({
 			<Grid container spacing={2}>
 				{isLoading
 					? Array.from(new Array(10)).map((_) => (
-							<Grid size={{ xs: 12, sm: 6, md: 4, lg: 2.4 }} key={uuidv4()}>
-								<Card sx={{ height: "100%" }}>
-									<Skeleton variant="rectangular" height={120} />
-									<CardContent>
-										<Skeleton variant="text" />
-									</CardContent>
-								</Card>
+							<Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={uuidv4()}>
+								<Paper
+									sx={{
+										p: 2,
+										bgcolor: "background.paper",
+										border: "1px solid rgba(255, 255, 255, 0.1)",
+										borderRadius: 2,
+									}}
+								>
+									<Skeleton variant="text" width="100%" />
+								</Paper>
 							</Grid>
 						))
 					: categories?.map((category) => (
-							<Grid size={{ xs: 6, sm: 4, md: 3, lg: 2 }} key={category}>
-								<Card
+							<Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={category}>
+								<Paper
 									sx={{
-										cursor: "pointer",
-										"&:hover": {
-											boxShadow: 3,
-											transform: "translateY(-2px)",
-											transition: "all 0.2s",
-										},
-										height: "100%",
+										p: 2,
+										bgcolor: "background.paper",
+										border: "1px solid rgba(255, 255, 255, 0.1)",
+										borderRadius: 2,
 										display: "flex",
 										alignItems: "center",
-										justifyContent: "center",
-										p: 2,
-										minHeight: 80,
+										gap: 2,
+										cursor: "pointer",
+										transition: "all 0.2s",
+										position: "relative",
+										overflow: "hidden",
+										"&:hover": {
+											borderColor: "secondary.main",
+											bgcolor: alpha("#F6D32D", 0.05),
+											transform: "translateX(4px)",
+											boxShadow: "0 0 15px rgba(246, 211, 45, 0.1)"
+										},
 									}}
 									onClick={() => onCategorySelect(category)}
 								>
 									<Typography
 										variant="body2"
-										textAlign="center"
-										textTransform="capitalize"
-										sx={{ width: "100%", fontWeight: 500 }}
+										sx={{
+											fontWeight: 600,
+											fontFamily: 'IBM Plex Sans',
+											color: "text.primary"
+										}}
 									>
 										{category}
 									</Typography>
-								</Card>
+								</Paper>
 							</Grid>
 						))}
 			</Grid>

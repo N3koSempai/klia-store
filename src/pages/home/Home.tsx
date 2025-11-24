@@ -3,13 +3,17 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import {
 	Badge,
 	Box,
-	Button,
 	Card,
 	CardContent,
+	Chip,
 	Container,
 	IconButton,
+	InputBase,
+	Paper,
 	Skeleton,
+	Stack,
 	Typography,
+	alpha,
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -57,58 +61,60 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 	const showSearchResults = searchQuery.trim().length > 0;
 
 	return (
-		<Container maxWidth="xl">
-			<Box sx={{ py: 4, minHeight: "100vh" }}>
-				{/* Search Bar with My Apps Button - Always visible */}
-				<Box
-					sx={{
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-						gap: 2,
-						mb: 4,
-						mt: 2,
-					}}
-				>
-					<Badge
-						badgeContent={updateCount}
-						color="error"
-						invisible={updateCount === 0}
+		<Box
+			sx={{
+				minHeight: "100vh",
+				bgcolor: "background.default",
+				color: "text.primary",
+				pb: 8,
+			}}
+		>
+			<Container maxWidth="xl" sx={{ pt: 4 }}>
+				{/* Search Bar with My Apps Button */}
+				<Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mb: 6 }}>
+					{/* Botón My Apps */}
+					<Paper
+						component="button"
+						onClick={onMyAppsClick}
+						sx={{
+							px: 3,
+							height: 48,
+							bgcolor: "background.paper",
+							border: "1px solid rgba(255,255,255,0.1)",
+							borderRadius: 2,
+							color: "primary.main",
+							fontWeight: 600,
+							cursor: "pointer",
+							display: "flex",
+							alignItems: "center",
+							gap: 1,
+							transition: "all 0.2s",
+							"&:hover": { borderColor: "primary.main", bgcolor: alpha("#4A86CF", 0.05) }
+						}}
 					>
-						<Button
-							variant="outlined"
-							startIcon={<AppsIcon />}
-							onClick={onMyAppsClick}
-							sx={{
-								borderRadius: 3,
-								px: 3,
-								py: 1.5,
-								fontWeight: "bold",
-								borderColor: "rgba(255, 255, 255, 0.1)",
-								"&:hover": {
-									borderColor: "primary.main",
-									backgroundColor: "rgba(25, 118, 210, 0.04)",
-								},
-							}}
-						>
+						<Typography variant="button" sx={{textTransform: 'none', fontWeight: 700}}>
 							{t("home.myApps")}
-						</Button>
-					</Badge>
+						</Typography>
+						{updateCount > 0 && (
+							<Chip
+								label={updateCount}
+								size="small"
+								color="error"
+								sx={{ height: 20, fontSize: '0.75rem', fontWeight: 'bold' }}
+							/>
+						)}
+					</Paper>
+
+					{/* Barra de Búsqueda con componente integrado */}
 					<AppSearchBar onSearch={handleSearch} onLoading={setIsSearching} />
+
 					<IconButton
 						onClick={() => setAboutModalOpen(true)}
-						sx={{
-							borderRadius: 2,
-							border: "1px solid rgba(255, 255, 255, 0.1)",
-							"&:hover": {
-								borderColor: "primary.main",
-								backgroundColor: "rgba(25, 118, 210, 0.04)",
-							},
-						}}
+						sx={{ color: "text.secondary" }}
 					>
 						<InfoOutlinedIcon />
 					</IconButton>
-				</Box>
+				</Stack>
 
 				{/* Search Results Section */}
 				{showSearchResults && (
@@ -294,13 +300,13 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 						<CategoriesSection onCategorySelect={onCategorySelect} />
 					</>
 				)}
-			</Box>
 
-			{/* About Modal */}
-			<AboutModal
-				open={aboutModalOpen}
-				onClose={() => setAboutModalOpen(false)}
-			/>
-		</Container>
+				{/* About Modal */}
+				<AboutModal
+					open={aboutModalOpen}
+					onClose={() => setAboutModalOpen(false)}
+				/>
+			</Container>
+		</Box>
 	);
 };
