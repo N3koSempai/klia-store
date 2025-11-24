@@ -91,6 +91,7 @@ export const AppsOfTheDaySection = ({
 										}}
 									>
 										<Box
+											key={app.app_id}
 											sx={{
 												height: 140,
 												bgcolor: "grey.700",

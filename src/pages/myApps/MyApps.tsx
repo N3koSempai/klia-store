@@ -2,6 +2,7 @@ import { ArrowBack, Update } from "@mui/icons-material";
 import {
 	Box,
 	Button,
+	CircularProgress,
 	Container,
 	Dialog,
 	DialogContent,
@@ -100,6 +101,9 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	const setInstalledAppsInfo = useInstalledAppsStore(
 		(state) => state.setInstalledAppsInfo,
 	);
+	const isLoadingUpdates = useInstalledAppsStore(
+		(state) => state.isLoadingUpdates,
+	);
 
 	const [selectedAppForNotes, setSelectedAppForNotes] = useState<string | null>(
 		null,
@@ -111,6 +115,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	// Update All modal state
 	const [updateAllModalOpen, setUpdateAllModalOpen] = useState(false);
 	const [showUpdateAllTerminal, setShowUpdateAllTerminal] = useState(false);
+	const [isReloadingUpdates, setIsReloadingUpdates] = useState(false);
 
 	// Use custom hooks for operations
 	const {
@@ -227,11 +232,15 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 		await reloadAvailableUpdates();
 	}, [installedApps, hasUpdate, updateCount, updateAll, reloadAvailableUpdates]);
 
-	const handleCloseUpdateAllModal = useCallback(() => {
+	const handleCloseUpdateAllModal = useCallback(async () => {
 		setUpdateAllModalOpen(false);
 		setShowUpdateAllTerminal(false);
 		clearUpdateAll();
-	}, [clearUpdateAll]);
+		// Reload updates to refresh the button state
+		setIsReloadingUpdates(true);
+		await reloadAvailableUpdates();
+		setIsReloadingUpdates(false);
+	}, [clearUpdateAll, reloadAvailableUpdates]);
 
 	const handleToggleUpdateAllTerminal = useCallback(() => {
 		setShowUpdateAllTerminal((prev) => !prev);
@@ -276,7 +285,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 							: t("myApps.appsInstalled", { count: installedApps.length })}
 					</Typography>
 
-					{updateCount > 0 && (
+					{(updateCount > 0 || isLoadingUpdates) && (
 						<Box
 							sx={{
 								display: "flex",
@@ -288,13 +297,15 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 							<Button
 								variant="contained"
 								color="primary"
-								startIcon={<Update />}
+								startIcon={(isReloadingUpdates || isLoadingUpdates) ? <CircularProgress size={20} color="inherit" /> : <Update />}
 								onClick={handleUpdateAll}
-								disabled={isUpdatingAll}
+								disabled={isUpdatingAll || isReloadingUpdates || isLoadingUpdates}
 							>
-								{updateCount === 1
-									? t("myApps.updateAllCount", { count: updateCount })
-									: t("myApps.updateAllCount_plural", { count: updateCount })}
+								{(isReloadingUpdates || isLoadingUpdates)
+									? t("myApps.checkingUpdates")
+									: updateCount === 1
+										? t("myApps.updateAllCount", { count: updateCount })
+										: t("myApps.updateAllCount_plural", { count: updateCount })}
 							</Button>
 							{(() => {
 								const userAppUpdates = installedApps.filter((app) =>

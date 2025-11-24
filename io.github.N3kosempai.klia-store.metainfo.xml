@@ -37,14 +37,17 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="1.2.2" date="2025-01-22">
+    <release version="1.2.3" date="2025-01-23">
       <description>
-        <p>Bug fixes and performance improvements:</p>
+        <p>Improved update experience and home page enhancements:</p>
         <ul>
-        <li>Fixed progress bars not updating correctly during app updates.</li>
-        <li>Resolved issue where progress would jump from 0% to 100% unexpectedly.</li>
-        <li>Improved reliability of update operations with better error handling.</li>
-        <li>Enhanced real-time feedback during installation and update processes.</li>
+        <li>Update All button now refreshes automatically after completing all updates.</li>
+        <li>Added loading indicator when checking for updates to prevent confusion.</li>
+        <li>Fixed issue where the update count wouldn't refresh after closing the update dialog.</li>
+        <li>Better visual feedback with spinner while verifying available updates.</li>
+        <li>Featured section now displays as an interactive carousel with multiple highlighted apps.</li>
+        <li>Improved image loading with skeleton placeholders to prevent showing outdated images.</li>
+        <li>Renamed "Featured" section to "Spotlight" for better clarity.</li>
         </ul>
       </description>
     </release>

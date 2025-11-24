@@ -5,6 +5,7 @@ import {
 	Skeleton,
 	Typography,
 } from "@mui/material";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
 import { useAppOfTheDay } from "../../../hooks/useAppOfTheDay";
@@ -14,15 +15,37 @@ interface FeaturedSectionProps {
 	onAppSelect: (app: AppStream) => void;
 }
 
+// Promoted app card component (disabled by default)
+interface PromotedAppCardData {
+	appId: string;
+	name: string;
+	summary: string;
+	icon: string;
+	appStream: AppStream;
+}
+
+// Set to null to disable promoted app
+const PROMOTED_APP: PromotedAppCardData | null = null;
+
 export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const { t } = useTranslation();
 	const { data: appOfTheDay, isLoading, error } = useAppOfTheDay();
+
+	// Carousel state - includes backend app and optional promoted app
+	const [activeSlide, setActiveSlide] = useState(0);
+
+	// Build slides array
+	const slides = [];
+	if (appOfTheDay) slides.push({ type: 'backend' as const, data: appOfTheDay });
+	if (PROMOTED_APP) slides.push({ type: 'promoted' as const, data: PROMOTED_APP });
+
+	const totalSlides = slides.length;
 
 	if (isLoading) {
 		return (
 			<Box sx={{ mb: 4 }}>
 				<Typography variant="h5" gutterBottom>
-					{t("home.featured")}
+					Spotlight
 				</Typography>
 				<Card
 					sx={{
@@ -60,7 +83,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 		return (
 			<Box sx={{ mb: 4 }}>
 				<Typography variant="h5" gutterBottom>
-					{t("home.featured")}
+					Spotlight
 				</Typography>
 				<Box
 					sx={{
@@ -80,27 +103,36 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 		);
 	}
 
+	const currentSlide = slides[activeSlide];
+
 	return (
 		<Box sx={{ mb: 4 }}>
 			<Typography variant="h5" gutterBottom>
-				{t("home.featured")}
+				Spotlight
 			</Typography>
-			<Card
-				onClick={() =>
-					appOfTheDay?.appStream && onAppSelect(appOfTheDay.appStream)
-				}
-				sx={{
-					height: 300,
-					borderRadius: 2,
-					display: "flex",
-					position: "relative",
-					overflow: "hidden",
-					cursor: "pointer",
-					"&:hover": { boxShadow: 3 },
-				}}
-			>
-				{appOfTheDay?.icon && appOfTheDay.app_id && (
+
+			{/* Carousel Card */}
+			{currentSlide && (
+				<Card
+					onClick={() => {
+						const appStream = currentSlide.type === 'backend'
+							? currentSlide.data.appStream
+							: currentSlide.data.appStream;
+						if (appStream) onAppSelect(appStream);
+					}}
+					sx={{
+						height: 300,
+						borderRadius: 2,
+						display: "flex",
+						position: "relative",
+						overflow: "hidden",
+						cursor: "pointer",
+						"&:hover": { boxShadow: 3 },
+					}}
+				>
+					{/* Image section with key to force remount on slide change */}
 					<Box
+						key={currentSlide.type === 'backend' ? currentSlide.data.app_id : currentSlide.data.appId}
 						sx={{
 							width: 200,
 							display: "flex",
@@ -110,9 +142,9 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 						}}
 					>
 						<CachedImage
-							appId={appOfTheDay.app_id}
-							imageUrl={appOfTheDay.icon}
-							alt={appOfTheDay.name || appOfTheDay.app_id}
+							appId={currentSlide.type === 'backend' ? currentSlide.data.app_id : currentSlide.data.appId}
+							imageUrl={currentSlide.type === 'backend' ? currentSlide.data.icon : currentSlide.data.icon}
+							alt={currentSlide.type === 'backend' ? (currentSlide.data.name || currentSlide.data.app_id) : currentSlide.data.name}
 							style={{
 								width: "100%",
 								height: "100%",
@@ -120,28 +152,63 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 							}}
 						/>
 					</Box>
-				)}
-				<CardContent
+
+					<CardContent
+						sx={{
+							flex: 1,
+							display: "flex",
+							flexDirection: "column",
+							justifyContent: "center",
+						}}
+					>
+						<Typography variant="overline" color="primary" gutterBottom>
+							{currentSlide.type === 'backend' ? t("home.appOfTheDay") : "Promoted"}
+						</Typography>
+						<Typography variant="h4" component="div" gutterBottom>
+							{currentSlide.type === 'backend'
+								? (currentSlide.data.name || currentSlide.data.app_id)
+								: currentSlide.data.name
+							}
+						</Typography>
+						<Typography variant="body1" color="text.secondary">
+							{currentSlide.type === 'backend'
+								? currentSlide.data.appStream?.summary
+								: currentSlide.data.summary
+							}
+						</Typography>
+					</CardContent>
+				</Card>
+			)}
+
+			{/* Carousel dots navigation */}
+			{totalSlides > 1 && (
+				<Box
 					sx={{
-						flex: 1,
 						display: "flex",
-						flexDirection: "column",
 						justifyContent: "center",
+						gap: 1,
+						mt: 2,
 					}}
 				>
-					<Typography variant="overline" color="primary" gutterBottom>
-						{t("home.appOfTheDay")}
-					</Typography>
-					<Typography variant="h4" component="div" gutterBottom>
-						{appOfTheDay?.name || appOfTheDay?.app_id}
-					</Typography>
-					{appOfTheDay?.appStream?.summary && (
-						<Typography variant="body1" color="text.secondary">
-							{appOfTheDay.appStream.summary}
-						</Typography>
-					)}
-				</CardContent>
-			</Card>
+					{slides.map((_, index) => (
+						<Box
+							key={index}
+							onClick={() => setActiveSlide(index)}
+							sx={{
+								width: 10,
+								height: 10,
+								borderRadius: "50%",
+								bgcolor: activeSlide === index ? "primary.main" : "action.disabled",
+								cursor: "pointer",
+								transition: "background-color 0.3s",
+								"&:hover": {
+									bgcolor: activeSlide === index ? "primary.dark" : "action.hover",
+								},
+							}}
+						/>
+					))}
+				</Box>
+			)}
 		</Box>
 	);
 };

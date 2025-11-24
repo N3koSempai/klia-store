@@ -22,10 +22,13 @@ interface InstalledAppsStore {
 	availableUpdates: Record<string, UpdateAvailableInfo>;
 	// Number of available updates for badge
 	updateCount: number;
+	// Loading state for initial updates check
+	isLoadingUpdates: boolean;
 	setInstalledApp: (appId: string, isInstalled: boolean) => void;
 	setInstalledApps: (apps: Record<string, boolean>) => void;
 	setInstalledAppsInfo: (apps: InstalledAppInfo[]) => void;
 	setAvailableUpdates: (updates: UpdateAvailableInfo[]) => void;
+	setIsLoadingUpdates: (isLoading: boolean) => void;
 	isAppInstalled: (appId: string) => boolean;
 	getInstalledAppsInfo: () => InstalledAppInfo[];
 	hasUpdate: (appId: string) => boolean;
@@ -38,6 +41,7 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 	installedAppsInfo: [],
 	availableUpdates: {},
 	updateCount: 0,
+	isLoadingUpdates: true,
 
 	setInstalledApp: (appId: string, isInstalled: boolean) =>
 		set((state) => ({
@@ -72,8 +76,12 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 			return {
 				availableUpdates: updatesMap,
 				updateCount: updates.length,
+				isLoadingUpdates: false,
 			};
 		}),
+
+	setIsLoadingUpdates: (isLoading: boolean) =>
+		set({ isLoadingUpdates: isLoading }),
 
 	isAppInstalled: (appId: string) => {
 		const state = get();
