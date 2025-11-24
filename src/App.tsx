@@ -1,4 +1,6 @@
+import { Box } from "@mui/material";
 import { useState } from "react";
+import TitleBar from "./components/TitleBar";
 import { useAppInitialization } from "./hooks/useAppInitialization";
 import { useInstalledApps } from "./hooks/useInstalledApps";
 import { AppDetails } from "./pages/appDetails/AppDetails";
@@ -27,74 +29,110 @@ function App() {
 	// Show loading state while initializing
 	if (isInitializing) {
 		return (
-			<div
-				style={{
-					display: "flex",
-					justifyContent: "center",
-					alignItems: "center",
-					height: "100vh",
-				}}
-			>
-				<p>Initializing Klia Store...</p>
-			</div>
+			<>
+				<TitleBar />
+				<Box
+					sx={{
+						marginTop: "40px",
+						height: "calc(100vh - 40px)",
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						border: "1px solid rgba(255,255,255,0.05)",
+						borderTop: "none",
+					}}
+				>
+					<p>Initializing Klia Store...</p>
+				</Box>
+			</>
 		);
 	}
 
 	// Show error if initialization failed
 	if (error) {
 		return (
-			<div
-				style={{
-					display: "flex",
-					justifyContent: "center",
-					alignItems: "center",
-					height: "100vh",
-					flexDirection: "column",
-				}}
-			>
-				<p>Error initializing app:</p>
-				<p>{error}</p>
-			</div>
+			<>
+				<TitleBar />
+				<Box
+					sx={{
+						marginTop: "40px",
+						height: "calc(100vh - 40px)",
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						flexDirection: "column",
+						border: "1px solid rgba(255,255,255,0.05)",
+						borderTop: "none",
+					}}
+				>
+					<p>Error initializing app:</p>
+					<p>{error}</p>
+				</Box>
+			</>
 		);
 	}
 
 	// Show welcome screen on first launch
 	if (isFirstLaunch && showWelcome) {
-		return <Welcome onComplete={handleWelcomeComplete} />;
-	}
-
-	// Show main app
-	if (selectedApp) {
 		return (
-			<AppDetails
-				app={selectedApp}
-				onBack={() => {
-					setSelectedApp(null);
-				}}
-			/>
+			<>
+				<TitleBar />
+				<Box
+					sx={{
+						marginTop: "40px",
+						height: "calc(100vh - 40px)",
+						overflow: "auto",
+						border: "1px solid rgba(255,255,255,0.05)",
+						borderTop: "none",
+					}}
+				>
+					<Welcome onComplete={handleWelcomeComplete} />
+				</Box>
+			</>
 		);
 	}
 
-	if (selectedCategory) {
-		return (
-			<CategoryApps
-				categoryId={selectedCategory}
-				onBack={() => setSelectedCategory(null)}
-				onAppSelect={setSelectedApp}
-			/>
-		);
-	}
-
-	if (showMyApps) {
-		return <MyApps onBack={() => setShowMyApps(false)} />;
-	}
-
+	// Show main app with TitleBar
 	return (
-		<Home
-			onAppSelect={setSelectedApp}
-			onCategorySelect={setSelectedCategory}
-			onMyAppsClick={() => setShowMyApps(true)}
-		/>
+		<>
+			<TitleBar />
+			<Box
+				sx={{
+					marginTop: "40px",
+					height: "calc(100vh - 40px)",
+					overflow: "auto",
+					border: "1px solid rgba(255,255,255,0.05)",
+					borderTop: "none",
+				}}
+			>
+				{selectedApp && (
+					<AppDetails
+						app={selectedApp}
+						onBack={() => {
+							setSelectedApp(null);
+						}}
+					/>
+				)}
+
+				{selectedCategory && (
+					<CategoryApps
+						categoryId={selectedCategory}
+						onBack={() => setSelectedCategory(null)}
+						onAppSelect={setSelectedApp}
+					/>
+				)}
+
+				{showMyApps && <MyApps onBack={() => setShowMyApps(false)} />}
+
+				{!selectedApp && !selectedCategory && !showMyApps && (
+					<Home
+						onAppSelect={setSelectedApp}
+						onCategorySelect={setSelectedCategory}
+						onMyAppsClick={() => setShowMyApps(true)}
+					/>
+				)}
+			</Box>
+		</>
 	);
 }
 
