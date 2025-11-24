@@ -111,7 +111,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	);
 
 	// Fixed card height for consistent rendering
-	const CARD_HEIGHT = 300;
+	const CARD_HEIGHT = 340;
 
 	// Update All modal state
 	const [updateAllModalOpen, setUpdateAllModalOpen] = useState(false);
