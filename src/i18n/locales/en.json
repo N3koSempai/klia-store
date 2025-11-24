@@ -63,6 +63,7 @@
   },
   "myApps": {
     "title": "My Apps",
+    "subtitle": "Manage your applications and updates",
     "installed": "Installed",
     "updates": "Updates",
     "noAppsInstalled": "No apps installed yet",
