@@ -10,6 +10,20 @@ struct InstalledApp {
     name: String,
     version: String,
     summary: Option<String>,
+    developer: Option<String>,
+}
+
+// Helper function to extract developer from app_id
+// Example: org.libreoffice.LibreOffice -> libreoffice.org
+fn extract_developer(app_id: &str) -> Option<String> {
+    let parts: Vec<&str> = app_id.split('.').collect();
+    if parts.len() >= 2 {
+        // Reverse the first two parts (domain)
+        // org.libreoffice.LibreOffice -> libreoffice.org
+        Some(format!("{}.{}", parts[1], parts[0]))
+    } else {
+        None
+    }
 }
 
 #[derive(Serialize)]
@@ -364,8 +378,9 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<Vec<InstalledAp
         .filter_map(|line| {
             let parts: Vec<&str> = line.split('\t').collect();
             if parts.len() >= 3 {
+                let app_id = parts[0].trim().to_string();
                 Some(InstalledApp {
-                    app_id: parts[0].trim().to_string(),
+                    app_id: app_id.clone(),
                     name: parts[1].trim().to_string(),
                     version: parts[2].trim().to_string(),
                     summary: if parts.len() >= 4 && !parts[3].trim().is_empty() {
@@ -373,6 +388,7 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<Vec<InstalledAp
                     } else {
                         None
                     },
+                    developer: extract_developer(&app_id),
                 })
             } else {
                 None

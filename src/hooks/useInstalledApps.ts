@@ -9,6 +9,7 @@ interface InstalledAppRust {
 	name: string;
 	version: string;
 	summary?: string;
+	developer?: string;
 }
 
 export const useInstalledApps = () => {
@@ -26,6 +27,7 @@ export const useInstalledApps = () => {
 					name: app.name,
 					version: app.version,
 					summary: app.summary,
+					developer: app.developer,
 				}));
 
 				setInstalledAppsInfo(installedAppsInfo);

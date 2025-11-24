@@ -1,9 +1,10 @@
-import { Delete, Description } from "@mui/icons-material";
+import { Delete, Description, Person } from "@mui/icons-material";
 import {
 	Box,
 	Button,
 	Card,
 	CardContent,
+	Chip,
 	IconButton,
 	Typography,
 } from "@mui/material";
@@ -54,7 +55,7 @@ const InstalledAppCardComponent = ({
 					display: "flex",
 					flexDirection: "column",
 					alignItems: "center",
-					gap: 1.5,
+					gap: 1,
 					bgcolor: "background.paper",
 				}}
 			>
@@ -102,6 +103,33 @@ const InstalledAppCardComponent = ({
 				>
 					{app.name}
 				</Typography>
+
+				{/* Developer Badge */}
+				{app.developer && (
+					<Chip
+						icon={<Person sx={{ fontSize: 14 }} />}
+						label={app.developer}
+						size="small"
+						variant="outlined"
+						sx={{
+							height: 20,
+							fontSize: "0.65rem",
+							mt: -0.5,
+							width: "fit-content",
+							maxWidth: "100%",
+							"& .MuiChip-label": {
+								px: 1,
+								py: 0,
+								whiteSpace: "nowrap",
+								overflow: "visible",
+							},
+							"& .MuiChip-icon": {
+								ml: 0.5,
+								mr: -0.25,
+							},
+						}}
+					/>
+				)}
 			</Box>
 
 			<CardContent sx={{ flexGrow: 1, pt: 1, pb: 2 }}>
@@ -235,6 +263,7 @@ export const InstalledAppCard = memo(InstalledAppCardComponent, (prevProps, next
 		prevProps.app.name === nextProps.app.name &&
 		prevProps.app.version === nextProps.app.version &&
 		prevProps.app.summary === nextProps.app.summary &&
+		prevProps.app.developer === nextProps.app.developer &&
 		prevProps.hasUpdate === nextProps.hasUpdate &&
 		prevProps.isUpdating === nextProps.isUpdating &&
 		prevProps.isUninstalling === nextProps.isUninstalling &&

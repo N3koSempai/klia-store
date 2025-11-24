@@ -48,6 +48,8 @@
         <li>Featured section now displays as an interactive carousel with multiple highlighted apps.</li>
         <li>Improved image loading with skeleton placeholders to prevent showing outdated images.</li>
         <li>Renamed "Featured" section to "Spotlight" for better clarity.</li>
+        <li>Added developer badges to installed app cards for easier app identification.</li>
+        <li>Developer information is automatically extracted from app IDs without additional API calls.</li>
         </ul>
       </description>
     </release>

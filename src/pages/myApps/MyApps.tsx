@@ -28,6 +28,7 @@ interface InstalledAppRust {
 	name: string;
 	version: string;
 	summary?: string;
+	developer?: string;
 }
 
 interface MyAppsProps {
@@ -155,6 +156,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 				name: app.name,
 				version: app.version,
 				summary: app.summary,
+				developer: app.developer,
 			}));
 
 			setInstalledAppsInfo(installedAppsInfo);
