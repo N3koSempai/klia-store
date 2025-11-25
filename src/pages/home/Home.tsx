@@ -4,6 +4,7 @@ import {
 	Badge,
 	Box,
 	Card,
+	CardActionArea,
 	CardContent,
 	Chip,
 	Container,
@@ -145,6 +146,9 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 										<Box key={uuidv4()}>
 											<Card
 												sx={{
+													bgcolor: "#161B22",
+													borderRadius: "12px",
+													border: "1px solid rgba(255, 255, 255, 0.1)",
 													height: "100%",
 													display: "flex",
 													flexDirection: "column",
@@ -164,118 +168,132 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 														variant="rectangular"
 														width={64}
 														height={64}
-														sx={{ borderRadius: 2, flexShrink: 0 }}
+														sx={{ borderRadius: 2, flexShrink: 0, bgcolor: "rgba(255,255,255,0.1)" }}
 													/>
 													<Box sx={{ flexGrow: 1, minWidth: 0 }}>
-														<Skeleton variant="text" sx={{ mb: 0.5 }} />
-														<Skeleton variant="text" width="50%" />
+														<Skeleton variant="text" sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }} />
+														<Skeleton variant="text" width="50%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
 													</Box>
 												</Box>
 												<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-													<Skeleton variant="text" />
-													<Skeleton variant="text" width="90%" />
+													<Skeleton variant="text" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
+													<Skeleton variant="text" width="90%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
 												</CardContent>
 											</Card>
 										</Box>
 									))
 								: searchResults.map((app) => (
-										<Box
-											key={app.app_id}
-											sx={{ minWidth: 0, overflow: "hidden" }}
-										>
+										<Box key={app.app_id} sx={{ minWidth: 0 }}>
 											<Card
 												sx={{
-													cursor: "pointer",
-													"&:hover": { boxShadow: 6 },
+													bgcolor: "#161B22",
+													borderRadius: "12px",
+													border: "1px solid rgba(255, 255, 255, 0.1)",
 													height: "100%",
 													display: "flex",
 													flexDirection: "column",
-													transition: "box-shadow 0.3s",
+													transition: "all 0.2s ease-in-out",
 													boxSizing: "border-box",
 													minWidth: 0,
 													overflow: "hidden",
+													willChange: "transform, box-shadow, border-color",
+													"&:hover": {
+														transform: "translateY(-5px)",
+														borderColor: "#4A86CF",
+														boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+														zIndex: 1,
+													},
 												}}
-												onClick={() => handleAppClick(app)}
 											>
-												<Box
-													sx={{
-														p: 2,
-														display: "flex",
-														alignItems: "center",
-														gap: 2,
-														minHeight: 100,
-														bgcolor: "background.paper",
-													}}
+												<CardActionArea
+													onClick={() => handleAppClick(app)}
+													sx={{ height: "100%", display: "flex", flexDirection: "column" }}
 												>
 													<Box
 														sx={{
-															width: 64,
-															height: 64,
-															flexShrink: 0,
-															borderRadius: 2,
-															overflow: "hidden",
-															bgcolor: "grey.800",
+															p: 2,
 															display: "flex",
 															alignItems: "center",
-															justifyContent: "center",
+															gap: 2,
+															minHeight: 100,
+															width: "100%",
 														}}
 													>
-														{app.icon ? (
-															<CachedImage
-																appId={app.app_id}
-																imageUrl={app.icon}
-																alt={app.name}
-																variant="rounded"
-																style={{
-																	width: "100%",
-																	height: "100%",
-																	objectFit: "cover",
+														<Box
+															sx={{
+																width: 64,
+																height: 64,
+																flexShrink: 0,
+																borderRadius: 2,
+																overflow: "hidden",
+																bgcolor: "transparent",
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+															}}
+														>
+															{app.icon ? (
+																<CachedImage
+																	appId={app.app_id}
+																	imageUrl={app.icon}
+																	alt={app.name}
+																	variant="rounded"
+																	style={{
+																		width: "100%",
+																		height: "100%",
+																		objectFit: "cover",
+																	}}
+																/>
+															) : (
+																<Typography variant="caption" sx={{ color: "#8B949E" }}>
+																	{t("home.noIcon")}
+																</Typography>
+															)}
+														</Box>
+
+														<Box sx={{ flexGrow: 1, minWidth: 0 }}>
+															<Typography
+																variant="body1"
+																sx={{
+																	fontFamily: '"IBM Plex Sans", sans-serif',
+																	fontWeight: 600,
+																	color: "#C9D1D9",
+																	mb: 0.5,
 																}}
-															/>
-														) : (
+																noWrap
+															>
+																{app.name}
+															</Typography>
 															<Typography
 																variant="caption"
-																color="text.secondary"
+																sx={{
+																	fontFamily: '"Inter", sans-serif',
+																	color: "#8B949E",
+																}}
+																noWrap
 															>
-																{t("home.noIcon")}
+																{app.developer_name}
 															</Typography>
-														)}
+														</Box>
 													</Box>
 
-													<Box sx={{ flexGrow: 1, minWidth: 0 }}>
+													<CardContent sx={{ flexGrow: 1, pt: 1, width: "100%" }}>
 														<Typography
-															variant="body1"
-															fontWeight="bold"
-															noWrap
-															sx={{ mb: 0.5 }}
+															variant="body2"
+															sx={{
+																fontFamily: '"Inter", sans-serif',
+																color: "#8B949E",
+																display: "-webkit-box",
+																WebkitLineClamp: 2,
+																WebkitBoxOrient: "vertical",
+																overflow: "hidden",
+																minHeight: "2.5em",
+															}}
 														>
-															{app.name}
+															{app.summary}
 														</Typography>
-														<Typography
-															variant="caption"
-															color="text.secondary"
-															noWrap
-														>
-															{app.developer_name}
-														</Typography>
-													</Box>
-												</Box>
-
-												<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-													<Typography
-														variant="body2"
-														color="text.secondary"
-														sx={{
-															display: "-webkit-box",
-															WebkitLineClamp: 2,
-															WebkitBoxOrient: "vertical",
-															overflow: "hidden",
-															minHeight: "2.5em",
-														}}
-													>
-														{app.summary}
-													</Typography>
-												</CardContent>
+													</CardContent>
+												</CardActionArea>
 											</Card>
 										</Box>
 									))}
