@@ -76,6 +76,14 @@ export class DBCacheManager {
 				)
 			`);
 
+			// Create viewed_notifications table if not exists
+			await this.db.execute(`
+				CREATE TABLE IF NOT EXISTS viewed_notifications (
+					notification_id TEXT PRIMARY KEY,
+					viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+				)
+			`);
+
 			console.log("All cache tables verified/created");
 		} catch (error) {
 			console.error("Error ensuring tables exist:", error);
@@ -283,6 +291,39 @@ export class DBCacheManager {
 		}
 
 		await this.updateSectionDate("categories");
+	}
+
+	// Notifications
+	async getViewedNotifications(): Promise<string[]> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			const result = await this.db.select<
+				Array<{
+					notification_id: string;
+				}>
+			>("SELECT notification_id FROM viewed_notifications");
+
+			return result.map((row) => row.notification_id);
+		} catch (error) {
+			console.error("Error reading viewed notifications:", error);
+			return [];
+		}
+	}
+
+	async markNotificationAsViewed(notificationId: string): Promise<void> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			await this.db.execute(
+				"INSERT OR IGNORE INTO viewed_notifications (notification_id) VALUES ($1)",
+				[notificationId],
+			);
+		} catch (error) {
+			console.error("Error marking notification as viewed:", error);
+		}
 	}
 }
 

@@ -1,13 +1,17 @@
-import { ArrowBack, Update } from "@mui/icons-material";
+import { ArrowBack, InfoOutlined, SystemUpdateAlt } from "@mui/icons-material";
 import {
 	Box,
 	Button,
+	Chip,
 	CircularProgress,
 	Container,
 	Dialog,
 	DialogContent,
 	IconButton,
+	Stack,
 	Typography,
+	alpha,
+	useTheme,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import { memo, useCallback, useMemo, useState } from "react";
@@ -88,6 +92,7 @@ const AppCardWrapper = memo(
 
 export const MyApps = ({ onBack }: MyAppsProps) => {
 	const { t } = useTranslation();
+	const theme = useTheme();
 
 	// Access store state directly to ensure reactivity
 	const installedApps = useInstalledAppsStore(
@@ -111,7 +116,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	);
 
 	// Fixed card height for consistent rendering
-	const CARD_HEIGHT = 300;
+	const CARD_HEIGHT = 340;
 
 	// Update All modal state
 	const [updateAllModalOpen, setUpdateAllModalOpen] = useState(false);
@@ -260,71 +265,145 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 	);
 
 	return (
-		<Container maxWidth="xl">
-			<Box sx={{ py: 4, minHeight: "100vh" }}>
-				{/* Back button */}
-				<Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 2 }}>
-					<IconButton onClick={onBack}>
-						<ArrowBack />
-					</IconButton>
-					<Typography variant="h4" fontWeight="bold">
-						{t("myApps.title")}
-					</Typography>
-				</Box>
-
-				{/* Installed apps count and Update All button */}
+		<Box
+			sx={{
+				minHeight: "100vh",
+				bgcolor: "background.default",
+				pt: 4,
+				pb: 8,
+			}}
+		>
+			<Container maxWidth="xl">
+				{/* --- HEADER SECTION --- */}
 				<Box
 					sx={{
-						mb: 4,
 						display: "flex",
+						flexDirection: { xs: "column", md: "row" },
+						alignItems: { xs: "flex-start", md: "flex-start" },
 						justifyContent: "space-between",
-						alignItems: "center",
+						mb: 5,
+						gap: 3,
 					}}
 				>
-					<Typography variant="body1" color="text.secondary">
-						{installedApps.length === 1
-							? t("myApps.appInstalled", { count: installedApps.length })
-							: t("myApps.appsInstalled", { count: installedApps.length })}
-					</Typography>
-
-					{(updateCount > 0 || isLoadingUpdates) && (
-						<Box
+					{/* IZQUIERDA: Navegación y Título */}
+					<Stack direction="row" alignItems="center" spacing={2}>
+						<IconButton
+							onClick={onBack}
 							sx={{
-								display: "flex",
-								flexDirection: "column",
-								alignItems: "center",
-								gap: 0.5,
+								border: `1px solid ${theme.palette.divider}`,
+								borderRadius: 3,
+								color: "text.primary",
+								"&:hover": {
+									bgcolor: alpha(theme.palette.primary.main, 0.1),
+								},
 							}}
 						>
+							<ArrowBack />
+						</IconButton>
+
+						<Box>
+							<Stack direction="row" alignItems="center" spacing={2}>
+								<Typography
+									variant="h4"
+									component="h1"
+									sx={{ fontWeight: 700, letterSpacing: "-0.02em" }}
+								>
+									{t("myApps.title")}
+								</Typography>
+
+								{/* Contador de Apps estilo Chip */}
+								<Chip
+									label={
+										installedApps.length === 1
+											? t("myApps.appInstalled", {
+													count: installedApps.length,
+												})
+											: t("myApps.appsInstalled", {
+													count: installedApps.length,
+												})
+									}
+									size="small"
+									sx={{
+										fontWeight: 600,
+										bgcolor: alpha(theme.palette.text.secondary, 0.1),
+										color: "text.secondary",
+									}}
+								/>
+							</Stack>
+
+							{/* Subtítulo */}
+							<Typography
+								variant="body2"
+								color="text.secondary"
+								sx={{ mt: 0.5 }}
+							>
+								{t("myApps.subtitle")}
+							</Typography>
+						</Box>
+					</Stack>
+
+					{/* DERECHA: Botón de Actualizar y Texto de Sistema */}
+					{(updateCount > 0 || isLoadingUpdates) && (
+						<Stack alignItems={{ xs: "flex-start", md: "flex-end" }}>
 							<Button
 								variant="contained"
-								color="primary"
-								startIcon={(isReloadingUpdates || isLoadingUpdates) ? <CircularProgress size={20} color="inherit" /> : <Update />}
 								onClick={handleUpdateAll}
+								startIcon={
+									isReloadingUpdates || isLoadingUpdates ? (
+										<CircularProgress size={20} color="inherit" />
+									) : (
+										<SystemUpdateAlt />
+									)
+								}
 								disabled={isUpdatingAll || isReloadingUpdates || isLoadingUpdates}
+								size="large"
+								sx={{
+									px: 3,
+									py: 1,
+									borderRadius: 2,
+									textTransform: "none",
+									fontSize: "1rem",
+									fontWeight: 600,
+									boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`,
+									background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.info.main})`,
+								}}
 							>
-								{(isReloadingUpdates || isLoadingUpdates)
+								{isReloadingUpdates || isLoadingUpdates
 									? t("myApps.checkingUpdates")
 									: updateCount === 1
 										? t("myApps.updateAllCount", { count: updateCount })
 										: t("myApps.updateAllCount_plural", { count: updateCount })}
 							</Button>
+
+							{/* El texto explicativo debajo del botón */}
 							{(() => {
 								const userAppUpdates = installedApps.filter((app) =>
 									hasUpdate(app.appId),
 								).length;
 								const systemUpdates = updateCount - userAppUpdates;
 								return systemUpdates > 0 ? (
-									<Typography
-										variant="caption"
-										color="text.secondary"
-										sx={{ fontSize: "0.75rem" }}
+									<Stack
+										direction="row"
+										alignItems="center"
+										spacing={0.5}
+										sx={{ mt: 1, mr: 0.5 }}
 									>
-										{t("myApps.systemUpdates", { count: systemUpdates })}
-									</Typography>
+										<InfoOutlined
+											sx={{ fontSize: 14, color: "text.secondary" }}
+										/>
+										<Typography
+											variant="caption"
+											sx={{
+												color: "text.secondary",
+												fontWeight: 500,
+											}}
+										>
+											{t("myApps.systemUpdates", { count: systemUpdates })}
+										</Typography>
+									</Stack>
 								) : null;
 							})()}
-						</Box>
+						</Stack>
 					)}
 				</Box>
 
@@ -450,7 +529,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 					isUpdatingSystem={isUpdatingSystem}
 					systemUpdateProgress={systemUpdateProgress}
 				/>
-			</Box>
-		</Container>
+			</Container>
+		</Box>
 	);
 };

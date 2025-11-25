@@ -41,14 +41,35 @@ export const CategoryApps = ({
 
 	return (
 		<Box
-			sx={{ p: 3, maxWidth: "100%", overflow: "hidden", minHeight: "100vh" }}
+			sx={{
+				width: "100%",
+				minHeight: "100vh",
+				bgcolor: "#0D1117",
+				p: 4,
+				fontFamily: '"Inter", sans-serif',
+			}}
 		>
 			{/* Header with back button */}
-			<Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-				<IconButton onClick={onBack}>
-					<ArrowBack />
+			<Box sx={{ display: "flex", alignItems: "center", mb: 4 }}>
+				<IconButton
+					onClick={onBack}
+					sx={{
+						color: "#C9D1D9",
+						mr: 2,
+						"&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+					}}
+				>
+					<ArrowBack fontSize="large" />
 				</IconButton>
-				<Typography variant="h4" fontWeight="bold" textTransform="capitalize">
+				<Typography
+					variant="h4"
+					sx={{
+						fontFamily: '"IBM Plex Sans", sans-serif',
+						fontWeight: 700,
+						color: "#C9D1D9",
+						textTransform: "capitalize",
+					}}
+				>
 					{categoryId.replace(/([A-Z])/g, " $1").trim()}
 				</Typography>
 			</Box>
@@ -79,6 +100,9 @@ export const CategoryApps = ({
 							<Box key={uuidv4()}>
 								<Card
 									sx={{
+										bgcolor: "#161B22",
+										borderRadius: "12px",
+										border: "1px solid rgba(255, 255, 255, 0.1)",
 										height: "100%",
 										display: "flex",
 										flexDirection: "column",
@@ -99,117 +123,136 @@ export const CategoryApps = ({
 											variant="rectangular"
 											width={64}
 											height={64}
-											sx={{ borderRadius: 2, flexShrink: 0 }}
+											sx={{ borderRadius: 2, flexShrink: 0, bgcolor: "rgba(255,255,255,0.1)" }}
 										/>
 										<Box sx={{ flexGrow: 1, minWidth: 0 }}>
-											<Skeleton variant="text" sx={{ mb: 0.5 }} />
-											<Skeleton variant="text" width="50%" />
+											<Skeleton variant="text" sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }} />
+											<Skeleton variant="text" width="50%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
 										</Box>
 									</Box>
 									{/* Skeleton for summary */}
 									<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-										<Skeleton variant="text" />
-										<Skeleton variant="text" width="90%" />
+										<Skeleton variant="text" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
+										<Skeleton variant="text" width="90%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
 									</CardContent>
 								</Card>
 							</Box>
 						))
 					: data?.hits.map((app) => (
-							<Box key={app.app_id} sx={{ minWidth: 0, overflow: "hidden" }}>
+							<Box key={app.app_id} sx={{ minWidth: 0 }}>
 								<Card
 									sx={{
-										cursor: "pointer",
-										"&:hover": { boxShadow: 6 },
+										bgcolor: "#161B22",
+										borderRadius: "12px",
+										border: "1px solid rgba(255, 255, 255, 0.1)",
 										height: "100%",
 										display: "flex",
 										flexDirection: "column",
-										transition: "box-shadow 0.3s",
+										transition: "all 0.3s ease-in-out",
 										boxSizing: "border-box",
 										minWidth: 0,
 										overflow: "hidden",
+										cursor: "pointer",
+										willChange: "transform, box-shadow, border-color",
+										"&:hover": {
+											transform: "translateY(-5px)",
+											borderColor: "#4A86CF",
+											boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
+											zIndex: 1,
+										},
 									}}
 									onClick={() => handleAppClick(app)}
 								>
-									{/* App icon and name section - wider than tall */}
-									<Box
-										sx={{
-											p: 2,
-											display: "flex",
-											alignItems: "center",
-											gap: 2,
-											minHeight: 100,
-											bgcolor: "background.paper",
-										}}
-									>
-										{/* Icon */}
+									<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+										{/* App icon and name section - wider than tall */}
 										<Box
 											sx={{
-												width: 64,
-												height: 64,
-												flexShrink: 0,
-												borderRadius: 2,
-												overflow: "hidden",
-												bgcolor: "grey.800",
+												p: 2,
 												display: "flex",
 												alignItems: "center",
-												justifyContent: "center",
+												gap: 2,
+												minHeight: 100,
+												width: "100%",
 											}}
 										>
-											{app.icon ? (
-												<CachedImage
-													appId={app.app_id}
-													imageUrl={app.icon}
-													alt={app.name}
-													variant="rounded"
-													style={{
-														width: "100%",
-														height: "100%",
-														objectFit: "cover",
+											{/* Icon */}
+											<Box
+												sx={{
+													width: 64,
+													height: 64,
+													flexShrink: 0,
+													borderRadius: 2,
+													overflow: "hidden",
+													bgcolor: "transparent",
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+												}}
+											>
+												{app.icon ? (
+													<CachedImage
+														appId={app.app_id}
+														imageUrl={app.icon}
+														alt={app.name}
+														variant="rounded"
+														style={{
+															width: "100%",
+															height: "100%",
+															objectFit: "cover",
+														}}
+													/>
+												) : (
+													<Typography variant="caption" sx={{ color: "#8B949E" }}>
+														{t("home.noIcon")}
+													</Typography>
+												)}
+											</Box>
+
+											{/* Name and developer */}
+											<Box sx={{ flexGrow: 1, minWidth: 0 }}>
+												<Typography
+													variant="body1"
+													sx={{
+														fontFamily: '"IBM Plex Sans", sans-serif',
+														fontWeight: 600,
+														color: "#C9D1D9",
+														mb: 0.5,
 													}}
-												/>
-											) : (
-												<Typography variant="caption" color="text.secondary">
-													{t("home.noIcon")}
+													noWrap
+												>
+													{app.name}
 												</Typography>
-											)}
+												<Typography
+													variant="caption"
+													sx={{
+														fontFamily: '"Inter", sans-serif',
+														color: "#8B949E",
+													}}
+													noWrap
+												>
+													{app.developer_name}
+												</Typography>
+											</Box>
 										</Box>
 
-										{/* Name and developer */}
-										<Box sx={{ flexGrow: 1, minWidth: 0 }}>
+										{/* Summary section */}
+										<CardContent sx={{ flexGrow: 1, pt: 1, width: "100%" }}>
 											<Typography
-												variant="body1"
-												fontWeight="bold"
-												noWrap
-												sx={{ mb: 0.5 }}
+												variant="body2"
+												sx={{
+													fontFamily: '"Inter", sans-serif',
+													color: "#8B949E",
+													display: "-webkit-box",
+													WebkitLineClamp: 2,
+													WebkitBoxOrient: "vertical",
+													overflow: "hidden",
+													minHeight: "2.5em",
+												}}
 											>
-												{app.name}
+												{app.summary}
 											</Typography>
-											<Typography
-												variant="caption"
-												color="text.secondary"
-												noWrap
-											>
-												{app.developer_name}
-											</Typography>
-										</Box>
+										</CardContent>
 									</Box>
-
-									{/* Summary section */}
-									<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-										<Typography
-											variant="body2"
-											color="text.secondary"
-											sx={{
-												display: "-webkit-box",
-												WebkitLineClamp: 2,
-												WebkitBoxOrient: "vertical",
-												overflow: "hidden",
-												minHeight: "2.5em",
-											}}
-										>
-											{app.summary}
-										</Typography>
-									</CardContent>
 								</Card>
 							</Box>
 						))}

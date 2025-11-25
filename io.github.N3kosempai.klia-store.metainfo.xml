@@ -37,6 +37,23 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.0.0" date="2025-11-24">
+      <description>
+        <p>🎉 Major redesign! Experience Klia Store like never before with a stunning visual overhaul and powerful new features:</p>
+        <ul>
+        <li>✨ Complete UI redesign with modern, sleek interface and smooth animations</li>
+        <li>🎨 Beautiful card-based layouts with enhanced visual hierarchy</li>
+        <li>🔍 Lightning-fast search with instant results and improved relevance</li>
+        <li>🌟 Redesigned home page featuring spotlight apps and curated collections</li>
+        <li>📱 Smart notification system to keep you updated on the latest news</li>
+        <li>🎯 Enhanced app details with richer information and better presentation</li>
+        <li>🚀 Improved performance and faster app loading times</li>
+        <li>🆕 Fresh new logo reflecting our modern identity</li>
+        <li>💬 Join our new Telegram community for support and updates</li>
+        <li>🔧 Numerous bug fixes and stability improvements</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2.3" date="2025-01-23">
       <description>
         <p>Improved update experience and home page enhancements:</p>

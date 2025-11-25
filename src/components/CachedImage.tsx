@@ -133,25 +133,30 @@ export const CachedImage = ({
 	// Show skeleton while fetching path OR while image is loading in browser
 	if (isLoading || !imageLoaded) {
 		return (
-			<>
-				<Skeleton
-					variant={variant}
-					sx={{
-						width: "100%",
-						height: "100%",
-						...style,
-						display: imageLoaded ? "none" : "block",
-					}}
-					className={className}
-					animation="wave"
-				/>
+			<Box sx={{ position: "relative", width: "100%", height: "100%" }}>
+				{!imageLoaded && (
+					<Skeleton
+						variant={variant}
+						sx={{
+							position: "absolute",
+							top: 0,
+							left: 0,
+							width: "100%",
+							height: "100%",
+							...style,
+						}}
+						className={className}
+						animation="wave"
+					/>
+				)}
 				{imageSrc && (
 					<img
 						src={imageSrc}
 						alt={alt}
 						style={{
 							...style,
-							display: imageLoaded ? "block" : "none",
+							opacity: imageLoaded ? 1 : 0,
+							transition: "opacity 0.2s ease-in-out",
 						}}
 						className={className}
 						onLoad={() => {
@@ -174,7 +179,7 @@ export const CachedImage = ({
 						}}
 					/>
 				)}
-			</>
+			</Box>
 		);
 	}
 
