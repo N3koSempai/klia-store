@@ -37,7 +37,7 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.0.0" date="2025-11-24">
+    <release version="2.0.1" date="2025-11-24">
       <description>
         <p>🎉 Major redesign! Experience Klia Store like never before with a stunning visual overhaul and powerful new features:</p>
         <ul>
@@ -51,22 +51,6 @@
         <li>🆕 Fresh new logo reflecting our modern identity</li>
         <li>💬 Join our new Telegram community for support and updates</li>
         <li>🔧 Numerous bug fixes and stability improvements</li>
-        </ul>
-      </description>
-    </release>
-    <release version="1.2.3" date="2025-01-23">
-      <description>
-        <p>Improved update experience and home page enhancements:</p>
-        <ul>
-        <li>Update All button now refreshes automatically after completing all updates.</li>
-        <li>Added loading indicator when checking for updates to prevent confusion.</li>
-        <li>Fixed issue where the update count wouldn't refresh after closing the update dialog.</li>
-        <li>Better visual feedback with spinner while verifying available updates.</li>
-        <li>Featured section now displays as an interactive carousel with multiple highlighted apps.</li>
-        <li>Improved image loading with skeleton placeholders to prevent showing outdated images.</li>
-        <li>Renamed "Featured" section to "Spotlight" for better clarity.</li>
-        <li>Added developer badges to installed app cards for easier app identification.</li>
-        <li>Developer information is automatically extracted from app IDs without additional API calls.</li>
         </ul>
       </description>
     </release>

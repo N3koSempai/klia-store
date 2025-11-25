@@ -461,6 +461,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 						appName={selectedApp.name}
 						currentVersion={selectedApp.version}
 						newVersion={updateInfo.newVersion}
+						changelog={updateInfo.changelog}
 						open={selectedAppForNotes !== null}
 						onClose={handleCloseModal}
 					/>

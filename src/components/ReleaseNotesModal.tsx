@@ -24,6 +24,7 @@ interface ReleaseNotesModalProps {
 	appName: string;
 	currentVersion: string;
 	newVersion: string;
+	changelog?: string;
 	open: boolean;
 	onClose: () => void;
 }
@@ -33,6 +34,7 @@ export const ReleaseNotesModal = ({
 	appName,
 	currentVersion,
 	newVersion,
+	changelog,
 	open,
 	onClose,
 }: ReleaseNotesModalProps) => {
@@ -47,6 +49,18 @@ export const ReleaseNotesModal = ({
 			setIsLoading(true);
 			setError(null);
 			try {
+				// Si hay changelog disponible, usarlo directamente
+				if (changelog) {
+					setReleases([{
+						timestamp: String(Math.floor(Date.now() / 1000)),
+						version: newVersion,
+						description: changelog,
+					}]);
+					setIsLoading(false);
+					return;
+				}
+
+				// Si no hay changelog, intentar cargar desde la API
 				const appStream: AppStream = await apiService.getAppStream(appId);
 
 				if (appStream.releases && appStream.releases.length > 0) {
@@ -65,7 +79,7 @@ export const ReleaseNotesModal = ({
 		};
 
 		loadReleaseNotes();
-	}, [appId, open]);
+	}, [appId, open, changelog, newVersion]);
 
 	// Función para limpiar HTML de la descripción
 	const stripHtml = (html: string) => {

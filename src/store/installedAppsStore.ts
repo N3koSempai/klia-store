@@ -12,6 +12,7 @@ export interface UpdateAvailableInfo {
 	appId: string;
 	newVersion: string;
 	branch: string;
+	changelog?: string;
 }
 
 interface InstalledAppsStore {
