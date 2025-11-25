@@ -1,6 +1,6 @@
 # KliaStore
 
-A modern desktop application for browsing and managing Flatpak applications from Flathub.
+A modern desktop application for browsing and managing Flatpak applications from Flathub
 
 ## Features
 
