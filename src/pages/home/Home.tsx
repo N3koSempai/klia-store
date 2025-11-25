@@ -21,6 +21,8 @@ import { v4 as uuidv4 } from "uuid";
 import { AboutModal } from "../../components/AboutModal";
 import { AppSearchBar } from "../../components/AppSearchBar";
 import { CachedImage } from "../../components/CachedImage";
+import { NotificationMenu } from "../../components/NotificationMenu";
+import { useNotifications } from "../../hooks/useNotifications";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { AppStream, CategoryApp } from "../../types";
 import { AppsOfTheDaySection } from "./components/AppsOfTheDaySection";
@@ -41,6 +43,14 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 	const [isSearching, setIsSearching] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [aboutModalOpen, setAboutModalOpen] = useState(false);
+
+	const {
+		notifications,
+		unreadCount,
+		markAsViewed,
+		markAllAsViewed,
+		isViewed,
+	} = useNotifications();
 
 	const handleSearch = (query: string, results: CategoryApp[]) => {
 		setSearchQuery(query);
@@ -107,6 +117,14 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 
 					{/* Barra de Búsqueda con componente integrado */}
 					<AppSearchBar onSearch={handleSearch} onLoading={setIsSearching} />
+
+					<NotificationMenu
+						notifications={notifications}
+						unreadCount={unreadCount}
+						isViewed={isViewed}
+						onMarkAsViewed={markAsViewed}
+						onMarkAllAsViewed={markAllAsViewed}
+					/>
 
 					<IconButton
 						onClick={() => setAboutModalOpen(true)}
