@@ -1,5 +1,5 @@
 import { Apps, Close, CropSquare, FilterNone, Remove } from "@mui/icons-material";
-import { Box, IconButton, Stack, Typography, useTheme } from "@mui/material";
+import { Box, Stack, Typography, useTheme } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
 

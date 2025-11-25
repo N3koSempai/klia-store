@@ -1,9 +1,7 @@
 import {
 	Box,
 	Card,
-	CardContent,
 	Chip,
-	Grid,
 	Skeleton,
 	Typography,
 	alpha,
@@ -38,9 +36,13 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const [activeSlide, setActiveSlide] = useState(0);
 
 	// Build slides array
-	const slides = [];
-	if (appOfTheDay) slides.push({ type: 'backend' as const, data: appOfTheDay });
-	if (PROMOTED_APP) slides.push({ type: 'promoted' as const, data: PROMOTED_APP });
+	type BackendSlide = { type: 'backend'; data: typeof appOfTheDay };
+	type PromotedSlide = { type: 'promoted'; data: PromotedAppCardData };
+	type Slide = BackendSlide | PromotedSlide;
+
+	const slides: Slide[] = [];
+	if (appOfTheDay) slides.push({ type: 'backend', data: appOfTheDay });
+	if (PROMOTED_APP) slides.push({ type: 'promoted', data: PROMOTED_APP });
 
 	const totalSlides = slides.length;
 
@@ -55,17 +57,17 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 					}}
 				>
 					<Box sx={{ p: 5 }}>
-						<Grid container spacing={4} alignItems="center">
-							<Grid item>
+						<Box sx={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+							<Box>
 								<Skeleton variant="rectangular" width={140} height={140} sx={{ borderRadius: 3 }} />
-							</Grid>
-							<Grid item xs>
+							</Box>
+							<Box sx={{ flexGrow: 1 }}>
 								<Skeleton variant="text" width="30%" height={24} sx={{ mb: 2 }} />
 								<Skeleton variant="text" width="70%" height={48} sx={{ mb: 2 }} />
 								<Skeleton variant="text" width="90%" />
 								<Skeleton variant="text" width="85%" />
-							</Grid>
-						</Grid>
+							</Box>
+						</Box>
 					</Box>
 				</Card>
 			</Box>
@@ -119,17 +121,17 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 					}}
 					onClick={() => {
 						const appStream = currentSlide.type === 'backend'
-							? currentSlide.data.appStream
+							? currentSlide.data?.appStream
 							: currentSlide.data.appStream;
 						if (appStream) onAppSelect(appStream);
 					}}
 				>
 					<Box sx={{ p: 5 }}>
-						<Grid container spacing={4} alignItems="center">
+						<Box sx={{ display: 'flex', gap: 4, alignItems: 'center' }}>
 							{/* Image / Icon */}
-							<Grid item>
+							<Box>
 								<Box
-									key={currentSlide.type === 'backend' ? currentSlide.data.app_id : currentSlide.data.appId}
+									key={currentSlide.type === 'backend' ? currentSlide.data?.app_id : currentSlide.data.appId}
 									sx={{
 										width: 140,
 										height: 140,
@@ -143,9 +145,9 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 									}}
 								>
 									<CachedImage
-										appId={currentSlide.type === 'backend' ? currentSlide.data.app_id : currentSlide.data.appId}
-										imageUrl={currentSlide.type === 'backend' ? currentSlide.data.icon : currentSlide.data.icon}
-										alt={currentSlide.type === 'backend' ? (currentSlide.data.name || currentSlide.data.app_id) : currentSlide.data.name}
+										appId={currentSlide.type === 'backend' ? currentSlide.data?.app_id || '' : currentSlide.data.appId}
+										imageUrl={currentSlide.type === 'backend' ? currentSlide.data?.icon || '' : currentSlide.data.icon}
+										alt={currentSlide.type === 'backend' ? (currentSlide.data?.name || currentSlide.data?.app_id || '') : currentSlide.data.name}
 										style={{
 											width: "100%",
 											height: "100%",
@@ -153,10 +155,10 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 										}}
 									/>
 								</Box>
-							</Grid>
+							</Box>
 
 							{/* Text */}
-							<Grid item xs>
+							<Box sx={{ flexGrow: 1 }}>
 								<Chip
 									label={currentSlide.type === 'backend' ? t("home.appOfTheDay").toUpperCase() : "PROMOTED"}
 									sx={{
@@ -170,18 +172,18 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 								/>
 								<Typography variant="h3" sx={{ fontFamily: 'IBM Plex Sans', fontWeight: 700, mb: 1, letterSpacing: '-0.5px' }}>
 									{currentSlide.type === 'backend'
-										? (currentSlide.data.name || currentSlide.data.app_id)
+										? (currentSlide.data?.name || currentSlide.data?.app_id || '')
 										: currentSlide.data.name
 									}
 								</Typography>
 								<Typography variant="h6" sx={{ color: "text.secondary", fontWeight: 400, lineHeight: 1.5, maxWidth: '80%' }}>
 									{currentSlide.type === 'backend'
-										? currentSlide.data.appStream?.summary
+										? currentSlide.data?.appStream?.summary
 										: currentSlide.data.summary
 									}
 								</Typography>
-							</Grid>
-						</Grid>
+							</Box>
+						</Box>
 					</Box>
 				</Card>
 			)}

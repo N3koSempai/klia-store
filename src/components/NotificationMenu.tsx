@@ -64,9 +64,11 @@ export const NotificationMenu = ({
 		}
 	};
 
-	const handleLinkClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+	const handleLinkClick = async (e: React.MouseEvent) => {
 		e.preventDefault();
-		const href = e.currentTarget.getAttribute("href");
+		e.stopPropagation();
+		const target = e.target as HTMLAnchorElement;
+		const href = target.getAttribute("href");
 		if (href) {
 			try {
 				await openUrl(href);
@@ -77,11 +79,6 @@ export const NotificationMenu = ({
 	};
 
 	const renderContent = (content: string) => {
-		// Create a temporary div to parse HTML
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(content, "text/html");
-		const links = doc.querySelectorAll("a");
-
 		// Return JSX with proper link handling
 		return (
 			<Typography
@@ -90,7 +87,7 @@ export const NotificationMenu = ({
 				onClick={(e) => {
 					const target = e.target as HTMLElement;
 					if (target.tagName === "A") {
-						handleLinkClick(e as unknown as React.MouseEvent<HTMLAnchorElement>);
+						handleLinkClick(e);
 					}
 				}}
 				sx={{
@@ -99,6 +96,7 @@ export const NotificationMenu = ({
 					"& a": {
 						color: "primary.main",
 						textDecoration: "none",
+						cursor: "pointer",
 						"&:hover": {
 							textDecoration: "underline",
 						},

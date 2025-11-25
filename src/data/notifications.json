@@ -1,9 +1,9 @@
 [
   {
-    "id": "welcome-2025",
-    "title": "Welcome to Klia Store!",
-    "content": "Thank you for using Klia Store. Check out our <a href='https://github.com/gatorand/kliaStore'>GitHub repository</a> to learn more about the project and contribute!",
-    "date": "2025-01-24",
-    "priority": "normal"
+    "id": "telegram-group-2025",
+    "title": "Join our Telegram community!",
+    "content": "We now have a Telegram group! Join us to get updates, share feedback, and connect with other Klia Store users. <a href='https://t.me/+oVu_y_LANmVjMGNh'>Join the group</a>",
+    "date": "2025-11-24",
+    "priority": "high"
   }
 ]
