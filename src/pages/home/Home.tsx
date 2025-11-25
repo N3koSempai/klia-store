@@ -4,7 +4,6 @@ import {
 	Badge,
 	Box,
 	Card,
-	CardActionArea,
 	CardContent,
 	Chip,
 	Container,
@@ -192,23 +191,22 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 													height: "100%",
 													display: "flex",
 													flexDirection: "column",
-													transition: "all 0.2s ease-in-out",
+													transition: "all 0.3s ease-in-out",
 													boxSizing: "border-box",
 													minWidth: 0,
 													overflow: "hidden",
+													cursor: "pointer",
 													willChange: "transform, box-shadow, border-color",
 													"&:hover": {
 														transform: "translateY(-5px)",
 														borderColor: "#4A86CF",
-														boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+														boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
 														zIndex: 1,
 													},
 												}}
+												onClick={() => handleAppClick(app)}
 											>
-												<CardActionArea
-													onClick={() => handleAppClick(app)}
-													sx={{ height: "100%", display: "flex", flexDirection: "column" }}
-												>
+												<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
 													<Box
 														sx={{
 															p: 2,
@@ -293,7 +291,7 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 															{app.summary}
 														</Typography>
 													</CardContent>
-												</CardActionArea>
+												</Box>
 											</Card>
 										</Box>
 									))}

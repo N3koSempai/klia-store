@@ -1,7 +1,6 @@
 import {
 	Box,
 	Card,
-	CardActionArea,
 	CardContent,
 	Paper,
 	Skeleton,
@@ -92,17 +91,19 @@ export const AppsOfTheDaySection = ({
 										bgcolor: "background.paper",
 										border: "1px solid rgba(255,255,255,0.1)",
 										borderRadius: 3,
-										transition: "all 0.2s ease",
+										transition: "all 0.3s ease-in-out",
+										cursor: "pointer",
 										willChange: "transform, box-shadow, border-color",
 										"&:hover": {
-											transform: "translateY(-6px)",
+											transform: "translateY(-5px)",
 											borderColor: "primary.main",
-											boxShadow: "0 12px 24px rgba(0,0,0,0.3)"
+											boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
+											zIndex: 1,
 										}
 									}}
+									onClick={() => app.appStream && onAppSelect(app.appStream)}
 								>
-									<CardActionArea
-										onClick={() => app.appStream && onAppSelect(app.appStream)}
+									<Box
 										sx={{
 											p: 3,
 											height: '100%',
@@ -148,7 +149,7 @@ export const AppsOfTheDaySection = ({
 										<Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.3, fontSize: '0.85rem' }}>
 											{app.summary || t("home.noDescription")}
 										</Typography>
-									</CardActionArea>
+									</Box>
 								</Paper>
 							)),
 							// Promoted card

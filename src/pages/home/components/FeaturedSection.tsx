@@ -1,7 +1,6 @@
 import {
 	Box,
 	Card,
-	CardActionArea,
 	CardContent,
 	Chip,
 	Grid,
@@ -108,22 +107,24 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 						bgcolor: "background.paper",
 						border: "1px solid rgba(255,255,255,0.1)",
 						borderRadius: 4,
-						transition: "border-color 0.3s",
+						transition: "all 0.3s ease-in-out",
+						cursor: "pointer",
+						willChange: "transform, box-shadow, border-color",
 						"&:hover": {
+							transform: "translateY(-5px)",
 							borderColor: "primary.main",
-							boxShadow: "0 4px 30px rgba(0,0,0,0.4)"
+							boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
+							zIndex: 1,
 						}
 					}}
+					onClick={() => {
+						const appStream = currentSlide.type === 'backend'
+							? currentSlide.data.appStream
+							: currentSlide.data.appStream;
+						if (appStream) onAppSelect(appStream);
+					}}
 				>
-					<CardActionArea
-						onClick={() => {
-							const appStream = currentSlide.type === 'backend'
-								? currentSlide.data.appStream
-								: currentSlide.data.appStream;
-							if (appStream) onAppSelect(appStream);
-						}}
-						sx={{ p: 5 }}
-					>
+					<Box sx={{ p: 5 }}>
 						<Grid container spacing={4} alignItems="center">
 							{/* Image / Icon */}
 							<Grid item>
@@ -181,7 +182,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 								</Typography>
 							</Grid>
 						</Grid>
-					</CardActionArea>
+					</Box>
 				</Card>
 			)}
 
