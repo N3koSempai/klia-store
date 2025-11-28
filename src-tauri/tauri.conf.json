@@ -1,7 +1,7 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
 	"productName": "klia-store",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"identifier": "io.github.N3kosempai.klia-store",
 	"build": {
 		"beforeDevCommand": "npm run dev",

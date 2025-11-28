@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import TitleBar from "./components/TitleBar";
 import { useAppInitialization } from "./hooks/useAppInitialization";
 import { useInstalledApps } from "./hooks/useInstalledApps";
@@ -11,12 +11,22 @@ import { Welcome } from "./pages/welcome/Welcome";
 import type { AppStream } from "./types";
 import "./App.css";
 
+type ViewType = "home" | "appDetails" | "category" | "myApps";
+
+interface NavigationState {
+	view: ViewType;
+	app?: AppStream;
+	category?: string;
+	scrollPosition?: number;
+}
+
 function App() {
-	const [selectedApp, setSelectedApp] = useState<AppStream | null>(null);
-	const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-	const [showMyApps, setShowMyApps] = useState(false);
+	const [navigationStack, setNavigationStack] = useState<NavigationState[]>([
+		{ view: "home" },
+	]);
 	const [showWelcome, setShowWelcome] = useState(true);
 	const { isFirstLaunch, isInitializing, error } = useAppInitialization();
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 	// Load installed apps on startup (non-blocking)
 	// This also loads available updates after installed apps are loaded
@@ -24,6 +34,62 @@ function App() {
 
 	const handleWelcomeComplete = () => {
 		setShowWelcome(false);
+	};
+
+	const currentState = navigationStack[navigationStack.length - 1];
+
+	const saveScrollPosition = () => {
+		if (scrollContainerRef.current) {
+			const scrollPosition = scrollContainerRef.current.scrollTop;
+			setNavigationStack((prev) => {
+				const newStack = [...prev];
+				newStack[newStack.length - 1] = {
+					...newStack[newStack.length - 1],
+					scrollPosition,
+				};
+				return newStack;
+			});
+		}
+	};
+
+	const restoreScrollPosition = (position?: number) => {
+		if (scrollContainerRef.current && position !== undefined) {
+			scrollContainerRef.current.scrollTop = position;
+		}
+	};
+
+	const navigateTo = (state: NavigationState) => {
+		saveScrollPosition();
+		setNavigationStack((prev) => [...prev, state]);
+		// Reset scroll to top for new views
+		if (scrollContainerRef.current) {
+			scrollContainerRef.current.scrollTop = 0;
+		}
+	};
+
+	const navigateBack = () => {
+		if (navigationStack.length > 1) {
+			setNavigationStack((prev) => {
+				const newStack = prev.slice(0, -1);
+				// Restore scroll position after state update
+				setTimeout(() => {
+					restoreScrollPosition(newStack[newStack.length - 1].scrollPosition);
+				}, 0);
+				return newStack;
+			});
+		}
+	};
+
+	const handleAppSelect = (app: AppStream) => {
+		navigateTo({ view: "appDetails", app });
+	};
+
+	const handleCategorySelect = (categoryId: string) => {
+		navigateTo({ view: "category", category: categoryId });
+	};
+
+	const handleMyAppsClick = () => {
+		navigateTo({ view: "myApps" });
 	};
 
 	// Show loading state while initializing
@@ -97,6 +163,7 @@ function App() {
 		<>
 			<TitleBar />
 			<Box
+				ref={scrollContainerRef}
 				sx={{
 					marginTop: "40px",
 					height: "calc(100vh - 40px)",
@@ -105,30 +172,25 @@ function App() {
 					borderTop: "none",
 				}}
 			>
-				{selectedApp && (
-					<AppDetails
-						app={selectedApp}
-						onBack={() => {
-							setSelectedApp(null);
-						}}
-					/>
+				{currentState.view === "appDetails" && currentState.app && (
+					<AppDetails app={currentState.app} onBack={navigateBack} />
 				)}
 
-				{selectedCategory && (
+				{currentState.view === "category" && currentState.category && (
 					<CategoryApps
-						categoryId={selectedCategory}
-						onBack={() => setSelectedCategory(null)}
-						onAppSelect={setSelectedApp}
+						categoryId={currentState.category}
+						onBack={navigateBack}
+						onAppSelect={handleAppSelect}
 					/>
 				)}
 
-				{showMyApps && <MyApps onBack={() => setShowMyApps(false)} />}
+				{currentState.view === "myApps" && <MyApps onBack={navigateBack} />}
 
-				{!selectedApp && !selectedCategory && !showMyApps && (
+				{currentState.view === "home" && (
 					<Home
-						onAppSelect={setSelectedApp}
-						onCategorySelect={setSelectedCategory}
-						onMyAppsClick={() => setShowMyApps(true)}
+						onAppSelect={handleAppSelect}
+						onCategorySelect={handleCategorySelect}
+						onMyAppsClick={handleMyAppsClick}
 					/>
 				)}
 			</Box>
