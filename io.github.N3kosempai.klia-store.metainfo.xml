@@ -18,19 +18,19 @@
   <screenshots>
     <screenshot type="default">
       <caption>Main application window showing start page</caption>
-      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot1.png</image>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot1.webp</image>
     </screenshot>
     <screenshot>
-      <caption>Application details view with description and installation options</caption>
-      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot2.png</image>
+      <caption>Application home screen</caption>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot2.webp</image>
     </screenshot>
     <screenshot>
-      <caption>Installed applications management interface</caption>
-      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot3.png</image>
+      <caption>search functionality in the home view</caption>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot3.webp</image>
     </screenshot>
     <screenshot>
-      <caption>Modal for updating a specific application</caption>
-      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot4.png</image>
+      <caption>Modal for install an specific application</caption>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot4.webp</image>
     </screenshot>
   </screenshots>
   <provides>
