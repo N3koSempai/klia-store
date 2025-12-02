@@ -25,6 +25,11 @@ interface InstalledAppCardProps {
 	onUpdate: () => void;
 	onUninstall: () => void;
 	onShowReleaseNotes: () => void;
+	onDeveloperClick?: (
+		developerId: string,
+		developerName: string,
+		appId: string,
+	) => void;
 }
 
 const InstalledAppCardComponent = ({
@@ -36,6 +41,7 @@ const InstalledAppCardComponent = ({
 	onUpdate,
 	onUninstall,
 	onShowReleaseNotes,
+	onDeveloperClick,
 }: InstalledAppCardProps) => {
 	const { t } = useTranslation();
 
@@ -170,11 +176,30 @@ const InstalledAppCardComponent = ({
 						label={app.developer}
 						size="small"
 						variant="outlined"
+						onClick={
+							onDeveloperClick
+								? () =>
+										onDeveloperClick(
+											app.developer || "",
+											app.developer || "",
+											app.appId,
+										)
+								: undefined
+						}
 						sx={{
 							mb: 2,
 							color: "text.secondary",
 							borderColor: "rgba(255,255,255,0.1)",
 							maxWidth: "100%",
+							cursor: onDeveloperClick ? "pointer" : "default",
+							transition: "all 0.2s ease",
+							"&:hover": onDeveloperClick
+								? {
+										borderColor: "#4A86CF",
+										color: "#4A86CF",
+										backgroundColor: "rgba(74, 134, 207, 0.1)",
+									}
+								: {},
 						}}
 					/>
 				)}

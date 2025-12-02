@@ -5,18 +5,22 @@ import { useAppInitialization } from "./hooks/useAppInitialization";
 import { useInstalledApps } from "./hooks/useInstalledApps";
 import { AppDetails } from "./pages/appDetails/AppDetails";
 import { CategoryApps } from "./pages/categoryApps/CategoryApps";
+import { DeveloperProfile } from "./pages/developerProfile/DeveloperProfile";
 import { Home } from "./pages/home/Home";
 import { MyApps } from "./pages/myApps/MyApps";
 import { Welcome } from "./pages/welcome/Welcome";
 import type { AppStream } from "./types";
 import "./App.css";
 
-type ViewType = "home" | "appDetails" | "category" | "myApps";
+type ViewType = "home" | "appDetails" | "category" | "myApps" | "developer";
 
 interface NavigationState {
 	view: ViewType;
 	app?: AppStream;
 	category?: string;
+	developerId?: string;
+	developerName?: string;
+	developerAppId?: string;
 	scrollPosition?: number;
 }
 
@@ -90,6 +94,14 @@ function App() {
 
 	const handleMyAppsClick = () => {
 		navigateTo({ view: "myApps" });
+	};
+
+	const handleDeveloperSelect = (
+		developerId: string,
+		developerName: string,
+		appId: string,
+	) => {
+		navigateTo({ view: "developer", developerId, developerName, developerAppId: appId });
 	};
 
 	// Show loading state while initializing
@@ -184,7 +196,21 @@ function App() {
 					/>
 				)}
 
-				{currentState.view === "myApps" && <MyApps onBack={navigateBack} />}
+				{currentState.view === "developer" &&
+					currentState.developerId &&
+					currentState.developerName && (
+						<DeveloperProfile
+							developerId={currentState.developerId}
+							developerName={currentState.developerName}
+							appId={currentState.developerAppId}
+							onBack={navigateBack}
+							onAppSelect={handleAppSelect}
+						/>
+					)}
+
+				{currentState.view === "myApps" && (
+					<MyApps onBack={navigateBack} onDeveloperSelect={handleDeveloperSelect} />
+				)}
 
 				{currentState.view === "home" && (
 					<Home

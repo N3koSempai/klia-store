@@ -156,4 +156,39 @@ export const apiService = {
 		const data = await response.json();
 		return data as SearchResponse;
 	},
+
+	async getDeveloperApps(
+		developerId: string,
+		locale: string = "en",
+	): Promise<CategoryAppsResponse> {
+		const searchRequest: SearchRequest = {
+			query: "",
+			filters: [
+				{
+					filterType: "developer_name",
+					value: developerId,
+				},
+			],
+			hits_per_page: 100,
+		};
+
+		const response = await tauriFetch(
+			`${API_BASE_URL}/search?locale=${locale}`,
+			{
+				method: "POST",
+				headers: {
+					accept: "application/json",
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(searchRequest),
+			},
+		);
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data = await response.json();
+		return { hits: data.hits } as CategoryAppsResponse;
+	},
 };

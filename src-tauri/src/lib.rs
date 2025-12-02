@@ -13,14 +13,16 @@ struct InstalledApp {
     developer: Option<String>,
 }
 
-// Helper function to extract developer from app_id
-// Example: org.libreoffice.LibreOffice -> libreoffice.org
+// Helper function to extract developer name from app_id
+// Takes the second-to-last segment (penultimate)
+// Example: io.github.N3kosempai.klia-store -> N3kosempai
+// Example: org.mozilla.firefox -> mozilla
+// Example: com.her01n.BatteryInfo -> her01n
 fn extract_developer(app_id: &str) -> Option<String> {
     let parts: Vec<&str> = app_id.split('.').collect();
     if parts.len() >= 2 {
-        // Reverse the first two parts (domain)
-        // org.libreoffice.LibreOffice -> libreoffice.org
-        Some(format!("{}.{}", parts[1], parts[0]))
+        // Always take the penultimate (second from the end)
+        Some(parts[parts.len() - 2].to_string())
     } else {
         None
     }

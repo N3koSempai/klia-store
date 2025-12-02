@@ -5,7 +5,7 @@ export interface InstalledAppInfo {
 	name: string;
 	version: string;
 	summary?: string;
-	developer?: string;
+	developer?: string; // Developer name extracted from app_id (e.g., "N3kosempai", "mozilla")
 }
 
 export interface UpdateAvailableInfo {

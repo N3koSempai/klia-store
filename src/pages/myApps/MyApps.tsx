@@ -37,6 +37,11 @@ interface InstalledAppRust {
 
 interface MyAppsProps {
 	onBack: () => void;
+	onDeveloperSelect?: (
+		developerId: string,
+		developerName: string,
+		appId: string,
+	) => void;
 }
 
 // Memoized wrapper for app card to prevent recreating callbacks
@@ -49,6 +54,11 @@ interface AppCardWrapperProps {
 	onUpdate: (appId: string) => void;
 	onUninstall: (appId: string) => void;
 	onShowReleaseNotes: (appId: string) => void;
+	onDeveloperClick?: (
+		developerId: string,
+		developerName: string,
+		appId: string,
+	) => void;
 }
 
 const AppCardWrapper = memo(
@@ -61,6 +71,7 @@ const AppCardWrapper = memo(
 		onUpdate,
 		onUninstall,
 		onShowReleaseNotes,
+		onDeveloperClick,
 	}: AppCardWrapperProps) => {
 		const handleUpdate = useCallback(
 			() => onUpdate(app.appId),
@@ -85,12 +96,13 @@ const AppCardWrapper = memo(
 				onUpdate={handleUpdate}
 				onUninstall={handleUninstall}
 				onShowReleaseNotes={handleShowReleaseNotes}
+				onDeveloperClick={onDeveloperClick}
 			/>
 		);
 	},
 );
 
-export const MyApps = ({ onBack }: MyAppsProps) => {
+export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const { t } = useTranslation();
 	const theme = useTheme();
 
@@ -435,6 +447,7 @@ export const MyApps = ({ onBack }: MyAppsProps) => {
 								onUpdate={handleUpdate}
 								onUninstall={handleUninstall}
 								onShowReleaseNotes={handleShowReleaseNotes}
+								onDeveloperClick={onDeveloperSelect}
 							/>
 						))}
 					</Box>

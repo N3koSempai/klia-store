@@ -111,6 +111,14 @@
     "noApps": "No apps found in this category",
     "errorLoadingApps": "Error loading apps: {{error}}"
   },
+  "developerProfile": {
+    "title": "Developer Profile",
+    "availableSoftware": "Available Software",
+    "packages": "Packages",
+    "package": "Package",
+    "noApps": "No apps available from this developer",
+    "errorLoadingApps": "Error loading apps: {{error}}"
+  },
   "searchResults": {
     "searching": "Searching...",
     "resultsFor": "Results for \"{{query}}\"",
