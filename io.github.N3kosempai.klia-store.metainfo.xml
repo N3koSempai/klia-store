@@ -37,6 +37,18 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.0.3" date="2025-12-02">
+      <description>
+        <p>Developer profiles and UI improvements:</p>
+        <ul>
+        <li>Added developer profile pages - click on a developer name to view all their apps</li>
+        <li>Improved developer name extraction from app IDs for better accuracy</li>
+        <li>Redesigned developer badge with blue accent color and user icon for better visibility</li>
+        <li>Version information moved to footer as technical metadata</li>
+        <li>Automatic fallback to correct developer name if initial search returns no results</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.0.2" date="2025-11-27">
       <description>
         <p>Navigation and scroll restoration improvements:</p>

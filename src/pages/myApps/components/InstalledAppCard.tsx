@@ -1,11 +1,10 @@
-import { DeleteOutline, History, Update } from "@mui/icons-material";
+import { DeleteOutline, History, Person, Update } from "@mui/icons-material";
 import {
 	Avatar,
 	Box,
 	Button,
 	Card,
 	CardContent,
-	Chip,
 	IconButton,
 	Stack,
 	Tooltip,
@@ -170,12 +169,10 @@ const InstalledAppCardComponent = ({
 					{app.name}
 				</Typography>
 
-				{/* Developer como Chip pequeño */}
+				{/* Developer como botón clickeable */}
 				{app.developer && (
-					<Chip
-						label={app.developer}
-						size="small"
-						variant="outlined"
+					<Button
+						startIcon={<Person sx={{ fontSize: "18px !important" }} />}
 						onClick={
 							onDeveloperClick
 								? () =>
@@ -186,22 +183,33 @@ const InstalledAppCardComponent = ({
 										)
 								: undefined
 						}
+						disabled={!onDeveloperClick}
 						sx={{
 							mb: 2,
-							color: "text.secondary",
-							borderColor: "rgba(255,255,255,0.1)",
+							px: 2,
+							py: 0.75,
+							textTransform: "none",
+							fontFamily: '"IBM Plex Sans", sans-serif',
+							fontWeight: 600,
+							fontSize: "0.875rem",
+							color: "#4A86CF",
+							backgroundColor: "rgba(74, 134, 207, 0.08)",
+							borderRadius: 2,
 							maxWidth: "100%",
-							cursor: onDeveloperClick ? "pointer" : "default",
+							justifyContent: "flex-start",
 							transition: "all 0.2s ease",
-							"&:hover": onDeveloperClick
-								? {
-										borderColor: "#4A86CF",
-										color: "#4A86CF",
-										backgroundColor: "rgba(74, 134, 207, 0.1)",
-									}
-								: {},
+							"&:hover": {
+								backgroundColor: "rgba(74, 134, 207, 0.15)",
+								transform: "translateY(-1px)",
+							},
+							"&.Mui-disabled": {
+								color: "text.secondary",
+								backgroundColor: "transparent",
+							},
 						}}
-					/>
+					>
+						@{app.developer}
+					</Button>
 				)}
 
 				{/* Descripción */}
@@ -223,7 +231,7 @@ const InstalledAppCardComponent = ({
 					</Typography>
 				)}
 
-				{/* --- ZONA INFERIOR: ID TÉCNICO Y ACCIÓN PRINCIPAL --- */}
+				{/* --- ZONA INFERIOR: ACCIÓN PRINCIPAL Y METADATA --- */}
 				<Box
 					sx={{
 						width: "100%",
@@ -235,20 +243,6 @@ const InstalledAppCardComponent = ({
 						gap: 1,
 					}}
 				>
-					{/* ID Técnico (Más discreto arriba del botón) */}
-					<Typography
-						variant="caption"
-						align="center"
-						sx={{
-							fontFamily: "monospace",
-							color: "text.secondary",
-							opacity: 0.5,
-							fontSize: "0.65rem",
-						}}
-					>
-						{app.appId}
-					</Typography>
-
 					{/* Botón Principal de Actualizar */}
 					{hasUpdate && (
 						<Button
@@ -276,26 +270,50 @@ const InstalledAppCardComponent = ({
 								},
 							}}
 						>
-							{isUpdating
-								? t("appDetails.updating")
-								: `${t("appDetails.update")} v${app.version}`}
+							{isUpdating ? t("appDetails.updating") : t("appDetails.update")}
 						</Button>
 					)}
 
-					{/* Si no hay actualización, mostramos la versión actual */}
-					{!hasUpdate && (
-						<Chip
-							label={`v${app.version}`}
-							size="small"
+					{/* Metadata: ID y Versión */}
+					<Box
+						sx={{
+							display: "flex",
+							justifyContent: "space-between",
+							alignItems: "center",
+							px: 0.5,
+						}}
+					>
+						{/* ID Técnico */}
+						<Typography
+							variant="caption"
 							sx={{
-								backgroundColor: "rgba(88, 166, 255, 0.1)",
-								color: "info.main",
-								fontWeight: 600,
-								height: 28,
-								alignSelf: "center",
+								fontFamily: '"JetBrains Mono", monospace',
+								color: "text.secondary",
+								opacity: 0.5,
+								fontSize: "0.65rem",
+								overflow: "hidden",
+								textOverflow: "ellipsis",
+								whiteSpace: "nowrap",
+								flex: 1,
 							}}
-						/>
-					)}
+						>
+							{app.appId}
+						</Typography>
+
+						{/* Versión */}
+						<Typography
+							variant="caption"
+							sx={{
+								fontFamily: '"JetBrains Mono", monospace',
+								color: "text.secondary",
+								fontSize: "0.75rem",
+								ml: 1,
+								flexShrink: 0,
+							}}
+						>
+							v{app.version}
+						</Typography>
+					</Box>
 				</Box>
 			</CardContent>
 		</Card>
@@ -303,17 +321,20 @@ const InstalledAppCardComponent = ({
 };
 
 // Memoize component to prevent unnecessary re-renders
-export const InstalledAppCard = memo(InstalledAppCardComponent, (prevProps, nextProps) => {
-	// Return true if props are equal (skip re-render)
-	return (
-		prevProps.app.appId === nextProps.app.appId &&
-		prevProps.app.name === nextProps.app.name &&
-		prevProps.app.version === nextProps.app.version &&
-		prevProps.app.summary === nextProps.app.summary &&
-		prevProps.app.developer === nextProps.app.developer &&
-		prevProps.hasUpdate === nextProps.hasUpdate &&
-		prevProps.isUpdating === nextProps.isUpdating &&
-		prevProps.isUninstalling === nextProps.isUninstalling &&
-		prevProps.cardHeight === nextProps.cardHeight
-	);
-});
+export const InstalledAppCard = memo(
+	InstalledAppCardComponent,
+	(prevProps, nextProps) => {
+		// Return true if props are equal (skip re-render)
+		return (
+			prevProps.app.appId === nextProps.app.appId &&
+			prevProps.app.name === nextProps.app.name &&
+			prevProps.app.version === nextProps.app.version &&
+			prevProps.app.summary === nextProps.app.summary &&
+			prevProps.app.developer === nextProps.app.developer &&
+			prevProps.hasUpdate === nextProps.hasUpdate &&
+			prevProps.isUpdating === nextProps.isUpdating &&
+			prevProps.isUninstalling === nextProps.isUninstalling &&
+			prevProps.cardHeight === nextProps.cardHeight
+		);
+	},
+);
