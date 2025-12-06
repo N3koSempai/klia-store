@@ -22,6 +22,8 @@ export const useRepoStats = (
 	urls?: {
 		bugtracker?: string;
 		vcs_browser?: string;
+		contribute?: string;
+		help?: string;
 	},
 ): RepoStatsData => {
 	const [stars, setStars] = useState<number | null>(null);
