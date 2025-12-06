@@ -60,5 +60,9 @@ modules:
     sources:
       - type: dir
         path: .
+        skip:
+          - src-tauri/target
+          - node_modules
+          - .git
       - ./generated-sources.json
       - ./cargo-sources.json

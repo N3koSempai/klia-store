@@ -85,113 +85,49 @@ jobs:
   build-flatpak:
     needs: check-release
     if: needs.check-release.outputs.should_release == 'true'
-    runs-on: ubuntu-22.04
-    container:
-      image: bilelmoussaoui/flatpak-github-actions:gnome-47
-      options: --privileged
+    runs-on: ubuntu-22.04 # Usamos la máquina directo, SIN container
     steps:
+      # 1. LA SOLUCIÓN AL ESPACIO: Borramos .NET, Android, Docker, Swap
+      # Esto nos da ~70GB libres en lugar de 14GB.
+      - name: Maximize Build Space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 2048
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+
       - uses: actions/checkout@v4
 
+      # 2. Instalamos Flatpak en el host
+      - name: Install Flatpak & Builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          # Agregamos el repo de Flathub
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+      # 3. Instalamos los SDKs necesarios (Igual que en tu YAML)
+      - name: Install Runtime & SDKs
+        run: |
+          flatpak install --user -y flathub org.gnome.Sdk//49 org.gnome.Platform//49
+          flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//24.08
+          flatpak install --user -y flathub org.freedesktop.Sdk.Extension.node20//24.08
+
+      # 4. Compilamos (Offline mode gracias a tus json)
       - name: Build Flatpak
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-        with:
-          bundle: Klia-Store-${{ needs.check-release.outputs.version }}.flatpak
-          manifest-path: io.github.N3kosempai.klia-store.yml
-          cache-key: flatpak-builder-${{ github.sha }}
+        # Nota: --sandbox evita que contamine tu home, --force-clean borra intentos previos
+        run: |
+          flatpak-builder --repo=repo --force-clean build-dir io.github.N3kosempai.klia-store.yml
+
+          # Generamos el bundle final
+          flatpak build-bundle repo Klia-Store-${{ needs.check-release.outputs.version }}.flatpak io.github.N3kosempai.klia-store
 
       - name: Upload Flatpak artifact
         uses: actions/upload-artifact@v4
         with:
           name: flatpak-package
           path: Klia-Store-*.flatpak
-
-  create-release:
-    needs: [check-release, build-deb, build-flatpak]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download .deb artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: deb-package
-
-      - name: Download Flatpak artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: flatpak-package
-
-      - name: Extract release notes from metainfo
-        id: extract_notes
-        run: |
-          VERSION="${{ needs.check-release.outputs.version }}"
-
-          # Extract the description for the current version from metainfo.xml
-          NOTES=$(python3 << 'EOF'
-          import xml.etree.ElementTree as ET
-          import sys
-
-          try:
-              tree = ET.parse('io.github.N3kosempai.klia-store.metainfo.xml')
-              root = tree.getroot()
-              version = "${{ needs.check-release.outputs.version }}"
-
-              # Find the release with matching version
-              for release in root.findall('.//release'):
-                  if release.get('version') == version:
-                      desc = release.find('description')
-                      if desc is not None:
-                          # Extract text content from description
-                          lines = []
-                          for elem in desc.iter():
-                              if elem.text and elem.text.strip():
-                                  lines.append(elem.text.strip())
-                              if elem.tail and elem.tail.strip():
-                                  lines.append(elem.tail.strip())
-                          print('\n'.join(lines))
-                          break
-          except Exception as e:
-              print(f"Error: {e}", file=sys.stderr)
-          EOF
-          )
-
-          # If extraction fails, use commit message as fallback
-          if [ -z "$NOTES" ]; then
-            NOTES="${{ github.event.head_commit.message }}"
-          fi
-
-          # Save to output (handle multiline)
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.check-release.outputs.version }}
-          name: Klia Store ${{ needs.check-release.outputs.version }}
-          draft: false
-          prerelease: false
-          body: |
-            ## Klia Store ${{ needs.check-release.outputs.version }}
-
-            ### What's New
-            ${{ steps.extract_notes.outputs.notes }}
-
-            ### Installation
-
-            **Debian/Ubuntu (.deb):**
-            ```bash
-            sudo dpkg -i Klia-Store-${{ needs.check-release.outputs.version }}.deb
-            ```
-
-            **Flatpak:**
-            ```bash
-            flatpak install Klia-Store-${{ needs.check-release.outputs.version }}.flatpak
-            flatpak run io.github.N3kosempai.klia-store
-            ```
-          files: |
-            Klia-Store-*.deb
-            Klia-Store-*.flatpak
