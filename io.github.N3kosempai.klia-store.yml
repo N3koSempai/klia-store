@@ -43,15 +43,11 @@ modules:
       # Biome won't run because it's not invoked in any script
       - npm install --offline --no-save --include=dev
 
-      # Build using Tauri CLI directly from node_modules (creates binary and deb, skips appimage/rpm that fail)
-      - ./node_modules/.bin/tauri build --bundles deb
+      # Build using Tauri CLI directly from node_modules (no bundle creation to save time and space)
+      - ./node_modules/.bin/tauri build --no-bundle
 
       # Install the binary
       - install -Dm755 src-tauri/target/release/klia-store -t /app/bin/
-
-      # Copy deb package for later use
-      - mkdir -p /app/share/packages
-      - cp src-tauri/target/release/bundle/deb/*.deb /app/share/packages/ || true
 
       # Install desktop file
       - install -Dm644 io.github.N3kosempai.klia-store.desktop -t /app/share/applications/
