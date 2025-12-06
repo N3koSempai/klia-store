@@ -40,18 +40,18 @@ jobs:
     if: needs.check-release.outputs.should_release == 'true'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
+      - name: Maximize Build Space
+        uses: easimon/maximize-build-space@master
         with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+          root-reserve-mb: 2048
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
+
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -108,7 +108,7 @@ jobs:
         with:
           bundle: Klia-Store-${{ needs.check-release.outputs.version }}.flatpak
           manifest-path: io.github.N3kosempai.klia-store.yml
-          cache-key: flatpak-builder-${{ github.sha }}
+          cache-key: flatpak-builder-v2
 
       - name: Upload Flatpak artifact
         uses: actions/upload-artifact@v4
