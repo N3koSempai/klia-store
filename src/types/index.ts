@@ -74,6 +74,17 @@ export interface AppStream {
 		description: string;
 		url?: string;
 	}>;
+	urls?: {
+		homepage?: string;
+		bugtracker?: string;
+		vcs_browser?: string;
+		help?: string;
+		donation?: string;
+		translate?: string;
+		contact?: string;
+		contribute?: string;
+		faq?: string;
+	};
 }
 
 export interface AppOfTheDayResponse {

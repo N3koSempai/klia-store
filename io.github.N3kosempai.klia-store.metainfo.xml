@@ -37,28 +37,16 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.0.3" date="2025-12-02">
+    <release version="2.1.0" date="2025-12-06">
       <description>
-        <p>Developer profiles and UI improvements:</p>
+        <p>New features:</p>
         <ul>
-        <li>Added developer profile pages - click on a developer name to view all their apps</li>
-        <li>Improved developer name extraction from app IDs for better accuracy</li>
-        <li>Redesigned developer badge with blue accent color and user icon for better visibility</li>
-        <li>Version information moved to footer as technical metadata</li>
-        <li>Automatic fallback to correct developer name if initial search returns no results</li>
+        <li>View GitHub and GitLab star counts directly on app details pages</li>
+        <li>Visual badges with different styles based on popularity (Indie/Solid/Epic/Legendary)</li>
+        <li>Click on star badges to open the project repository in your browser</li>
+        <li>Works with apps from GitHub, GitLab, and GNOME GitLab</li>
         </ul>
       </description>
     </release>
-    <release version="2.0.2" date="2025-11-27">
-      <description>
-        <p>Navigation and scroll restoration improvements:</p>
-        <ul>
-        <li>Fixed category apps navigation to properly redirect to app details page</li>
-        <li>Implemented scroll position restoration when navigating back from app details</li>
-        <li>Improved navigation stack system to prevent view overlapping issues</li>
-        </ul>
-      </description>
-    </release>
-  </releases>
   <content_rating type="oars-1.1"/>
 </component>
