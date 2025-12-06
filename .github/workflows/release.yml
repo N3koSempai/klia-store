@@ -83,51 +83,73 @@ jobs:
           path: Klia-Store-*.deb
 
   build-flatpak:
-    needs: check-release
-    if: needs.check-release.outputs.should_release == 'true'
-    runs-on: ubuntu-22.04 # Usamos la máquina directo, SIN container
-    steps:
-      # 1. LA SOLUCIÓN AL ESPACIO: Borramos .NET, Android, Docker, Swap
-      # Esto nos da ~70GB libres en lugar de 14GB.
-      - name: Maximize Build Space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 2048
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-          remove-docker-images: 'true'
+      needs: check-release
+      if: needs.check-release.outputs.should_release == 'true'
+      runs-on: ubuntu-22.04
+      steps:
+        # 1. Limpieza estándar (sin redimensionar particiones, es más seguro)
+        - name: Free Disk Space
+          uses: jlumbroso/free-disk-space@main
+          with:
+            tool-cache: true
+            android: true
+            dotnet: true
+            haskell: true
+            large-packages: true
+            docker-images: true
+            swap-storage: true
 
-      - uses: actions/checkout@v4
+        - uses: actions/checkout@v4
 
-      # 2. Instalamos Flatpak en el host
-      - name: Install Flatpak & Builder
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder
-          # Agregamos el repo de Flathub
-          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+        # 2. EL TRUCO MAESTRO: Redirigir Flatpak al disco de 75GB (/mnt)
+        - name: Redirect Flatpak Storage to /mnt
+          run: |
+            echo "Espacio antes del truco:"
+            df -h
 
-      # 3. Instalamos los SDKs necesarios (Igual que en tu YAML)
-      - name: Install Runtime & SDKs
-        run: |
-          flatpak install --user -y flathub org.gnome.Sdk//49 org.gnome.Platform//49
-          flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//24.08
-          flatpak install --user -y flathub org.freedesktop.Sdk.Extension.node20//24.08
+            # Crear carpeta en el disco gigante
+            sudo mkdir -p /mnt/flatpak-storage
+            sudo chown -R $USER:$USER /mnt/flatpak-storage
 
-      # 4. Compilamos (Offline mode gracias a tus json)
-      - name: Build Flatpak
-        # Nota: --sandbox evita que contamine tu home, --force-clean borra intentos previos
-        run: |
-          flatpak-builder --repo=repo --force-clean build-dir io.github.N3kosempai.klia-store.yml
+            # Crear la estructura local
+            mkdir -p ~/.local/share
 
-          # Generamos el bundle final
-          flatpak build-bundle repo Klia-Store-${{ needs.check-release.outputs.version }}.flatpak io.github.N3kosempai.klia-store
+            # Crear el enlace simbólico: Todo lo que vaya a ~/.local/share/flatpak
+            # realmente se guardará en /mnt/flatpak-storage (75GB libres)
+            ln -s /mnt/flatpak-storage ~/.local/share/flatpak
 
-      - name: Upload Flatpak artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: flatpak-package
-          path: Klia-Store-*.flatpak
+            echo "Enlace creado. Flatpak usará /mnt."
+
+        # 3. Instalación de herramientas
+        - name: Install Flatpak & Builder
+          run: |
+            sudo add-apt-repository ppa:flatpak/stable -y
+            sudo apt-get update
+            sudo apt-get install -y flatpak flatpak-builder
+
+            flatpak-builder --version
+
+            flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+        # 4. Instalar SDKs (Ahora irán al disco gigante)
+        - name: Install Runtime & SDKs
+          run: |
+            flatpak install --user -y flathub org.gnome.Sdk//49 org.gnome.Platform//49
+            flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//25.08
+            flatpak install --user -y flathub org.freedesktop.Sdk.Extension.node20//25.08
+
+        # 5. Compilar (Usando --sandbox para aislar)
+        - name: Build Flatpak
+          run: |
+            # Importante: XDG_DATA_HOME fuerza a usar nuestras rutas locales
+            export XDG_DATA_HOME=$HOME/.local/share
+
+            flatpak-builder --user --repo=repo --force-clean build-dir io.github.N3kosempai.klia-store.yml
+
+            flatpak build-bundle repo Klia-Store-${{ needs.check-release.outputs.version }}.flatpak io.github.N3kosempai.klia-store
+
+        - name: Upload Flatpak artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: flatpak-package
+            path: Klia-Store-*.flatpak
