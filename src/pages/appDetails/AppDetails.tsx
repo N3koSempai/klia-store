@@ -9,8 +9,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../components/CachedImage";
+import { GitHubStarBadge } from "../../components/GitHubStarBadge";
 import { Terminal } from "../../components/Terminal";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
+import { useRepoStats } from "../../hooks/useRepoStats";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { AppStream } from "../../types";
 
@@ -21,9 +23,13 @@ interface AppDetailsProps {
 
 export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const { t } = useTranslation();
-	const { screenshots, isLoading: isLoadingScreenshots } =
-		useAppScreenshots(app);
+	const {
+		screenshots,
+		urls,
+		isLoading: isLoadingScreenshots,
+	} = useAppScreenshots(app);
 	const { isAppInstalled, setInstalledApp } = useInstalledAppsStore();
+	const { stars, repoUrl } = useRepoStats(app.id, urls);
 	const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
 	// Generate stable UUIDs for screenshots
@@ -215,6 +221,15 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 						<Typography variant="body2" color="text.secondary">
 							{app.summary}
 						</Typography>
+
+						{/* Metadata Row */}
+						{stars !== null && repoUrl && (
+							<Box
+								sx={{ display: "flex", flexDirection: "row", gap: 2, mt: 1.5 }}
+							>
+								<GitHubStarBadge count={stars} url={repoUrl} />
+							</Box>
+						)}
 					</Box>
 				</Box>
 
@@ -380,7 +395,8 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 													left: 0,
 													width: "100%",
 													height: "100%",
-													display: index === currentImageIndex ? "flex" : "none",
+													display:
+														index === currentImageIndex ? "flex" : "none",
 													alignItems: "center",
 													justifyContent: "center",
 												}}
