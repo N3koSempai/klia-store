@@ -35,137 +35,69 @@ jobs:
             echo "No [release] tag found in commit message"
           fi
 
-  # build-deb:
-  #   needs: check-release
-  #   if: needs.check-release.outputs.should_release == 'true'
-  #   runs-on: ubuntu-22.04
-  #   steps:
-  #     - name: "🧹 Nuclear Disk Cleanup"
-  #       run: |
-  #         echo "Disk space BEFORE cleanup:"
-  #         df -h
+  build-deb:
+    needs: check-release
+    if: needs.check-release.outputs.should_release == 'true'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
 
-  #         # 1. Remove large frameworks we don't use
-  #         sudo rm -rf /usr/share/dotnet
-  #         sudo rm -rf /usr/local/lib/android
-  #         sudo rm -rf /opt/ghc
-  #         sudo rm -rf /opt/hostedtoolcache/CodeQL
-  #         sudo rm -rf /usr/share/swift
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-  #         # 2. Remove Docker images (take up a lot of space)
-  #         sudo docker image prune --all --force
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-  #         # 3. Clean apt cached packages
-  #         sudo apt-get clean
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
 
-  #         # 4. Remove Tool Cache (old Node, Python, Ruby versions)
-  #         # NOTE: If you use setup-node or setup-python later, they will re-download
-  #         # but only the version you need, not all of them.
-  #         sudo rm -rf /opt/hostedtoolcache
+      - name: Install dependencies
+        run: npm install
 
-  #         # 5. Remove Swap (optional, frees ~4GB but may affect if you have low RAM)
-  #         # sudo swapoff -a
-  #         # sudo rm -f /mnt/swapfile
+      - name: Build Tauri .deb
+        run: npm run tauri build -- --bundles deb
 
-  #         echo "Disk space AFTER cleanup:"
-  #         df -h
+      - name: Rename .deb file
+        run: |
+          VERSION="${{ needs.check-release.outputs.version }}"
+          DEB_FILE=$(find src-tauri/target/release/bundle/deb -name "*.deb" -type f)
+          mv "$DEB_FILE" "Klia-Store-${VERSION}.deb"
 
-  #     - uses: actions/checkout@v4
-
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-
-  #     - name: Install Rust
-  #       uses: dtolnay/rust-toolchain@stable
-
-  #     - name: Install system dependencies
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get install -y \
-  #           libwebkit2gtk-4.1-dev \
-  #           build-essential \
-  #           curl \
-  #           wget \
-  #           file \
-  #           libxdo-dev \
-  #           libssl-dev \
-  #           libayatana-appindicator3-dev \
-  #           librsvg2-dev
-
-  #     - name: Install dependencies
-  #       run: npm install
-
-  #     - name: Build Tauri .deb
-  #       run: npm run tauri build -- --bundles deb
-
-  #     - name: Rename .deb file
-  #       run: |
-  #         VERSION="${{ needs.check-release.outputs.version }}"
-  #         DEB_FILE=$(find src-tauri/target/release/bundle/deb -name "*.deb" -type f)
-  #         mv "$DEB_FILE" "Klia-Store-${VERSION}.deb"
-
-  #     - name: Upload .deb artifact
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: deb-package
-  #         path: Klia-Store-*.deb
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: Klia-Store-*.deb
 
   build-flatpak:
     needs: check-release
     if: needs.check-release.outputs.should_release == 'true'
     runs-on: ubuntu-22.04
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-47
+      options: --privileged
     steps:
-      - name: "🧹 Nuclear Disk Cleanup"
-        run: |
-          echo "Disk space BEFORE cleanup:"
-          df -h
-
-          # 1. Remove large frameworks we don't use
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/share/swift
-
-          # 2. Remove Docker images (take up a lot of space)
-          sudo docker image prune --all --force
-
-          # 3. Clean apt cached packages
-          sudo apt-get clean
-
-          # 4. Remove Tool Cache (old Node, Python, Ruby versions)
-          # NOTE: If you use setup-node or setup-python later, they will re-download
-          # but only the version you need, not all of them.
-          sudo rm -rf /opt/hostedtoolcache
-
-          # 5. Remove Swap (optional, frees ~4GB but may affect if you have low RAM)
-          # sudo swapoff -a
-          # sudo rm -f /mnt/swapfile
-
-          echo "Disk space AFTER cleanup:"
-          df -h
-
       - uses: actions/checkout@v4
 
-      - name: Install Flatpak and dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder
-
-      - name: Add Flathub repository
-        run: |
-          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-      - name: Install GNOME SDK
-        run: |
-          sudo flatpak install -y flathub org.gnome.Platform//49 org.gnome.Sdk//49
-
       - name: Build Flatpak
-        run: |
-          flatpak-builder --repo=repo --force-clean build-dir io.github.N3kosempai.klia-store.yml
-          flatpak build-bundle repo Klia-Store-${{ needs.check-release.outputs.version }}.flatpak io.github.N3kosempai.klia-store
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: Klia-Store-${{ needs.check-release.outputs.version }}.flatpak
+          manifest-path: io.github.N3kosempai.klia-store.yml
+          cache-key: flatpak-builder-${{ github.sha }}
 
       - name: Upload Flatpak artifact
         uses: actions/upload-artifact@v4
@@ -174,17 +106,17 @@ jobs:
           path: Klia-Store-*.flatpak
 
   create-release:
-    needs: [check-release, build-flatpak]
+    needs: [check-release, build-deb, build-flatpak]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
-      # - name: Download .deb artifact
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: deb-package
+      - name: Download .deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-package
 
       - name: Download Flatpak artifact
         uses: actions/download-artifact@v4
@@ -250,10 +182,16 @@ jobs:
 
             ### Installation
 
+            **Debian/Ubuntu (.deb):**
+            ```bash
+            sudo dpkg -i Klia-Store-${{ needs.check-release.outputs.version }}.deb
+            ```
+
             **Flatpak:**
             ```bash
             flatpak install Klia-Store-${{ needs.check-release.outputs.version }}.flatpak
             flatpak run io.github.N3kosempai.klia-store
             ```
           files: |
+            Klia-Store-*.deb
             Klia-Store-*.flatpak
