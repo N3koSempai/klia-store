@@ -496,9 +496,11 @@ async fn update_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), Str
                 app.emit("install-output", output.to_string())
                     .map_err(|e| format!("Failed to emit event: {}", e))?;
             }
-            tauri_plugin_shell::process::CommandEvent::Stderr(_line) => {
-                // Flatpak sends normal output to stderr, ignore it to avoid duplicates
-                // Real errors will be caught by the Error event or exit code
+            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                // Flatpak sends progress output to stderr
+                let output = String::from_utf8_lossy(&line);
+                app.emit("install-output", output.to_string())
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
             }
             tauri_plugin_shell::process::CommandEvent::Error(err) => {
                 app.emit("install-error", err)
@@ -553,9 +555,11 @@ async fn update_system_flatpaks(app: tauri::AppHandle) -> Result<(), String> {
                 app.emit("install-output", output.to_string())
                     .map_err(|e| format!("Failed to emit event: {}", e))?;
             }
-            tauri_plugin_shell::process::CommandEvent::Stderr(_line) => {
-                // Flatpak sends normal output to stderr, ignore it to avoid duplicates
-                // Real errors will be caught by the Error event or exit code
+            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                // Flatpak sends progress output to stderr
+                let output = String::from_utf8_lossy(&line);
+                app.emit("install-output", output.to_string())
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
             }
             tauri_plugin_shell::process::CommandEvent::Error(err) => {
                 app.emit("install-error", err)
@@ -610,9 +614,11 @@ async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), 
                 app.emit("install-output", output.to_string())
                     .map_err(|e| format!("Failed to emit event: {}", e))?;
             }
-            tauri_plugin_shell::process::CommandEvent::Stderr(_line) => {
-                // Flatpak sends normal output to stderr, ignore it to avoid duplicates
-                // Real errors will be caught by the Error event or exit code
+            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                // Flatpak sends progress output to stderr
+                let output = String::from_utf8_lossy(&line);
+                app.emit("install-output", output.to_string())
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
             }
             tauri_plugin_shell::process::CommandEvent::Error(err) => {
                 app.emit("install-error", err)

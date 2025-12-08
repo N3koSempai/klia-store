@@ -24,14 +24,17 @@ export function useUpdateApp(): UseUpdateAppReturn {
 
 		try {
 			const result = await updateFlatpakApp(appId, (progress) => {
+				// Update output in real-time
+				setUpdateOutput((prev) => [...prev, progress.output]);
+
 				// Update progress if available
 				if (progress.progress !== undefined) {
 					setUpdateProgress(progress.progress);
 				}
 			});
 
-			// Set final output from the operation
-			setUpdateOutput(result.output);
+			// No need to set output again, it's already been updated in real-time
+			// setUpdateOutput(result.output);
 
 			if (result.success) {
 				setUpdateOutput((prev) => [

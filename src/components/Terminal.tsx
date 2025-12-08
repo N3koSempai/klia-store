@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 interface TerminalProps {
@@ -9,13 +9,24 @@ interface TerminalProps {
 
 export const Terminal = ({ output, isRunning }: TerminalProps) => {
 	const terminalRef = useRef<HTMLDivElement>(null);
+	const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
-	// Auto-scroll al final cuando hay nuevo contenido
-	useEffect(() => {
+	// Detect if user has scrolled manually
+	const handleScroll = () => {
 		if (terminalRef.current) {
+			const { scrollTop, scrollHeight, clientHeight } = terminalRef.current;
+			// Check if user is at the bottom (with a small threshold of 10px)
+			const isAtBottom = scrollHeight - scrollTop - clientHeight < 10;
+			setShouldAutoScroll(isAtBottom);
+		}
+	};
+
+	// Auto-scroll to bottom when new output arrives, but only if user hasn't scrolled up
+	useEffect(() => {
+		if (shouldAutoScroll && terminalRef.current) {
 			terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
 		}
-	}, []);
+	}, [output, shouldAutoScroll]);
 
 	return (
 		<Box
@@ -75,6 +86,7 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 			{/* Contenido de la terminal */}
 			<Box
 				ref={terminalRef}
+				onScroll={handleScroll}
 				sx={{
 					p: 2,
 					height: 500,
