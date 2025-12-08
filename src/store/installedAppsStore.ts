@@ -26,16 +26,20 @@ interface InstalledAppsStore {
 	updateCount: number;
 	// Loading state for initial updates check
 	isLoadingUpdates: boolean;
+	// Installed runtimes (for dependency checking)
+	installedRuntimes: Set<string>;
 	setInstalledApp: (appId: string, isInstalled: boolean) => void;
 	setInstalledApps: (apps: Record<string, boolean>) => void;
 	setInstalledAppsInfo: (apps: InstalledAppInfo[]) => void;
 	setAvailableUpdates: (updates: UpdateAvailableInfo[]) => void;
 	setIsLoadingUpdates: (isLoading: boolean) => void;
+	setInstalledRuntimes: (runtimes: string[]) => void;
 	isAppInstalled: (appId: string) => boolean;
 	getInstalledAppsInfo: () => InstalledAppInfo[];
 	hasUpdate: (appId: string) => boolean;
 	getUpdateInfo: (appId: string) => UpdateAvailableInfo | undefined;
 	getUpdateCount: () => number;
+	isRuntimeInstalled: (runtimeRef: string) => boolean;
 }
 
 export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
@@ -44,6 +48,7 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 	availableUpdates: {},
 	updateCount: 0,
 	isLoadingUpdates: true,
+	installedRuntimes: new Set<string>(),
 
 	setInstalledApp: (appId: string, isInstalled: boolean) =>
 		set((state) => ({
@@ -85,6 +90,12 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 	setIsLoadingUpdates: (isLoading: boolean) =>
 		set({ isLoadingUpdates: isLoading }),
 
+	setInstalledRuntimes: (runtimes: string[]) => {
+		console.log(`[installedAppsStore] Setting ${runtimes.length} runtimes, unique: ${new Set(runtimes).size}`);
+		console.log("[installedAppsStore] First 5 runtimes:", runtimes.slice(0, 5));
+		return set({ installedRuntimes: new Set(runtimes) });
+	},
+
 	isAppInstalled: (appId: string) => {
 		const state = get();
 		return state.installedApps[appId] ?? false;
@@ -108,5 +119,10 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 	getUpdateCount: () => {
 		const state = get();
 		return state.updateCount;
+	},
+
+	isRuntimeInstalled: (runtimeRef: string) => {
+		const state = get();
+		return state.installedRuntimes.has(runtimeRef);
 	},
 }));

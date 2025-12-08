@@ -12,36 +12,46 @@ interface InstalledAppRust {
 	developer?: string;
 }
 
+interface InstalledPackagesResponse {
+	apps: InstalledAppRust[];
+	runtimes: string[];
+}
+
 export const useInstalledApps = () => {
-	const { setInstalledAppsInfo, setAvailableUpdates } =
+	const { setInstalledAppsInfo, setAvailableUpdates, setInstalledRuntimes } =
 		useInstalledAppsStore();
 
 	useEffect(() => {
-		const loadInstalledApps = async () => {
+		const loadInstalledPackages = async () => {
 			try {
-				const apps = await invoke<InstalledAppRust[]>("get_installed_flatpaks");
+				const response = await invoke<InstalledPackagesResponse>(
+					"get_installed_flatpaks",
+				);
 
-				// Convert from Rust format to TypeScript format
-				const installedAppsInfo: InstalledAppInfo[] = apps.map((app) => ({
-					appId: app.app_id,
-					name: app.name,
-					version: app.version,
-					summary: app.summary,
-					developer: app.developer,
-				}));
+				// Convert apps from Rust format to TypeScript format
+				const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
+					(app) => ({
+						appId: app.app_id,
+						name: app.name,
+						version: app.version,
+						summary: app.summary,
+						developer: app.developer,
+					}),
+				);
 
 				setInstalledAppsInfo(installedAppsInfo);
+				setInstalledRuntimes(response.runtimes);
 
 				// After loading installed apps, check for available updates
 				const updates = await checkAvailableUpdates();
 				setAvailableUpdates(updates);
 			} catch (error) {
 				// If loading fails, don't block the app
-				console.error("Error loading installed apps:", error);
+				console.error("Error loading installed packages:", error);
 			}
 		};
 
 		// Execute asynchronously without blocking
-		loadInstalledApps();
-	}, [setInstalledAppsInfo, setAvailableUpdates]);
+		loadInstalledPackages();
+	}, [setInstalledAppsInfo, setAvailableUpdates, setInstalledRuntimes]);
 };

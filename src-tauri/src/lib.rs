@@ -13,6 +13,12 @@ struct InstalledApp {
     developer: Option<String>,
 }
 
+#[derive(Serialize)]
+struct InstalledPackagesResponse {
+    apps: Vec<InstalledApp>,
+    runtimes: Vec<String>,
+}
+
 // Helper function to extract developer name from app_id
 // Takes the second-to-last segment (penultimate)
 // Example: io.github.N3kosempai.klia-store -> N3kosempai
@@ -344,17 +350,19 @@ fn check_file_exists(path: String) -> bool {
 }
 
 #[tauri::command]
-async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<Vec<InstalledApp>, String> {
+async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackagesResponse, String> {
     let shell = app.shell();
 
     // Detect if we're running inside a flatpak
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
+    // Get everything (apps + runtimes) with ref column to distinguish
+    // Note: flatpak list without --system or --user gets both
     let output = if is_flatpak {
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "list", "--app", "--columns=application,name,version,description"])
+            .args(["--host", "flatpak", "list", "--columns=application,name,version,description,ref"])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
@@ -362,7 +370,7 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<Vec<InstalledAp
         // Outside flatpak, use flatpak directly
         shell
             .command("flatpak")
-            .args(["list", "--app", "--columns=application,name,version,description"])
+            .args(["list", "--columns=application,name,version,description,ref"])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak: {}", e))?
@@ -374,31 +382,98 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<Vec<InstalledAp
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let apps: Vec<InstalledApp> = stdout
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .filter_map(|line| {
-            let parts: Vec<&str> = line.split('\t').collect();
-            if parts.len() >= 3 {
-                let app_id = parts[0].trim().to_string();
-                Some(InstalledApp {
-                    app_id: app_id.clone(),
+    let mut apps: Vec<InstalledApp> = Vec::new();
+    let mut runtimes: Vec<String> = Vec::new();
+
+    for line in stdout.lines() {
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        let parts: Vec<&str> = line.split('\t').collect();
+        if parts.len() >= 5 {
+            let app_id = parts[0].trim();
+            let ref_full = parts[4].trim();
+
+            // Distinguish apps from runtimes based on naming convention
+            // Apps usually have reverse-DNS like: org.example.AppName
+            // Runtimes usually end with .Platform, .Sdk, .BaseApp, etc.
+            let is_runtime = app_id.ends_with(".Platform")
+                || app_id.ends_with(".Sdk")
+                || app_id.ends_with(".BaseApp")
+                || app_id.ends_with(".Compat")
+                || app_id.ends_with(".Locale")
+                || app_id.ends_with(".Debug")
+                || app_id.contains(".GL.")
+                || app_id.contains(".VAAPI.")
+                || app_id.contains(".ffmpeg");
+
+            if is_runtime {
+                // It's a runtime - store the ref
+                runtimes.push(ref_full.to_string());
+            } else {
+                // It's an application
+                apps.push(InstalledApp {
+                    app_id: app_id.to_string(),
                     name: parts[1].trim().to_string(),
                     version: parts[2].trim().to_string(),
-                    summary: if parts.len() >= 4 && !parts[3].trim().is_empty() {
+                    summary: if !parts[3].trim().is_empty() {
                         Some(parts[3].trim().to_string())
                     } else {
                         None
                     },
-                    developer: extract_developer(&app_id),
-                })
-            } else {
-                None
+                    developer: extract_developer(app_id),
+                });
             }
-        })
-        .collect();
+        }
+    }
 
-    Ok(apps)
+    Ok(InstalledPackagesResponse { apps, runtimes })
+}
+
+#[tauri::command]
+async fn get_app_runtime_info(app: tauri::AppHandle, app_id: String) -> Result<String, String> {
+    let shell = app.shell();
+
+    // Detect if we're running inside a flatpak
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    // Use --user to match installation scope and avoid interactive prompt
+    let output = if is_flatpak {
+        // Inside flatpak, use flatpak-spawn to execute on the host
+        shell
+            .command("flatpak-spawn")
+            .args(["--host", "flatpak", "remote-info", "--user", "--show-metadata", "flathub", &app_id])
+            .output()
+            .await
+            .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
+    } else {
+        // Outside flatpak, use flatpak directly
+        shell
+            .command("flatpak")
+            .args(["remote-info", "--user", "--show-metadata", "flathub", &app_id])
+            .output()
+            .await
+            .map_err(|e| format!("Failed to execute flatpak: {}", e))?
+    };
+
+    if !output.status.success() {
+        let error = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Flatpak command failed: {}", error));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse the metadata to extract runtime=
+    for line in stdout.lines() {
+        if line.starts_with("runtime=") {
+            if let Some(runtime) = line.strip_prefix("runtime=") {
+                return Ok(runtime.trim().to_string());
+            }
+        }
+    }
+
+    Err("Runtime information not found in metadata".to_string())
 }
 
 #[tauri::command]
@@ -659,6 +734,7 @@ pub fn run() {
             get_cached_image_path,
             check_file_exists,
             get_installed_flatpaks,
+            get_app_runtime_info,
             get_available_updates,
             update_flatpak,
             update_system_flatpaks,

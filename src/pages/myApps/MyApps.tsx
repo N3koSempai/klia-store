@@ -35,6 +35,11 @@ interface InstalledAppRust {
 	developer?: string;
 }
 
+interface InstalledPackagesResponse {
+	apps: InstalledAppRust[];
+	runtimes: string[];
+}
+
 interface MyAppsProps {
 	onBack: () => void;
 	onDeveloperSelect?: (
@@ -165,16 +170,20 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 
 	const reloadInstalledApps = useCallback(async () => {
 		try {
-			const apps = await invoke<InstalledAppRust[]>("get_installed_flatpaks");
+			const response = await invoke<InstalledPackagesResponse>(
+				"get_installed_flatpaks",
+			);
 
 			// Convert from Rust format to TypeScript format
-			const installedAppsInfo: InstalledAppInfo[] = apps.map((app) => ({
-				appId: app.app_id,
-				name: app.name,
-				version: app.version,
-				summary: app.summary,
-				developer: app.developer,
-			}));
+			const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
+				(app) => ({
+					appId: app.app_id,
+					name: app.name,
+					version: app.version,
+					summary: app.summary,
+					developer: app.developer,
+				}),
+			);
 
 			setInstalledAppsInfo(installedAppsInfo);
 

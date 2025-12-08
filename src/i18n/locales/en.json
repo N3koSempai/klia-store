@@ -174,5 +174,15 @@
     "contributing": "Contributing",
     "viewLicense": "View License",
     "viewContributing": "View Contributing Guidelines"
+  },
+  "dependency": {
+    "checkingRuntime": "Checking runtime...",
+    "runtimeReady": "Runtime Ready",
+    "runtimeDownload": "Runtime Download",
+    "runtimeDependencies": "Runtime Dependencies",
+    "alreadyInstalled": "Already installed on your system",
+    "willBeDownloaded": "Will be downloaded during installation",
+    "fastInstallationNote": "Installation will be fast since the runtime is already cached.",
+    "largerDownloadNote": "First installation may take longer as it needs to download runtime dependencies."
   }
 }

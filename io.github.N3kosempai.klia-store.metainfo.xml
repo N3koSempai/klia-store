@@ -37,14 +37,14 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.1.0" date="2025-12-06">
+    <release version="2.2.0" date="2025-12-07">
       <description>
-        <p>New features:</p>
+        <p>Improvements:</p>
         <ul>
-        <li>View GitHub and GitLab star counts directly on app details pages</li>
-        <li>Visual badges with different styles based on popularity (Indie/Solid/Epic/Legendary)</li>
-        <li>Click on star badges to open the project repository in your browser</li>
-        <li>Works with apps from GitHub, GitLab, and GNOME GitLab</li>
+        <li>Terminal now automatically follows new output in real-time during installations and updates</li>
+        <li>Smart auto-scroll: terminal stops scrolling when you manually scroll up to read, and resumes when you scroll back down</li>
+        <li>Individual app updates now display real-time progress instead of showing all output at once</li>
+        <li>Fixed animations not displaying in production builds</li>
         </ul>
       </description>
     </release>

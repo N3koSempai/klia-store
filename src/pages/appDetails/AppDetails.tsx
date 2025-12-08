@@ -9,10 +9,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../components/CachedImage";
+import { DependencyStatusCard } from "../../components/DependencyStatusCard";
 import { GitHubStarBadge } from "../../components/GitHubStarBadge";
 import { Terminal } from "../../components/Terminal";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
 import { useRepoStats } from "../../hooks/useRepoStats";
+import { useRuntimeCheck } from "../../hooks/useRuntimeCheck";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { AppStream } from "../../types";
 
@@ -30,6 +32,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	} = useAppScreenshots(app);
 	const { isAppInstalled, setInstalledApp } = useInstalledAppsStore();
 	const { stars, repoUrl } = useRepoStats(app.id, urls);
+	const runtimeCheck = useRuntimeCheck(app.id);
 	const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
 	// Generate stable UUIDs for screenshots
@@ -233,50 +236,63 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 					</Box>
 				</Box>
 
-				{/* Install Button */}
-				<Button
-					variant="contained"
-					size="large"
-					onClick={handleInstall}
-					disabled={
-						isInstalled ||
-						installStatus === "installing" ||
-						installStatus === "success"
-					}
-					sx={{
-						px: 4,
-						py: 1.5,
-						fontSize: "1rem",
-						fontWeight: "bold",
-						bgcolor:
-							isInstalled || installStatus === "success"
-								? "success.main"
-								: installStatus === "installing"
-									? "grey.600"
-									: "primary.main",
-						"&:hover": {
-							bgcolor:
-								isInstalled || installStatus === "success"
-									? "success.dark"
-									: installStatus === "installing"
-										? "grey.600"
-										: "primary.dark",
-						},
-						"&.Mui-disabled": {
+				{/* Install Button and Runtime Status */}
+				<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+					<Button
+						variant="contained"
+						size="large"
+						onClick={handleInstall}
+						disabled={
+							isInstalled ||
+							installStatus === "installing" ||
+							installStatus === "success"
+						}
+						sx={{
+							px: 4,
+							py: 1.5,
+							fontSize: "1rem",
+							fontWeight: "bold",
 							bgcolor:
 								isInstalled || installStatus === "success"
 									? "success.main"
-									: "grey.600",
-							color: "white",
-						},
-					}}
-				>
-					{isInstalled || installStatus === "success"
-						? t("appDetails.installed")
-						: installStatus === "installing"
-							? t("appDetails.installing")
-							: t("appDetails.install")}
-				</Button>
+									: installStatus === "installing"
+										? "grey.600"
+										: "primary.main",
+							"&:hover": {
+								bgcolor:
+									isInstalled || installStatus === "success"
+										? "success.dark"
+										: installStatus === "installing"
+											? "grey.600"
+											: "primary.dark",
+							},
+							"&.Mui-disabled": {
+								bgcolor:
+									isInstalled || installStatus === "success"
+										? "success.main"
+										: "grey.600",
+								color: "white",
+							},
+						}}
+					>
+						{isInstalled || installStatus === "success"
+							? t("appDetails.installed")
+							: installStatus === "installing"
+								? t("appDetails.installing")
+								: t("appDetails.install")}
+					</Button>
+
+					{/* Runtime Dependency Status Chip */}
+					{!isInstalled && installStatus === "idle" && (
+						<Box>
+							<DependencyStatusCard
+								runtimeRef={runtimeCheck.runtimeRef}
+								isInstalled={runtimeCheck.isInstalled}
+								loading={runtimeCheck.loading}
+							/>
+						</Box>
+					)}
+				</Box>
 			</Box>
 
 			{/* Sección de Screenshots - Carrusel, Terminal o Resultado */}
@@ -305,8 +321,8 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 								key={installStatus}
 								src={
 									installStatus === "success"
-										? "/src/assets/animations/success.lottie"
-										: "/src/assets/animations/Error.lottie"
+										? "../../assets/animations/success.lottie"
+										: "../../assets/animations/Error.lottie"
 								}
 								loop={false}
 								autoplay={true}
