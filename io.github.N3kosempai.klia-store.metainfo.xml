@@ -45,6 +45,7 @@
         <li>Smart auto-scroll: terminal stops scrolling when you manually scroll up to read, and resumes when you scroll back down</li>
         <li>Individual app updates now display real-time progress instead of showing all output at once</li>
         <li>Fixed animations not displaying in production builds</li>
+        <li>Application details now show runtime dependency status before installation</li>
         </ul>
       </description>
     </release>
