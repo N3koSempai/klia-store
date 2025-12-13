@@ -356,13 +356,14 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
     // Detect if we're running inside a flatpak
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
-    // Get everything (apps + runtimes) with ref column to distinguish
+    // Get everything (apps + runtimes) with options column to distinguish
     // Note: flatpak list without --system or --user gets both
+    // The 'options' column contains 'runtime' for runtimes/extensions and 'current' for apps
     let output = if is_flatpak {
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "list", "--columns=application,name,version,description,ref"])
+            .args(["--host", "flatpak", "list", "--columns=application,name,version,description,options,ref"])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
@@ -370,7 +371,7 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
         // Outside flatpak, use flatpak directly
         shell
             .command("flatpak")
-            .args(["list", "--columns=application,name,version,description,ref"])
+            .args(["list", "--columns=application,name,version,description,options,ref"])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak: {}", e))?
@@ -391,22 +392,15 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
         }
 
         let parts: Vec<&str> = line.split('\t').collect();
-        if parts.len() >= 5 {
+        if parts.len() >= 6 {
             let app_id = parts[0].trim();
-            let ref_full = parts[4].trim();
+            let options = parts[4].trim();
+            let ref_full = parts[5].trim();
 
-            // Distinguish apps from runtimes based on naming convention
-            // Apps usually have reverse-DNS like: org.example.AppName
-            // Runtimes usually end with .Platform, .Sdk, .BaseApp, etc.
-            let is_runtime = app_id.ends_with(".Platform")
-                || app_id.ends_with(".Sdk")
-                || app_id.ends_with(".BaseApp")
-                || app_id.ends_with(".Compat")
-                || app_id.ends_with(".Locale")
-                || app_id.ends_with(".Debug")
-                || app_id.contains(".GL.")
-                || app_id.contains(".VAAPI.")
-                || app_id.contains(".ffmpeg");
+            // Distinguish apps from runtimes using the official 'options' column
+            // Apps have 'current' in options (e.g., "user,current" or "system,current")
+            // Runtimes/extensions have 'runtime' in options (e.g., "user,runtime" or "system,runtime")
+            let is_runtime = options.contains("runtime");
 
             if is_runtime {
                 // It's a runtime - store the ref
