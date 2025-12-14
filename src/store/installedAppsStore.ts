@@ -8,6 +8,13 @@ export interface InstalledAppInfo {
 	developer?: string; // Developer name extracted from app_id (e.g., "N3kosempai", "mozilla")
 }
 
+export interface InstalledExtensionInfo {
+	extensionId: string;
+	name: string;
+	version: string;
+	parentAppId: string;
+}
+
 export interface UpdateAvailableInfo {
 	appId: string;
 	newVersion: string;
@@ -20,6 +27,8 @@ interface InstalledAppsStore {
 	installedApps: Record<string, boolean>;
 	// Nueva estructura con información completa
 	installedAppsInfo: InstalledAppInfo[];
+	// Installed extensions mapped by parent app ID
+	installedExtensions: Record<string, InstalledExtensionInfo[]>;
 	// Apps que tienen actualizaciones disponibles
 	availableUpdates: Record<string, UpdateAvailableInfo>;
 	// Number of available updates for badge
@@ -31,11 +40,13 @@ interface InstalledAppsStore {
 	setInstalledApp: (appId: string, isInstalled: boolean) => void;
 	setInstalledApps: (apps: Record<string, boolean>) => void;
 	setInstalledAppsInfo: (apps: InstalledAppInfo[]) => void;
+	setInstalledExtensions: (extensions: InstalledExtensionInfo[]) => void;
 	setAvailableUpdates: (updates: UpdateAvailableInfo[]) => void;
 	setIsLoadingUpdates: (isLoading: boolean) => void;
 	setInstalledRuntimes: (runtimes: string[]) => void;
 	isAppInstalled: (appId: string) => boolean;
 	getInstalledAppsInfo: () => InstalledAppInfo[];
+	getInstalledExtensionsForApp: (appId: string) => InstalledExtensionInfo[];
 	hasUpdate: (appId: string) => boolean;
 	getUpdateInfo: (appId: string) => UpdateAvailableInfo | undefined;
 	getUpdateCount: () => number;
@@ -45,6 +56,7 @@ interface InstalledAppsStore {
 export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 	installedApps: {},
 	installedAppsInfo: [],
+	installedExtensions: {},
 	availableUpdates: {},
 	updateCount: 0,
 	isLoadingUpdates: true,
@@ -71,6 +83,21 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 			return {
 				installedAppsInfo: apps,
 				installedApps: installedAppsMap,
+			};
+		}),
+
+	setInstalledExtensions: (extensions: InstalledExtensionInfo[]) =>
+		set(() => {
+			// Group extensions by parent app ID
+			const extensionsMap: Record<string, InstalledExtensionInfo[]> = {};
+			for (const ext of extensions) {
+				if (!extensionsMap[ext.parentAppId]) {
+					extensionsMap[ext.parentAppId] = [];
+				}
+				extensionsMap[ext.parentAppId].push(ext);
+			}
+			return {
+				installedExtensions: extensionsMap,
 			};
 		}),
 
@@ -104,6 +131,11 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 	getInstalledAppsInfo: () => {
 		const state = get();
 		return state.installedAppsInfo;
+	},
+
+	getInstalledExtensionsForApp: (appId: string) => {
+		const state = get();
+		return state.installedExtensions[appId] ?? [];
 	},
 
 	hasUpdate: (appId: string) => {

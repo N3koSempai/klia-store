@@ -20,6 +20,7 @@ export async function executeFlatpakOperation(
 	command: () => Promise<void>,
 	onProgress?: (progress: FlatpakOperationProgress) => void,
 ): Promise<FlatpakOperationResult> {
+	console.log("[executeFlatpakOperation] Starting operation...");
 	const output: string[] = [];
 	let unlistenOutput: UnlistenFn | null = null;
 	let unlistenError: UnlistenFn | null = null;
@@ -30,6 +31,7 @@ export async function executeFlatpakOperation(
 			// Listen to output events
 			unlistenOutput = await listen<string>("install-output", (event) => {
 				const line = event.payload;
+				console.log("[executeFlatpakOperation] Output:", line);
 				output.push(line);
 
 				// Parse progress if available
@@ -60,6 +62,7 @@ export async function executeFlatpakOperation(
 			// Listen to error events
 			unlistenError = await listen<string>("install-error", (event) => {
 				const errorMsg = `Error: ${event.payload}`;
+				console.log("[executeFlatpakOperation] Error:", errorMsg);
 				output.push(errorMsg);
 				if (onProgress) {
 					onProgress({ output: errorMsg });
@@ -70,6 +73,7 @@ export async function executeFlatpakOperation(
 			unlistenCompleted = await listen<number>("install-completed", (event) => {
 				const exitCode = event.payload;
 				const success = exitCode === 0;
+				console.log("[executeFlatpakOperation] Completed with exit code:", exitCode);
 
 				// Cleanup listeners
 				unlistenOutput?.();
@@ -83,9 +87,12 @@ export async function executeFlatpakOperation(
 				});
 			});
 
+			console.log("[executeFlatpakOperation] Listeners set up, executing command...");
 			// Start the operation
 			await command();
+			console.log("[executeFlatpakOperation] Command executed");
 		} catch (error) {
+			console.error("[executeFlatpakOperation] Error executing command:", error);
 			// Cleanup listeners on error
 			unlistenOutput?.();
 			unlistenError?.();
@@ -130,6 +137,32 @@ export async function uninstallFlatpakApp(
 ): Promise<FlatpakOperationResult> {
 	return executeFlatpakOperation(
 		() => invoke("uninstall_flatpak", { appId }),
+		onProgress,
+	);
+}
+
+/**
+ * Install a flatpak extension
+ */
+export async function installExtension(
+	extensionId: string,
+	onProgress?: (progress: FlatpakOperationProgress) => void,
+): Promise<FlatpakOperationResult> {
+	return executeFlatpakOperation(
+		() => invoke("install_extension", { extensionId }),
+		onProgress,
+	);
+}
+
+/**
+ * Uninstall a flatpak extension
+ */
+export async function uninstallExtension(
+	extensionId: string,
+	onProgress?: (progress: FlatpakOperationProgress) => void,
+): Promise<FlatpakOperationResult> {
+	return executeFlatpakOperation(
+		() => invoke("uninstall_extension", { extensionId }),
 		onProgress,
 	);
 }

@@ -14,9 +14,18 @@ struct InstalledApp {
 }
 
 #[derive(Serialize)]
+struct InstalledExtension {
+    extension_id: String,
+    name: String,
+    version: String,
+    parent_app_id: String,
+}
+
+#[derive(Serialize)]
 struct InstalledPackagesResponse {
     apps: Vec<InstalledApp>,
     runtimes: Vec<String>,
+    extensions: Vec<InstalledExtension>,
 }
 
 // Helper function to extract developer name from app_id
@@ -356,13 +365,14 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
     // Detect if we're running inside a flatpak
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
-    // Get everything (apps + runtimes) with ref column to distinguish
+    // Get everything (apps + runtimes) with options column to distinguish
     // Note: flatpak list without --system or --user gets both
+    // The 'options' column contains 'runtime' for runtimes/extensions and 'current' for apps
     let output = if is_flatpak {
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "list", "--columns=application,name,version,description,ref"])
+            .args(["--host", "flatpak", "list", "--columns=application,name,version,description,options,ref"])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
@@ -370,7 +380,7 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
         // Outside flatpak, use flatpak directly
         shell
             .command("flatpak")
-            .args(["list", "--columns=application,name,version,description,ref"])
+            .args(["list", "--columns=application,name,version,description,options,ref"])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak: {}", e))?
@@ -384,33 +394,49 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
     let stdout = String::from_utf8_lossy(&output.stdout);
     let mut apps: Vec<InstalledApp> = Vec::new();
     let mut runtimes: Vec<String> = Vec::new();
+    let mut potential_extensions: Vec<(String, String, String, String)> = Vec::new(); // (app_id, name, version, ref)
 
+    // First pass: collect apps and potential extensions
     for line in stdout.lines() {
         if line.trim().is_empty() {
             continue;
         }
 
         let parts: Vec<&str> = line.split('\t').collect();
-        if parts.len() >= 5 {
+        if parts.len() >= 6 {
             let app_id = parts[0].trim();
-            let ref_full = parts[4].trim();
+            let options = parts[4].trim();
+            let ref_full = parts[5].trim();
 
-            // Distinguish apps from runtimes based on naming convention
-            // Apps usually have reverse-DNS like: org.example.AppName
-            // Runtimes usually end with .Platform, .Sdk, .BaseApp, etc.
-            let is_runtime = app_id.ends_with(".Platform")
-                || app_id.ends_with(".Sdk")
-                || app_id.ends_with(".BaseApp")
-                || app_id.ends_with(".Compat")
-                || app_id.ends_with(".Locale")
-                || app_id.ends_with(".Debug")
-                || app_id.contains(".GL.")
-                || app_id.contains(".VAAPI.")
-                || app_id.contains(".ffmpeg");
+            // Distinguish apps from runtimes using the official 'options' column
+            // Apps have 'current' in options (e.g., "user,current" or "system,current")
+            // Runtimes/extensions have 'runtime' in options (e.g., "user,runtime" or "system,runtime")
+            let is_runtime = options.contains("runtime");
 
             if is_runtime {
-                // It's a runtime - store the ref
-                runtimes.push(ref_full.to_string());
+                // Check if it might be an app extension using blacklist approach
+                // Exclude system/platform extensions, consider everything else as potential app extension
+                let is_system_extension =
+                    app_id.contains("org.freedesktop.Platform.") ||
+                    app_id.contains("org.freedesktop.Sdk.") ||
+                    app_id.contains(".Platform.GL32") ||
+                    app_id.contains(".Platform.VAAPI") ||
+                    app_id.contains(".Platform.Compat.i386") ||
+                    app_id.contains(".Platform.codecs");
+
+                let is_potential_app_extension = !is_system_extension;
+
+                if is_potential_app_extension {
+                    potential_extensions.push((
+                        app_id.to_string(),
+                        parts[1].trim().to_string(),
+                        parts[2].trim().to_string(),
+                        ref_full.to_string(),
+                    ));
+                } else {
+                    // It's a platform/runtime/driver - store the ref
+                    runtimes.push(ref_full.to_string());
+                }
             } else {
                 // It's an application
                 apps.push(InstalledApp {
@@ -428,7 +454,31 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
         }
     }
 
-    Ok(InstalledPackagesResponse { apps, runtimes })
+    // Second pass: match extensions to their parent apps
+    let mut extensions: Vec<InstalledExtension> = Vec::new();
+    for (ext_id, ext_name, ext_version, ext_ref) in potential_extensions {
+        // Try to find parent app by checking if any installed app's ID is a prefix of this extension
+        let mut matched = false;
+        for app in &apps {
+            if ext_id.starts_with(&app.app_id) && ext_id != app.app_id {
+                extensions.push(InstalledExtension {
+                    extension_id: ext_id.clone(),
+                    name: ext_name.clone(),
+                    version: ext_version.clone(),
+                    parent_app_id: app.app_id.clone(),
+                });
+                matched = true;
+                break;
+            }
+        }
+
+        // If no match found, it's probably a platform extension, add to runtimes
+        if !matched {
+            runtimes.push(ext_ref);
+        }
+    }
+
+    Ok(InstalledPackagesResponse { apps, runtimes, extensions })
 }
 
 #[tauri::command]
@@ -711,6 +761,265 @@ async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), 
     Ok(())
 }
 
+#[tauri::command]
+async fn get_app_remote_metadata(app: tauri::AppHandle, app_id: String) -> Result<String, String> {
+    let shell = app.shell();
+
+    // Detect if we're running inside a flatpak
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    let output = if is_flatpak {
+        // Inside flatpak, use flatpak-spawn to execute on the host
+        shell
+            .command("flatpak-spawn")
+            .args(["--host", "flatpak", "remote-info", "--user", "--show-metadata", "flathub", &app_id])
+            .output()
+            .await
+            .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
+    } else {
+        // Outside flatpak, use flatpak directly
+        shell
+            .command("flatpak")
+            .args(["remote-info", "--user", "--show-metadata", "flathub", &app_id])
+            .output()
+            .await
+            .map_err(|e| format!("Failed to execute flatpak: {}", e))?
+    };
+
+    if !output.status.success() {
+        let error = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Flatpak command failed: {}", error));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.to_string())
+}
+
+#[derive(serde::Serialize)]
+struct InstallableExtension {
+    extension_id: String,
+    name: String,
+    version: String,
+}
+
+#[tauri::command]
+async fn get_installable_extensions(app: tauri::AppHandle, app_id: String) -> Result<Vec<InstallableExtension>, String> {
+    let shell = app.shell();
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    // First, get the metadata to find extension points
+    let metadata = get_app_remote_metadata(app.clone(), app_id.clone()).await?;
+
+    // Parse extension points from metadata
+    let mut extension_points = Vec::new();
+    for line in metadata.lines() {
+        if let Some(captures) = line.strip_prefix("[Extension ").and_then(|s| s.strip_suffix("]")) {
+            let extension_point = captures.trim().to_string();
+
+            // Use a blacklist approach: exclude system/platform extensions
+            // Only accept extensions that belong to this app's domain
+            let belongs_to_app = extension_point.starts_with(&app_id);
+
+            // Check if it's a system extension by looking at the first segment after app_id
+            // Example: io.github.peazip.PeaZip.Debug -> first segment is "Debug" (exclude)
+            // Example: io.github.peazip.PeaZip.Addon.i386 -> first segment is "Addon" (allow)
+            let is_system_extension = if belongs_to_app && extension_point.len() > app_id.len() {
+                let suffix = &extension_point[app_id.len()..];
+                // Get the first segment after app_id (e.g., ".Debug" or ".Addon")
+                let first_segment = suffix.split('.').nth(1).unwrap_or("");
+
+                first_segment == "Debug" ||
+                first_segment == "Locale" ||
+                first_segment == "Help"
+            } else {
+                // Platform extensions from freedesktop
+                extension_point.contains("org.freedesktop.Platform.") ||
+                extension_point.contains("org.freedesktop.Sdk.")
+            };
+
+            if belongs_to_app && !is_system_extension {
+                extension_points.push(extension_point);
+            }
+        }
+    }
+
+    // Now search flathub for packages that match these extension points
+    let mut installable_extensions = Vec::new();
+
+    for extension_point in extension_points {
+        // Use flatpak search to find extensions matching the extension point
+        // Note: flatpak search doesn't return version info, only application and name
+        let output = if is_flatpak {
+            shell
+                .command("flatpak-spawn")
+                .args(["--host", "flatpak", "search", "--columns=application,name", &extension_point])
+                .output()
+                .await
+                .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
+        } else {
+            shell
+                .command("flatpak")
+                .args(["search", "--columns=application,name", &extension_point])
+                .output()
+                .await
+                .map_err(|e| format!("Failed to execute flatpak: {}", e))?
+        };
+
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            // Find packages that start with the extension point ID
+            for line in stdout.lines() {
+                if line.trim().is_empty() {
+                    continue;
+                }
+                let parts: Vec<&str> = line.split('\t').collect();
+                if parts.len() >= 2 {
+                    let pkg_id = parts[0].trim();
+                    let pkg_name = parts[1].trim();
+                    // flatpak search doesn't return version, use empty string
+                    let pkg_version = "";
+
+                    // Check if this package is an extension for this extension point
+                    // It can be exactly equal to the extension point or start with it
+                    if pkg_id.starts_with(&extension_point) {
+                        // Accept if it's exactly the extension point OR if it has additional components
+                        let is_valid = pkg_id == extension_point ||
+                                      (pkg_id.len() > extension_point.len() &&
+                                       pkg_id.chars().nth(extension_point.len()) == Some('.'));
+
+                        if is_valid {
+                            installable_extensions.push(InstallableExtension {
+                                extension_id: pkg_id.to_string(),
+                                name: pkg_name.to_string(),
+                                version: pkg_version.to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(installable_extensions)
+}
+
+#[tauri::command]
+async fn install_extension(app: tauri::AppHandle, extension_id: String) -> Result<(), String> {
+    app.emit(
+        "install-output",
+        format!("Installing extension {}...", extension_id),
+    )
+    .map_err(|e| format!("Failed to emit: {}", e))?;
+
+    let shell = app.shell();
+
+    // Detect if we're running inside a flatpak
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    let (mut rx, _child) = if is_flatpak {
+        // Inside flatpak, use flatpak-spawn to execute on the host
+        shell
+            .command("flatpak-spawn")
+            .args(["--host", "flatpak", "install", "-y", "--user", "flathub", &extension_id])
+            .spawn()
+            .map_err(|e| format!("Failed to spawn flatpak-spawn: {}", e))?
+    } else {
+        // Outside flatpak, use flatpak directly
+        shell
+            .command("flatpak")
+            .args(["install", "-y", "--user", "flathub", &extension_id])
+            .spawn()
+            .map_err(|e| format!("Failed to spawn flatpak: {}", e))?
+    };
+
+    // Read output in real-time
+    while let Some(event) = rx.recv().await {
+        match event {
+            tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
+                let output = String::from_utf8_lossy(&line);
+                app.emit("install-output", output.to_string())
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
+            }
+            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                let output = String::from_utf8_lossy(&line);
+                app.emit("install-output", output.to_string())
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
+            }
+            tauri_plugin_shell::process::CommandEvent::Error(err) => {
+                app.emit("install-error", err)
+                    .map_err(|e| format!("Failed to emit error: {}", e))?;
+            }
+            tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                app.emit("install-completed", payload.code.unwrap_or(-1))
+                    .map_err(|e| format!("Failed to emit completion: {}", e))?;
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn uninstall_extension(app: tauri::AppHandle, extension_id: String) -> Result<(), String> {
+    app.emit(
+        "install-output",
+        format!("Uninstalling extension {}...", extension_id),
+    )
+    .map_err(|e| format!("Failed to emit: {}", e))?;
+
+    let shell = app.shell();
+
+    // Detect if we're running inside a flatpak
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    let (mut rx, _child) = if is_flatpak {
+        // Inside flatpak, use flatpak-spawn to execute on the host
+        shell
+            .command("flatpak-spawn")
+            .args(["--host", "flatpak", "uninstall", "-y", &extension_id])
+            .spawn()
+            .map_err(|e| format!("Failed to spawn flatpak-spawn: {}", e))?
+    } else {
+        // Outside flatpak, use flatpak directly
+        shell
+            .command("flatpak")
+            .args(["uninstall", "-y", &extension_id])
+            .spawn()
+            .map_err(|e| format!("Failed to spawn flatpak: {}", e))?
+    };
+
+    // Read output in real-time
+    while let Some(event) = rx.recv().await {
+        match event {
+            tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
+                let output = String::from_utf8_lossy(&line);
+                app.emit("install-output", output.to_string())
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
+            }
+            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                let output = String::from_utf8_lossy(&line);
+                app.emit("install-output", output.to_string())
+                    .map_err(|e| format!("Failed to emit event: {}", e))?;
+            }
+            tauri_plugin_shell::process::CommandEvent::Error(err) => {
+                app.emit("install-error", err)
+                    .map_err(|e| format!("Failed to emit error: {}", e))?;
+            }
+            tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                app.emit("install-completed", payload.code.unwrap_or(-1))
+                    .map_err(|e| format!("Failed to emit completion: {}", e))?;
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -735,10 +1044,14 @@ pub fn run() {
             check_file_exists,
             get_installed_flatpaks,
             get_app_runtime_info,
+            get_app_remote_metadata,
+            get_installable_extensions,
             get_available_updates,
             update_flatpak,
             update_system_flatpaks,
-            uninstall_flatpak
+            uninstall_flatpak,
+            install_extension,
+            uninstall_extension
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
