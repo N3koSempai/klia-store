@@ -37,15 +37,20 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.2.0" date="2025-12-07">
+    <release version="2.3.0" date="2025-01-13">
       <description>
-        <p>Improvements:</p>
+        <p>New Features:</p>
         <ul>
-        <li>Terminal now automatically follows new output in real-time during installations and updates</li>
-        <li>Smart auto-scroll: terminal stops scrolling when you manually scroll up to read, and resumes when you scroll back down</li>
-        <li>Individual app updates now display real-time progress instead of showing all output at once</li>
-        <li>Fixed animations not displaying in production builds</li>
-        <li>Application details now show runtime dependency status before installation</li>
+        <li>Added extension management system for installed applications</li>
+        <li>View and install available extensions (plugins, addons, utilities) for each app directly from My Apps</li>
+        <li>Real-time installation progress with visual feedback for extensions</li>
+        <li>Automatic detection of installed extensions with uninstall capability</li>
+        <li>Smart filtering: only shows user-installable extensions, excluding system components</li>
+        </ul>
+        <p>UI Improvements:</p>
+        <ul>
+        <li>Changed release notes icon to a more intuitive document icon</li>
+        <li>Improved extension list UI with clear install/installed states</li>
         </ul>
       </description>
     </release>

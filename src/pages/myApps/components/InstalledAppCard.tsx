@@ -1,4 +1,4 @@
-import { DeleteOutline, History, Person, Update } from "@mui/icons-material";
+import { DeleteOutline, Description, Extension, Person, Update } from "@mui/icons-material";
 import {
 	Avatar,
 	Box,
@@ -10,9 +10,10 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { memo } from "react";
+import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
+import { ExtensionsPopover } from "../../../components/ExtensionsPopover";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
 
 interface InstalledAppCardProps {
@@ -43,6 +44,15 @@ const InstalledAppCardComponent = ({
 	onDeveloperClick,
 }: InstalledAppCardProps) => {
 	const { t } = useTranslation();
+	const [extensionsAnchorEl, setExtensionsAnchorEl] = useState<HTMLElement | null>(null);
+
+	const handleExtensionsClick = (event: React.MouseEvent<HTMLElement>) => {
+		setExtensionsAnchorEl(event.currentTarget);
+	};
+
+	const handleExtensionsClose = () => {
+		setExtensionsAnchorEl(null);
+	};
 
 	return (
 		<Card
@@ -72,6 +82,25 @@ const InstalledAppCardComponent = ({
 				spacing={1}
 				sx={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}
 			>
+				{/* Botón para ver extensiones */}
+				<Tooltip title="Extensions">
+					<IconButton
+						onClick={handleExtensionsClick}
+						size="small"
+						sx={{
+							color: "text.secondary",
+							border: "1px solid rgba(255,255,255,0.1)",
+							"&:hover": {
+								color: "#FFD700",
+								backgroundColor: "rgba(255, 215, 0, 0.1)",
+								borderColor: "#FFD700",
+							},
+						}}
+					>
+						<Extension fontSize="small" />
+					</IconButton>
+				</Tooltip>
+
 				{/* Botón para ver el Changelog/Release Notes */}
 				{hasUpdate && (
 					<Tooltip title={t("appDetails.releaseNotes")}>
@@ -88,7 +117,7 @@ const InstalledAppCardComponent = ({
 								},
 							}}
 						>
-							<History fontSize="small" />
+							<Description fontSize="small" />
 						</IconButton>
 					</Tooltip>
 				)}
@@ -114,6 +143,14 @@ const InstalledAppCardComponent = ({
 					</IconButton>
 				</Tooltip>
 			</Stack>
+
+			{/* Extensions Popover */}
+			<ExtensionsPopover
+				appId={app.appId}
+				anchorEl={extensionsAnchorEl}
+				open={Boolean(extensionsAnchorEl)}
+				onClose={handleExtensionsClose}
+			/>
 
 			<CardContent
 				sx={{

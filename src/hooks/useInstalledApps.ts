@@ -12,13 +12,21 @@ interface InstalledAppRust {
 	developer?: string;
 }
 
+interface InstalledExtensionRust {
+	extension_id: string;
+	name: string;
+	version: string;
+	parent_app_id: string;
+}
+
 interface InstalledPackagesResponse {
 	apps: InstalledAppRust[];
 	runtimes: string[];
+	extensions: InstalledExtensionRust[];
 }
 
 export const useInstalledApps = () => {
-	const { setInstalledAppsInfo, setAvailableUpdates, setInstalledRuntimes } =
+	const { setInstalledAppsInfo, setInstalledExtensions, setAvailableUpdates, setInstalledRuntimes } =
 		useInstalledAppsStore();
 
 	useEffect(() => {
@@ -39,7 +47,15 @@ export const useInstalledApps = () => {
 					}),
 				);
 
+				const installedExtensionsInfo = response.extensions.map((ext) => ({
+					extensionId: ext.extension_id,
+					name: ext.name,
+					version: ext.version,
+					parentAppId: ext.parent_app_id,
+				}));
+
 				setInstalledAppsInfo(installedAppsInfo);
+				setInstalledExtensions(installedExtensionsInfo);
 				setInstalledRuntimes(response.runtimes);
 
 				// After loading installed apps, check for available updates
@@ -53,5 +69,5 @@ export const useInstalledApps = () => {
 
 		// Execute asynchronously without blocking
 		loadInstalledPackages();
-	}, [setInstalledAppsInfo, setAvailableUpdates, setInstalledRuntimes]);
+	}, [setInstalledAppsInfo, setInstalledExtensions, setAvailableUpdates, setInstalledRuntimes]);
 };

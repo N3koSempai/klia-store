@@ -35,9 +35,17 @@ interface InstalledAppRust {
 	developer?: string;
 }
 
+interface InstalledExtensionRust {
+	extension_id: string;
+	name: string;
+	version: string;
+	parent_app_id: string;
+}
+
 interface InstalledPackagesResponse {
 	apps: InstalledAppRust[];
 	runtimes: string[];
+	extensions: InstalledExtensionRust[];
 }
 
 interface MyAppsProps {
@@ -124,6 +132,9 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const setInstalledAppsInfo = useInstalledAppsStore(
 		(state) => state.setInstalledAppsInfo,
 	);
+	const setInstalledExtensions = useInstalledAppsStore(
+		(state) => state.setInstalledExtensions,
+	);
 	const isLoadingUpdates = useInstalledAppsStore(
 		(state) => state.isLoadingUpdates,
 	);
@@ -185,7 +196,15 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 				}),
 			);
 
+			const installedExtensionsInfo = response.extensions.map((ext) => ({
+				extensionId: ext.extension_id,
+				name: ext.name,
+				version: ext.version,
+				parentAppId: ext.parent_app_id,
+			}));
+
 			setInstalledAppsInfo(installedAppsInfo);
+			setInstalledExtensions(installedExtensionsInfo);
 
 			// After loading installed apps, check for available updates
 			const updates = await checkAvailableUpdates();
@@ -193,7 +212,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		} catch (error) {
 			console.error("Error reloading installed apps:", error);
 		}
-	}, [setInstalledAppsInfo, setAvailableUpdates]);
+	}, [setInstalledAppsInfo, setInstalledExtensions, setAvailableUpdates]);
 
 	const reloadAvailableUpdates = useCallback(async () => {
 		try {
