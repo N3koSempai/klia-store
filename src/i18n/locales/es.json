@@ -1,0 +1,212 @@
+{
+  "about": {
+    "availabilityLabel": "Disponibilidad laboral:",
+    "availabilityStatus": {
+      "available": "Disponible para trabajar",
+      "busy": "Trabajando, pero abierto a ofertas",
+      "unavailable": "No disponible"
+    },
+    "contributing": "Contribución",
+    "createdBy": "Creado por",
+    "description": "Klia Store es una tienda de aplicaciones moderna para Linux, que ofrece una forma fácil e intuitiva de descubrir, instalar y gestionar aplicaciones. Parte de la Suite de Software Klia.",
+    "license": "Licencia",
+    "title": "Acerca de Klia Store",
+    "version": "Versión",
+    "viewContributing": "Ver Guía de Contribución",
+    "viewLicense": "Ver Licencia"
+  },
+  "appDetails": {
+    "aboutThisApp": "Acerca de esta aplicación",
+    "accept": "Aceptar",
+    "category": "Categoría",
+    "description": "Descripción",
+    "developer": "Desarrollador",
+    "downloadingReference": "Descargando referencia de flatpak...",
+    "errorInvokingCommand": "✗ Error al invocar el comando: {{error}}",
+    "errorLoading": "Error al cargar los detalles de la aplicación",
+    "getLog": "Obtener registro",
+    "install": "Instalar",
+    "installationCompleted": "¡Instalación completada con éxito!",
+    "installationCompletedSuccess": "✓ Instalación completada con éxito.",
+    "installationError": "Error de instalación",
+    "installationFailed": "✗ La instalación falló con el código: {{code}}",
+    "installationInProgress": "Instalación en progreso",
+    "installed": "Instalada",
+    "installing": "Instalando...",
+    "launch": "Lanzar",
+    "license": "Licencia",
+    "noIcon": "Sin icono",
+    "noScreenshots": "No hay capturas de pantalla disponibles",
+    "preparingInstallation": "Preparando instalación personalizada...",
+    "releaseNotes": "Notas de la versión",
+    "screenshots": "Capturas de pantalla",
+    "size": "Tamaño",
+    "uninstall": "Desinstalar",
+    "uninstalling": "Desinstalando...",
+    "update": "Actualizar",
+    "updating": "Actualizando...",
+    "version": "Versión"
+  },
+  "categoryApps": {
+    "error": "Error al cargar aplicaciones",
+    "errorLoadingApps": "Error al cargar aplicaciones: {{error}}",
+    "loading": "Cargando aplicaciones...",
+    "noApps": "No se encontraron aplicaciones en esta categoría",
+    "title": "{{category}}"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "error": "Error",
+    "errorInitializing": "Error al inicializar la aplicación:",
+    "initializing": "Inicializando Klia Store...",
+    "loading": "Cargando...",
+    "noResults": "No se encontraron resultados",
+    "retry": "Reintentar",
+    "save": "Guardar",
+    "search": "Buscar"
+  },
+  "dependency": {
+    "alreadyInstalled": "Ya instalado en su sistema",
+    "checkingRuntime": "Comprobando entorno de ejecución...",
+    "fastInstallationNote": "La instalación será rápida ya que el entorno de ejecución ya está en caché.",
+    "largerDownloadNote": "La primera instalación puede tardar más, ya que necesita descargar las dependencias del entorno de ejecución.",
+    "runtimeDependencies": "Dependencias del entorno",
+    "runtimeDownload": "Descarga del entorno",
+    "runtimeReady": "Entorno listo",
+    "willBeDownloaded": "Se descargará durante la instalación"
+  },
+  "developerProfile": {
+    "availableSoftware": "Software disponible",
+    "errorLoadingApps": "Error al cargar aplicaciones: {{error}}",
+    "noApps": "No hay aplicaciones disponibles de este desarrollador",
+    "package": "Paquete",
+    "packages": "Paquetes",
+    "title": "Perfil del Desarrollador"
+  },
+  "extensions": {
+    "errorLoading": "Error al cargar extensiones: {{error}}",
+    "install": "Instalar",
+    "installed": "Instalada",
+    "installing": "Instalando",
+    "noExtensions": "No hay extensiones disponibles",
+    "title": "Extensiones",
+    "uninstalling": "Desinstalando"
+  },
+  "home": {
+    "appOfTheDay": "Aplicación del día",
+    "appsOfTheWeek": "Aplicaciones de la semana",
+    "categories": "Categorías",
+    "contactUs": "Contáctanos",
+    "errorLoadingApp": "Error al cargar la aplicación del día",
+    "errorLoadingApps": "Error al cargar aplicaciones: {{error}}",
+    "errorLoadingCategories": "Error al cargar categorías: {{error}}",
+    "featured": "Destacado",
+    "myApps": "Mis Apps",
+    "noDescription": "No hay descripción disponible",
+    "noIcon": "Sin icono",
+    "noImage": "Sin imagen",
+    "noResultsFor": "No se encontraron resultados para \"{{query}}\"",
+    "promoted": "Promocionado",
+    "searchPlaceholder": "Buscar aplicaciones...",
+    "searchResults": "Resultados para \"{{query}}\"",
+    "searching": "Buscando...",
+    "wantYourAppHere": "¿Quieres tu aplicación aquí?"
+  },
+  "myApps": {
+    "allUpdatesCompleted": "¡✓ Todas las actualizaciones se completaron con éxito!",
+    "appInstalled": "{{count}} aplicación instalada",
+    "appsInstalled": "{{count}} aplicaciones instaladas",
+    "checkingUpdates": "Buscando actualizaciones...",
+    "closeButton": "Cerrar",
+    "currentApp": "Aplicación actual",
+    "errorInvokingCommand": "✗ Error al invocar el comando: {{error}}",
+    "hideDetails": "Ocultar detalles técnicos",
+    "installAppsMessage": "Instala aplicaciones desde la tienda para verlas aquí",
+    "installed": "Instaladas",
+    "listUpdated": "✓ Lista actualizada.",
+    "noAppsInstalled": "Aún no hay aplicaciones instaladas",
+    "noAppsInstalledMessage": "No tienes ninguna aplicación instalada",
+    "noUpdatesAvailable": "No hay actualizaciones disponibles",
+    "overallProgress": "Progreso general",
+    "preparingSystemUpdates": "Preparando actualizaciones del sistema ({{count}} paquetes)...",
+    "preparingUninstall": "Preparando desinstalación de {{appId}}...",
+    "preparingUpdate": "Preparando actualización de {{appId}}...",
+    "reloadingUpdateList": "Recargando lista de actualizaciones...",
+    "showDetails": "Mostrar detalles técnicos",
+    "subtitle": "Gestiona tus aplicaciones y actualizaciones",
+    "systemAndRuntimeUpdates": "Actualizaciones del sistema y entorno",
+    "systemUpdates": "{{count}} son actualizaciones del sistema",
+    "systemUpdatesAlreadyInstalled": "✓ Los paquetes del sistema ya están actualizados.",
+    "systemUpdatesCompleted": "✓ Actualizaciones del sistema completadas con éxito.",
+    "title": "Mis Apps",
+    "uninstallCompletedSuccess": "✓ Desinstalación completada con éxito.",
+    "uninstallFailed": "✗ La desinstalación falló con el código: {{code}}",
+    "uninstalling": "Desinstalando {{appId}}",
+    "upToDate": "Al día",
+    "updateAll": "Actualizar todo",
+    "updateAllCount": "Actualizar {{count}} aplicación",
+    "updateAllCount_plural": "Actualizar {{count}} aplicaciones",
+    "updateAvailable": "Actualización disponible",
+    "updateCompletedSuccess": "✓ Actualización completada con éxito.",
+    "updateFailed": "✗ La actualización falló con el código: {{code}}",
+    "updates": "Actualizaciones",
+    "updatesCompletedWithErrors": "Actualizaciones completadas con algunos errores",
+    "updating": "Actualizando {{appId}}",
+    "updatingAllApps": "Actualizando todas las aplicaciones",
+    "waiting": "Esperando..."
+  },
+  "notifications": {
+    "noNotifications": "No hay notificaciones",
+    "title": "Notificaciones"
+  },
+  "releaseNotes": {
+    "currentVersion": "Versión actual:",
+    "errorLoading": "No se pudieron cargar las notas de la versión",
+    "moreInfo": "Más información →",
+    "newVersionAvailable": "Nueva versión disponible:",
+    "noNotes": "No hay notas de versión disponibles",
+    "title": "Notas de la versión",
+    "version": "Versión {{version}}"
+  },
+  "searchResults": {
+    "noResultsFor": "No se encontraron resultados para \"{{query}}\"",
+    "resultsFor": "Resultados para \"{{query}}\"",
+    "searching": "Buscando..."
+  },
+  "terminal": {
+    "clear": "Limpiar",
+    "flatpakInstallation": "Instalación de Flatpak",
+    "placeholder": "Escribe un comando...",
+    "running": "Ejecutando...",
+    "title": "Terminal",
+    "waitingForInstallation": "Esperando el inicio de la instalación..."
+  },
+  "welcome": {
+    "getStarted": "Empezar",
+    "goToSlide": "Ir a la diapositiva {{index}}",
+    "settingUp": "Configurando...",
+    "skip": "Omitir",
+    "slide1": {
+      "description": "Tu puerta de entrada para descubrir e instalar aplicaciones increíbles",
+      "title": "Bienvenido a Klia Store"
+    },
+    "slide2": {
+      "description": "Klia Store utiliza caché inteligente para evitar el uso innecesario de ancho de banda",
+      "title": "¿Sabías que...?"
+    },
+    "slide3": {
+      "description": "NekoSempai creó esta tienda para brindar más oportunidades a los desarrolladores de código abierto de recibir donaciones a través de pagos con criptomonedas",
+      "title": "¿Sabías que...?"
+    },
+    "slide4": {
+      "description": "Instala aplicaciones con un solo clic y mantenlas actualizadas automáticamente",
+      "title": "Instalación fácil"
+    },
+    "slide5": {
+      "description": "¡Exploremos juntos el mundo de las aplicaciones de código abierto!",
+      "title": "Listo para empezar"
+    }
+  }
+}
