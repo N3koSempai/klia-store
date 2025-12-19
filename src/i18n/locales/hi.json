@@ -1,0 +1,212 @@
+{
+  "about": {
+    "availabilityLabel": "कार्य उपलब्धता:",
+    "availabilityStatus": {
+      "available": "कार्य के लिए उपलब्ध",
+      "busy": "कार्यरत, लेकिन प्रस्तावों के लिए खुला",
+      "unavailable": "उपलब्ध नहीं"
+    },
+    "contributing": "योगदान",
+    "createdBy": "द्वारा बनाया गया",
+    "description": "Klia Store लिनक्स के लिए एक आधुनिक एप्लिकेशन स्टोर है, जो एप्लिकेशन खोजने, इंस्टॉल करने और प्रबंधित करने का एक आसान और सहज तरीका प्रदान करता है। Klia सॉफ्टवेयर सूट का हिस्सा।",
+    "license": "लाइसेंस",
+    "title": "Klia Store के बारे में",
+    "version": "संस्करण",
+    "viewContributing": "योगदान दिशानिर्देश देखें",
+    "viewLicense": "लाइसेंस देखें"
+  },
+  "appDetails": {
+    "aboutThisApp": "इस ऐप के बारे में",
+    "accept": "स्वीकार करें",
+    "category": "श्रेणी",
+    "description": "विवरण",
+    "developer": "डेवलपर",
+    "downloadingReference": "flatpak संदर्भ डाउनलोड किया जा रहा है...",
+    "errorInvokingCommand": "✗ कमांड चलाने में त्रुटि: {{error}}",
+    "errorLoading": "ऐप विवरण लोड करने में त्रुटि",
+    "getLog": "लॉग प्राप्त करें",
+    "install": "इंस्टॉल करें",
+    "installationCompleted": "इंस्टॉलेशन सफलतापूर्वक पूरा हुआ!",
+    "installationCompletedSuccess": "✓ इंस्टॉलेशन सफलतापूर्वक पूरा हुआ।",
+    "installationError": "इंस्टॉलेशन त्रुटि",
+    "installationFailed": "✗ कोड के साथ इंस्टॉलेशन विफल: {{code}}",
+    "installationInProgress": "इंस्टॉलेशन प्रगति पर है",
+    "installed": "इंस्टॉल किया गया",
+    "installing": "इंस्टॉल हो रहा है...",
+    "launch": "लॉन्च करें",
+    "license": "लाइसेंस",
+    "noIcon": "कोई आइकन नहीं",
+    "noScreenshots": "कोई स्क्रीनशॉट उपलब्ध नहीं",
+    "preparingInstallation": "कस्टम इंस्टॉलेशन की तैयारी की जा रही है...",
+    "releaseNotes": "रिलीज़ नोट्स",
+    "screenshots": "स्क्रीनशॉट",
+    "size": "आकार",
+    "uninstall": "अनइंस्टॉल करें",
+    "uninstalling": "अनइंस्टॉल हो रहा है...",
+    "update": "अपडेट करें",
+    "updating": "अपडेट हो रहा है...",
+    "version": "संस्करण"
+  },
+  "categoryApps": {
+    "error": "ऐप्स लोड करने में त्रुटि",
+    "errorLoadingApps": "ऐप्स लोड करने में त्रुटि: {{error}}",
+    "loading": "ऐप्स लोड हो रहे हैं...",
+    "noApps": "इस श्रेणी में कोई ऐप नहीं मिला",
+    "title": "{{category}}"
+  },
+  "common": {
+    "cancel": "रद्द करें",
+    "close": "बंद करें",
+    "confirm": "पुष्टि करें",
+    "error": "त्रुटि",
+    "errorInitializing": "ऐप प्रारंभ करने में त्रुटि:",
+    "initializing": "Klia Store प्रारंभ हो रहा है...",
+    "loading": "लोड हो रहा है...",
+    "noResults": "कोई परिणाम नहीं मिला",
+    "retry": "पुनः प्रयास करें",
+    "save": "सहेजें",
+    "search": "खोजें"
+  },
+  "dependency": {
+    "alreadyInstalled": "आपके सिस्टम पर पहले से इंस्टॉल है",
+    "checkingRuntime": "रनटाइम की जाँच की जा रही है...",
+    "fastInstallationNote": "इंस्टॉलेशन तेज़ होगा क्योंकि रनटाइम पहले से ही कैश्ड है।",
+    "largerDownloadNote": "पहले इंस्टॉलेशन में अधिक समय लग सकता है क्योंकि इसे रनटाइम निर्भरता डाउनलोड करने की आवश्यकता होती है।",
+    "runtimeDependencies": "रनटाइम निर्भरताएँ",
+    "runtimeDownload": "रनटाइम डाउनलोड",
+    "runtimeReady": "रनटाइम तैयार",
+    "willBeDownloaded": "इंस्टॉलेशन के दौरान डाउनलोड किया जाएगा"
+  },
+  "developerProfile": {
+    "availableSoftware": "उपलब्ध सॉफ्टवेयर",
+    "errorLoadingApps": "ऐप्स लोड करने में त्रुटि: {{error}}",
+    "noApps": "इस डेवलपर का कोई ऐप उपलब्ध नहीं है",
+    "package": "पैकेज",
+    "packages": "पैकेज",
+    "title": "डेवलपर प्रोफाइल"
+  },
+  "extensions": {
+    "errorLoading": "एक्सटेंशन लोड करने में त्रुटि: {{error}}",
+    "install": "इंस्टॉल करें",
+    "installed": "इंस्टॉल किया गया",
+    "installing": "इंस्टॉल हो रहा है",
+    "noExtensions": "कोई एक्सटेंशन उपलब्ध नहीं",
+    "title": "एक्सटेंशन",
+    "uninstalling": "अनइंस्टॉल हो रहा है"
+  },
+  "home": {
+    "appOfTheDay": "आज का ऐप",
+    "appsOfTheWeek": "सप्ताह के ऐप्स",
+    "categories": "श्रेणियाँ",
+    "contactUs": "हमसे संपर्क करें",
+    "errorLoadingApp": "आज का ऐप लोड करने में त्रुटि",
+    "errorLoadingApps": "ऐप्स लोड करने में त्रुटि: {{error}}",
+    "errorLoadingCategories": "श्रेणियाँ लोड करने में त्रुटि: {{error}}",
+    "featured": "विशेष",
+    "myApps": "मेरे ऐप्स",
+    "noDescription": "कोई विवरण उपलब्ध नहीं",
+    "noIcon": "कोई आइकन नहीं",
+    "noImage": "कोई छवि नहीं",
+    "noResultsFor": "\"{{query}}\" के लिए कोई परिणाम नहीं मिला",
+    "promoted": "प्रचारित",
+    "searchPlaceholder": "ऐप्स खोजें...",
+    "searchResults": "\"{{query}}\" के परिणाम",
+    "searching": "खोजा जा रहा है...",
+    "wantYourAppHere": "अपना ऐप यहाँ चाहते हैं?"
+  },
+  "myApps": {
+    "allUpdatesCompleted": "✓ सभी अपडेट सफलतापूर्वक पूरे हुए!",
+    "appInstalled": "{{count}} ऐप इंस्टॉल किया गया",
+    "appsInstalled": "{{count}} ऐप्स इंस्टॉल किए गए",
+    "checkingUpdates": "अपडेट की जाँच की जा रही है...",
+    "closeButton": "बंद करें",
+    "currentApp": "वर्तमान ऐप",
+    "errorInvokingCommand": "✗ कमांड चलाने में त्रुटि: {{error}}",
+    "hideDetails": "तकनीकी विवरण छिपाएं",
+    "installAppsMessage": "उन्हें यहाँ देखने के लिए स्टोर से ऐप इंस्टॉल करें",
+    "installed": "इंस्टॉल किया गया",
+    "listUpdated": "✓ सूची अपडेट की गई।",
+    "noAppsInstalled": "अभी तक कोई ऐप इंस्टॉल नहीं किया गया",
+    "noAppsInstalledMessage": "आपने कोई ऐप इंस्टॉल नहीं किया है",
+    "noUpdatesAvailable": "कोई अपडेट उपलब्ध नहीं",
+    "overallProgress": "कुल प्रगति",
+    "preparingSystemUpdates": "सिस्टम अपडेट की तैयारी ({{count}} पैकेज)...",
+    "preparingUninstall": "{{appId}} के लिए अनइंस्टॉल की तैयारी...",
+    "preparingUpdate": "{{appId}} के लिए अपडेट की तैयारी...",
+    "reloadingUpdateList": "अपडेट सूची फिर से लोड की जा रही है...",
+    "showDetails": "तकनीकी विवरण दिखाएं",
+    "subtitle": "अपने एप्लिकेशन और अपडेट प्रबंधित करें",
+    "systemAndRuntimeUpdates": "सिस्टम और रनटाइम अपडेट",
+    "systemUpdates": "{{count}} सिस्टम अपडेट हैं",
+    "systemUpdatesAlreadyInstalled": "✓ सिस्टम पैकेज पहले से ही अपडेट हैं।",
+    "systemUpdatesCompleted": "✓ सिस्टम अपडेट सफलतापूर्वक पूरे हुए।",
+    "title": "मेरे ऐप्स",
+    "uninstallCompletedSuccess": "✓ अनइंस्टॉल सफलतापूर्वक पूरा हुआ।",
+    "uninstallFailed": "✗ अनइंस्टॉल कोड के साथ विफल: {{code}}",
+    "uninstalling": "{{appId}} अनइंस्टॉल हो रहा है",
+    "upToDate": "अप टू डेट",
+    "updateAll": "सभी अपडेट करें",
+    "updateAllCount": "{{count}} ऐप अपडेट करें",
+    "updateAllCount_plural": "{{count}} ऐप्स अपडेट करें",
+    "updateAvailable": "अपडेट उपलब्ध",
+    "updateCompletedSuccess": "✓ अपडेट सफलतापूर्वक पूरा हुआ।",
+    "updateFailed": "✗ अपडेट कोड के साथ विफल: {{code}}",
+    "updates": "अपडेट",
+    "updatesCompletedWithErrors": "अपडेट कुछ त्रुटियों के साथ पूरे हुए",
+    "updating": "{{appId}} अपडेट हो रहा है",
+    "updatingAllApps": "सभी ऐप्स अपडेट हो रहे हैं",
+    "waiting": "प्रतीक्षा करें..."
+  },
+  "notifications": {
+    "noNotifications": "कोई सूचना नहीं",
+    "title": "सूचनाएं"
+  },
+  "releaseNotes": {
+    "currentVersion": "वर्तमान संस्करण:",
+    "errorLoading": "रिलीज़ नोट्स लोड नहीं किए जा सके",
+    "moreInfo": "अधिक जानकारी →",
+    "newVersionAvailable": "नया संस्करण उपलब्ध है:",
+    "noNotes": "कोई रिलीज़ नोट्स उपलब्ध नहीं",
+    "title": "रिलीज़ नोट्स",
+    "version": "संस्करण {{version}}"
+  },
+  "searchResults": {
+    "noResultsFor": "\"{{query}}\" के लिए कोई परिणाम नहीं मिला",
+    "resultsFor": "\"{{query}}\" के परिणाम",
+    "searching": "खोजा जा रहा है..."
+  },
+  "terminal": {
+    "clear": "साफ़ करें",
+    "flatpakInstallation": "Flatpak इंस्टॉलेशन",
+    "placeholder": "कमांड दर्ज करें...",
+    "running": "चल रहा है...",
+    "title": "टर्मिनल",
+    "waitingForInstallation": "इंस्टॉलेशन शुरू होने की प्रतीक्षा की जा रही है..."
+  },
+  "welcome": {
+    "getStarted": "शुरू करें",
+    "goToSlide": "स्लाइड {{index}} पर जाएं",
+    "settingUp": "सेटअप किया जा रहा है...",
+    "skip": "छोड़ें",
+    "slide1": {
+      "description": "अद्भुत एप्लिकेशन खोजने और इंस्टॉल करने का आपका प्रवेश द्वार",
+      "title": "Klia Store में आपका स्वागत है"
+    },
+    "slide2": {
+      "description": "Klia Store अनावश्यक बैंडविड्थ उपयोग से बचने के लिए स्मार्ट कैशिंग का उपयोग करता है",
+      "title": "क्या आप जानते हैं..."
+    },
+    "slide3": {
+      "description": "NekoSempai ने इस स्टोर को ओपन सोर्स डेवलपर्स के लिए क्रिप्टोकरेंसी भुगतान के माध्यम से दान प्राप्त करने के अधिक अवसर प्रदान करने के लिए बनाया है",
+      "title": "क्या आप जानते हैं..."
+    },
+    "slide4": {
+      "description": "सिर्फ एक क्लिक के साथ ऐप इंस्टॉल करें और उन्हें स्वचालित रूप से अपडेट रखें",
+      "title": "आसान इंस्टॉलेशन"
+    },
+    "slide5": {
+      "description": "आइए मिलकर ओपन सोर्स एप्लिकेशन की दुनिया का अन्वेषण करें!",
+      "title": "शुरू करने के लिए तैयार"
+    }
+  }
+}

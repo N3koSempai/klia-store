@@ -2,6 +2,10 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import en from "./locales/en.json";
 import es from "./locales/es.json";
+import pt from "./locales/pt.json";
+import ru from "./locales/ru.json";
+import zh from "./locales/zh.json";
+import hi from "./locales/hi.json";
 
 // Define resources type
 const resources = {
@@ -10,6 +14,18 @@ const resources = {
   },
   es: {
     translation: es,
+  },
+  pt: {
+    translation: pt,
+  },
+  ru: {
+    translation: ru,
+  },
+  zh: {
+    translation: zh,
+  },
+  hi: {
+    translation: hi,
   },
 } as const;
 

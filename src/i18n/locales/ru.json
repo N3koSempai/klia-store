@@ -1,0 +1,212 @@
+{
+  "about": {
+    "availabilityLabel": "Доступность для работы:",
+    "availabilityStatus": {
+      "available": "Доступен для работы",
+      "busy": "Работаю, но открыт для предложений",
+      "unavailable": "Недоступен"
+    },
+    "contributing": "Участие в разработке",
+    "createdBy": "Создано:",
+    "description": "Klia Store — это современный магазин приложений для Linux, обеспечивающий простой и интуитивно понятный способ поиска, установки и управления приложениями. Часть программного комплекса Klia Software Suite.",
+    "license": "Лицензия",
+    "title": "О Klia Store",
+    "version": "Версия",
+    "viewContributing": "Посмотреть руководство для разработчиков",
+    "viewLicense": "Посмотреть лицензию"
+  },
+  "appDetails": {
+    "aboutThisApp": "Об этом приложении",
+    "accept": "Принять",
+    "category": "Категория",
+    "description": "Описание",
+    "developer": "Разработчик",
+    "downloadingReference": "Загрузка ссылки flatpak...",
+    "errorInvokingCommand": "✗ Ошибка при вызове команды: {{error}}",
+    "errorLoading": "Ошибка загрузки данных приложения",
+    "getLog": "Получить лог",
+    "install": "Установить",
+    "installationCompleted": "Установка успешно завершена!",
+    "installationCompletedSuccess": "✓ Установка успешно завершена.",
+    "installationError": "Ошибка установки",
+    "installationFailed": "✗ Установка не удалась с кодом: {{code}}",
+    "installationInProgress": "Выполняется установка",
+    "installed": "Установлено",
+    "installing": "Установка...",
+    "launch": "Запустить",
+    "license": "Лицензия",
+    "noIcon": "Нет иконки",
+    "noScreenshots": "Скриншоты отсутствуют",
+    "preparingInstallation": "Подготовка пользовательской установки...",
+    "releaseNotes": "Примечания к выпуску",
+    "screenshots": "Скриншоты",
+    "size": "Размер",
+    "uninstall": "Удалить",
+    "uninstalling": "Удаление...",
+    "update": "Обновить",
+    "updating": "Обновление...",
+    "version": "Версия"
+  },
+  "categoryApps": {
+    "error": "Ошибка загрузки приложений",
+    "errorLoadingApps": "Ошибка загрузки приложений: {{error}}",
+    "loading": "Загрузка приложений...",
+    "noApps": "В этой категории приложений не найдено",
+    "title": "{{category}}"
+  },
+  "common": {
+    "cancel": "Отмена",
+    "close": "Закрыть",
+    "confirm": "Подтвердить",
+    "error": "Ошибка",
+    "errorInitializing": "Ошибка инициализации приложения:",
+    "initializing": "Инициализация Klia Store...",
+    "loading": "Загрузка...",
+    "noResults": "Результатов не найдено",
+    "retry": "Повторить",
+    "save": "Сохранить",
+    "search": "Поиск"
+  },
+  "dependency": {
+    "alreadyInstalled": "Уже установлено в вашей системе",
+    "checkingRuntime": "Проверка среды выполнения...",
+    "fastInstallationNote": "Установка будет быстрой, так как среда выполнения уже находится в кэше.",
+    "largerDownloadNote": "Первая установка может занять больше времени, так как необходимо загрузить зависимости среды выполнения.",
+    "runtimeDependencies": "Зависимости среды выполнения",
+    "runtimeDownload": "Загрузка среды выполнения",
+    "runtimeReady": "Среда выполнения готова",
+    "willBeDownloaded": "Будет загружено во время установки"
+  },
+  "developerProfile": {
+    "availableSoftware": "Доступное ПО",
+    "errorLoadingApps": "Ошибка загрузки приложений: {{error}}",
+    "noApps": "У этого разработчика нет доступных приложений",
+    "package": "Пакет",
+    "packages": "Пакеты",
+    "title": "Профиль разработчика"
+  },
+  "extensions": {
+    "errorLoading": "Ошибка загрузки расширений: {{error}}",
+    "install": "Установить",
+    "installed": "Установлено",
+    "installing": "Установка",
+    "noExtensions": "Нет доступных расширений",
+    "title": "Расширения",
+    "uninstalling": "Удаление"
+  },
+  "home": {
+    "appOfTheDay": "Приложение дня",
+    "appsOfTheWeek": "Приложения недели",
+    "categories": "Категории",
+    "contactUs": "Связаться с нами",
+    "errorLoadingApp": "Ошибка загрузки приложения дня",
+    "errorLoadingApps": "Ошибка загрузки приложений: {{error}}",
+    "errorLoadingCategories": "Ошибка загрузки категорий: {{error}}",
+    "featured": "Рекомендуемое",
+    "myApps": "Мои приложения",
+    "noDescription": "Описание отсутствует",
+    "noIcon": "Нет иконки",
+    "noImage": "Нет изображения",
+    "noResultsFor": "Результатов по запросу «{{query}}» не найдено",
+    "promoted": "Рекламное",
+    "searchPlaceholder": "Поиск приложений...",
+    "searchResults": "Результаты по запросу «{{query}}»",
+    "searching": "Поиск...",
+    "wantYourAppHere": "Хотите видеть свое приложение здесь?"
+  },
+  "myApps": {
+    "allUpdatesCompleted": "✓ Все обновления успешно завершены!",
+    "appInstalled": "Установлено приложений: {{count}}",
+    "appsInstalled": "Установлено приложений: {{count}}",
+    "checkingUpdates": "Проверка обновлений...",
+    "closeButton": "Закрыть",
+    "currentApp": "Текущее приложение",
+    "errorInvokingCommand": "✗ Ошибка при вызове команды: {{error}}",
+    "hideDetails": "Скрыть технические подробности",
+    "installAppsMessage": "Установите приложения из магазина, чтобы увидеть их здесь",
+    "installed": "Установлено",
+    "listUpdated": "✓ Список обновлен.",
+    "noAppsInstalled": "Приложения еще не установлены",
+    "noAppsInstalledMessage": "У вас нет установленных приложений",
+    "noUpdatesAvailable": "Нет доступных обновлений",
+    "overallProgress": "Общий прогресс",
+    "preparingSystemUpdates": "Подготовка системных обновлений (пакетов: {{count}})...",
+    "preparingUninstall": "Подготовка к удалению {{appId}}...",
+    "preparingUpdate": "Подготовка к обновлению {{appId}}...",
+    "reloadingUpdateList": "Обновление списка...",
+    "showDetails": "Показать технические подробности",
+    "subtitle": "Управление приложениями и обновлениями",
+    "systemAndRuntimeUpdates": "Системные обновления и обновления среды выполнения",
+    "systemUpdates": "Системных обновлений: {{count}}",
+    "systemUpdatesAlreadyInstalled": "✓ Системные пакеты уже обновлены.",
+    "systemUpdatesCompleted": "✓ Системные обновления успешно завершены.",
+    "title": "Мои приложения",
+    "uninstallCompletedSuccess": "✓ Удаление успешно завершено.",
+    "uninstallFailed": "✗ Удаление не удалось с кодом: {{code}}",
+    "uninstalling": "Удаление {{appId}}",
+    "upToDate": "Обновлено",
+    "updateAll": "Обновить все",
+    "updateAllCount": "Обновить {{count}} приложение",
+    "updateAllCount_plural": "Обновить {{count}} приложений",
+    "updateAvailable": "Доступно обновление",
+    "updateCompletedSuccess": "✓ Обновление успешно завершено.",
+    "updateFailed": "✗ Обновление не удалось с кодом: {{code}}",
+    "updates": "Обновления",
+    "updatesCompletedWithErrors": "Обновления завершены с ошибками",
+    "updating": "Обновление {{appId}}",
+    "updatingAllApps": "Обновление всех приложений",
+    "waiting": "Ожидание..."
+  },
+  "notifications": {
+    "noNotifications": "Нет уведомлений",
+    "title": "Уведомления"
+  },
+  "releaseNotes": {
+    "currentVersion": "Текущая версия:",
+    "errorLoading": "Не удалось загрузить примечания к выпуску",
+    "moreInfo": "Подробнее →",
+    "newVersionAvailable": "Доступна новая версия:",
+    "noNotes": "Примечания к выпуску отсутствуют",
+    "title": "Примечания к выпуску",
+    "version": "Версия {{version}}"
+  },
+  "searchResults": {
+    "noResultsFor": "Результатов по запросу «{{query}}» не найдено",
+    "resultsFor": "Результаты по запросу «{{query}}»",
+    "searching": "Поиск..."
+  },
+  "terminal": {
+    "clear": "Очистить",
+    "flatpakInstallation": "Установка Flatpak",
+    "placeholder": "Введите команду...",
+    "running": "Выполняется...",
+    "title": "Терминал",
+    "waitingForInstallation": "Ожидание начала установки..."
+  },
+  "welcome": {
+    "getStarted": "Начать",
+    "goToSlide": "Перейти к слайду {{index}}",
+    "settingUp": "Настройка...",
+    "skip": "Пропустить",
+    "slide1": {
+      "description": "Ваш путь к поиску и установке потрясающих приложений",
+      "title": "Добро пожаловать в Klia Store"
+    },
+    "slide2": {
+      "description": "Klia Store использует умное кэширование, чтобы избежать ненужного расхода трафика",
+      "title": "А вы знали..."
+    },
+    "slide3": {
+      "description": "NekoSempai создал этот магазин, чтобы предоставить разработчикам открытого ПО больше возможностей для получения пожертвований через криптовалютные платежи",
+      "title": "А вы знали..."
+    },
+    "slide4": {
+      "description": "Устанавливайте приложения одним кликом и поддерживайте их в актуальном состоянии автоматически",
+      "title": "Простая установка"
+    },
+    "slide5": {
+      "description": "Давайте вместе исследовать мир приложений с открытым исходным кодом!",
+      "title": "Готовы начать?"
+    }
+  }
+}

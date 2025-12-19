@@ -1,0 +1,212 @@
+{
+  "about": {
+    "availabilityLabel": "工作状态：",
+    "availabilityStatus": {
+      "available": "可承接工作",
+      "busy": "工作中，但接受邀请",
+      "unavailable": "暂不可用"
+    },
+    "contributing": "贡献",
+    "createdBy": "创建者",
+    "description": "Klia Store 是一款现代化的 Linux 应用商店，提供简单直观的方式来发现、安装和管理应用程序。它是 Klia 软件套件的一部分。",
+    "license": "许可证",
+    "title": "关于 Klia Store",
+    "version": "版本",
+    "viewContributing": "查看贡献指南",
+    "viewLicense": "查看许可证"
+  },
+  "appDetails": {
+    "aboutThisApp": "关于此应用",
+    "accept": "接受",
+    "category": "类别",
+    "description": "描述",
+    "developer": "开发者",
+    "downloadingReference": "正在下载 flatpak 引用...",
+    "errorInvokingCommand": "✗ 调用命令出错：{{error}}",
+    "errorLoading": "加载应用详情出错",
+    "getLog": "获取日志",
+    "install": "安装",
+    "installationCompleted": "安装成功完成！",
+    "installationCompletedSuccess": "✓ 安装成功完成。",
+    "installationError": "安装错误",
+    "installationFailed": "✗ 安装失败，代码：{{code}}",
+    "installationInProgress": "正在安装",
+    "installed": "已安装",
+    "installing": "正在安装...",
+    "launch": "启动",
+    "license": "许可证",
+    "noIcon": "无图标",
+    "noScreenshots": "暂无屏幕截图",
+    "preparingInstallation": "正在准备自定义安装...",
+    "releaseNotes": "发行说明",
+    "screenshots": "屏幕截图",
+    "size": "大小",
+    "uninstall": "卸载",
+    "uninstalling": "正在卸载...",
+    "update": "更新",
+    "updating": "正在更新...",
+    "version": "版本"
+  },
+  "categoryApps": {
+    "error": "加载应用出错",
+    "errorLoadingApps": "加载应用出错：{{error}}",
+    "loading": "正在加载应用...",
+    "noApps": "此类别下未找到应用",
+    "title": "{{category}}"
+  },
+  "common": {
+    "cancel": "取消",
+    "close": "关闭",
+    "confirm": "确认",
+    "error": "错误",
+    "errorInitializing": "初始化应用出错：",
+    "initializing": "正在初始化 Klia Store...",
+    "loading": "正在加载...",
+    "noResults": "未找到结果",
+    "retry": "重试",
+    "save": "保存",
+    "search": "搜索"
+  },
+  "dependency": {
+    "alreadyInstalled": "系统中已安装",
+    "checkingRuntime": "正在检查运行时...",
+    "fastInstallationNote": "由于运行时已缓存，安装将会很快。",
+    "largerDownloadNote": "首次安装可能需要较长时间，因为需要下载运行时依赖项。",
+    "runtimeDependencies": "运行时依赖项",
+    "runtimeDownload": "运行时下载",
+    "runtimeReady": "运行时就绪",
+    "willBeDownloaded": "将在安装期间下载"
+  },
+  "developerProfile": {
+    "availableSoftware": "可用软件",
+    "errorLoadingApps": "加载应用出错：{{error}}",
+    "noApps": "该开发者暂无可用应用",
+    "package": "软件包",
+    "packages": "软件包",
+    "title": "开发者资料"
+  },
+  "extensions": {
+    "errorLoading": "加载扩展出错：{{error}}",
+    "install": "安装",
+    "installed": "已安装",
+    "installing": "正在安装",
+    "noExtensions": "暂无可用扩展",
+    "title": "扩展",
+    "uninstalling": "正在卸载"
+  },
+  "home": {
+    "appOfTheDay": "今日推荐",
+    "appsOfTheWeek": "本周热门",
+    "categories": "类别",
+    "contactUs": "联系我们",
+    "errorLoadingApp": "加载今日推荐应用出错",
+    "errorLoadingApps": "加载应用出错：{{error}}",
+    "errorLoadingCategories": "加载类别出错：{{error}}",
+    "featured": "精选",
+    "myApps": "我的应用",
+    "noDescription": "暂无描述",
+    "noIcon": "无图标",
+    "noImage": "无图片",
+    "noResultsFor": "未找到关于“{{query}}”的结果",
+    "promoted": "推广",
+    "searchPlaceholder": "搜索应用...",
+    "searchResults": "“{{query}}”的搜索结果",
+    "searching": "正在搜索...",
+    "wantYourAppHere": "想在这里展示您的应用吗？"
+  },
+  "myApps": {
+    "allUpdatesCompleted": "✓ 所有更新已成功完成！",
+    "appInstalled": "已安装 {{count}} 个应用",
+    "appsInstalled": "已安装 {{count}} 个应用",
+    "checkingUpdates": "正在检查更新...",
+    "closeButton": "关闭",
+    "currentApp": "当前应用",
+    "errorInvokingCommand": "✗ 调用命令出错：{{error}}",
+    "hideDetails": "隐藏技术细节",
+    "installAppsMessage": "从商店安装应用后将在此显示",
+    "installed": "已安装",
+    "listUpdated": "✓ 列表已更新。",
+    "noAppsInstalled": "尚未安装任何应用",
+    "noAppsInstalledMessage": "您还没有安装任何应用",
+    "noUpdatesAvailable": "暂无可用更新",
+    "overallProgress": "总体进度",
+    "preparingSystemUpdates": "正在准备系统更新（{{count}} 个软件包）...",
+    "preparingUninstall": "正在准备卸载 {{appId}}...",
+    "preparingUpdate": "正在准备更新 {{appId}}...",
+    "reloadingUpdateList": "正在重新加载更新列表...",
+    "showDetails": "显示技术细节",
+    "subtitle": "管理您的应用程序和更新",
+    "systemAndRuntimeUpdates": "系统和运行时更新",
+    "systemUpdates": "有 {{count}} 个系统更新",
+    "systemUpdatesAlreadyInstalled": "✓ 系统软件包已是最新。",
+    "systemUpdatesCompleted": "✓ 系统更新已成功完成。",
+    "title": "我的应用",
+    "uninstallCompletedSuccess": "✓ 卸载成功完成。",
+    "uninstallFailed": "✗ 卸载失败，代码：{{code}}",
+    "uninstalling": "正在卸载 {{appId}}",
+    "upToDate": "已是最新",
+    "updateAll": "全部更新",
+    "updateAllCount": "更新 {{count}} 个应用",
+    "updateAllCount_plural": "更新 {{count}} 个应用",
+    "updateAvailable": "有可用更新",
+    "updateCompletedSuccess": "✓ 更新成功完成。",
+    "updateFailed": "✗ 更新失败，代码：{{code}}",
+    "updates": "更新",
+    "updatesCompletedWithErrors": "更新完成，但出现一些错误",
+    "updating": "正在更新 {{appId}}",
+    "updatingAllApps": "正在更新所有应用",
+    "waiting": "等待中..."
+  },
+  "notifications": {
+    "noNotifications": "暂无通知",
+    "title": "通知"
+  },
+  "releaseNotes": {
+    "currentVersion": "当前版本：",
+    "errorLoading": "无法加载发行说明",
+    "moreInfo": "更多信息 →",
+    "newVersionAvailable": "有新版本可用：",
+    "noNotes": "暂无发行说明",
+    "title": "发行说明",
+    "version": "版本 {{version}}"
+  },
+  "searchResults": {
+    "noResultsFor": "未找到关于“{{query}}”的结果",
+    "resultsFor": "“{{query}}”的搜索结果",
+    "searching": "正在搜索..."
+  },
+  "terminal": {
+    "clear": "清除",
+    "flatpakInstallation": "Flatpak 安装",
+    "placeholder": "输入命令...",
+    "running": "运行中...",
+    "title": "终端",
+    "waitingForInstallation": "等待安装开始..."
+  },
+  "welcome": {
+    "getStarted": "开始使用",
+    "goToSlide": "跳转至第 {{index}} 页",
+    "settingUp": "正在设置...",
+    "skip": "跳过",
+    "slide1": {
+      "description": "探索和安装精彩应用程序的门户",
+      "title": "欢迎使用 Klia Store"
+    },
+    "slide2": {
+      "description": "Klia Store 使用智能缓存以避免不必要的带宽消耗",
+      "title": "您知道吗..."
+    },
+    "slide3": {
+      "description": "NekoSempai 创建此商店是为了让开源开发者有更多机会通过加密货币支付获得捐赠",
+      "title": "您知道吗..."
+    },
+    "slide4": {
+      "description": "一键安装应用并保持自动更新",
+      "title": "便捷安装"
+    },
+    "slide5": {
+      "description": "让我们一起探索开源应用的世界！",
+      "title": "准备开始"
+    }
+  }
+}
