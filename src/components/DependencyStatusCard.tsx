@@ -1,10 +1,9 @@
-import { CheckCircle, CloudDownload, ExpandMore } from "@mui/icons-material";
+import { ExpandMore } from "@mui/icons-material";
 import {
 	Box,
 	Chip,
 	List,
 	ListItem,
-	ListItemIcon,
 	ListItemText,
 	Popover,
 	Skeleton,
@@ -12,16 +11,15 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { Dependency } from "../hooks/useRuntimeCheck";
 
 interface DependencyStatusCardProps {
-	runtimeRef: string | null;
-	isInstalled: boolean;
+	dependencies: Dependency[];
 	loading: boolean;
 }
 
 export const DependencyStatusCard = ({
-	runtimeRef,
-	isInstalled,
+	dependencies,
 	loading,
 }: DependencyStatusCardProps) => {
 	const { t } = useTranslation();
@@ -38,7 +36,7 @@ export const DependencyStatusCard = ({
 	const open = Boolean(anchorEl);
 
 	// Always show skeleton while loading to reserve space
-	if (loading || !runtimeRef) {
+	if (loading) {
 		return (
 			<Skeleton
 				variant="rounded"
@@ -52,6 +50,29 @@ export const DependencyStatusCard = ({
 		);
 	}
 
+	// If no dependencies, don't show anything (app already installed or error)
+	if (dependencies.length === 0) {
+		return null;
+	}
+
+	// Calculate total download size
+	const totalDownloadMB = dependencies.reduce((total, dep) => {
+		const match = dep.download_size.match(/(\d+\.?\d*)\s*(MB|GB|kB)/);
+		if (match) {
+			const value = Number.parseFloat(match[1]);
+			const unit = match[2];
+			if (unit === "GB") return total + value * 1024;
+			if (unit === "MB") return total + value;
+			if (unit === "kB") return total + value / 1024;
+		}
+		return total;
+	}, 0);
+
+	const displaySize =
+		totalDownloadMB >= 1024
+			? `${(totalDownloadMB / 1024).toFixed(1)} GB`
+			: `${totalDownloadMB.toFixed(1)} MB`;
+
 	return (
 		<>
 			<Chip
@@ -62,25 +83,19 @@ export const DependencyStatusCard = ({
 							width: 8,
 							height: 8,
 							borderRadius: "50%",
-							bgcolor: isInstalled ? "#238636" : "#F6D32D",
+							bgcolor: "#F6D32D",
 							ml: 1,
 						}}
 					/>
 				}
-				label={
-					isInstalled
-						? t("dependency.runtimeReady")
-						: t("dependency.runtimeDownload")
-				}
+				label={`${dependencies.length} ${t("dependency.dependenciesToDownload")} (${displaySize})`}
 				deleteIcon={<ExpandMore sx={{ fontSize: 20 }} />}
 				onDelete={handleClick}
 				onClick={handleClick}
 				sx={{
-					bgcolor: isInstalled
-						? "rgba(35, 134, 54, 0.1)"
-						: "rgba(246, 211, 45, 0.1)",
-					color: isInstalled ? "#238636" : "#F6D32D",
-					border: `1px solid ${isInstalled ? "rgba(35, 134, 54, 0.3)" : "rgba(246, 211, 45, 0.3)"}`,
+					bgcolor: "rgba(246, 211, 45, 0.1)",
+					color: "#F6D32D",
+					border: "1px solid rgba(246, 211, 45, 0.3)",
 					fontFamily: "IBM Plex Sans, sans-serif",
 					fontSize: "0.875rem",
 					fontWeight: 600,
@@ -89,17 +104,13 @@ export const DependencyStatusCard = ({
 					cursor: "pointer",
 					transition: "all 0.2s ease-in-out",
 					"&:hover": {
-						bgcolor: isInstalled
-							? "rgba(35, 134, 54, 0.15)"
-							: "rgba(246, 211, 45, 0.15)",
-						borderColor: isInstalled
-							? "rgba(35, 134, 54, 0.5)"
-							: "rgba(246, 211, 45, 0.5)",
+						bgcolor: "rgba(246, 211, 45, 0.15)",
+						borderColor: "rgba(246, 211, 45, 0.5)",
 					},
 					"& .MuiChip-deleteIcon": {
-						color: isInstalled ? "#238636" : "#F6D32D",
+						color: "#F6D32D",
 						"&:hover": {
-							color: isInstalled ? "#2ea043" : "#f8e45c",
+							color: "#f8e45c",
 						},
 					},
 				}}
@@ -140,49 +151,62 @@ export const DependencyStatusCard = ({
 							mb: 1.5,
 						}}
 					>
-						{t("dependency.runtimeDependencies")}
+						{t("dependency.installationRequirements")}
 					</Typography>
 
 					<List dense disablePadding>
-						<ListItem
-							sx={{
-								px: 0,
-								py: 1,
-								borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-							}}
-						>
-							<ListItemIcon sx={{ minWidth: 32 }}>
-								{isInstalled ? (
-									<CheckCircle sx={{ fontSize: 20, color: "#238636" }} />
-								) : (
-									<CloudDownload sx={{ fontSize: 20, color: "#F6D32D" }} />
-								)}
-							</ListItemIcon>
-							<ListItemText
-								primary={runtimeRef}
-								primaryTypographyProps={{
-									sx: {
-										fontFamily: "JetBrains Mono, monospace",
-										fontSize: "0.8rem",
-										color: isInstalled ? "#238636" : "#F6D32D",
-										wordBreak: "break-all",
-									},
+						{dependencies.map((dep) => (
+							<ListItem
+								key={dep.name}
+								sx={{
+									px: 0,
+									py: 1,
+									borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+									display: "flex",
+									flexDirection: "column",
+									alignItems: "flex-start",
 								}}
-								secondary={
-									isInstalled
-										? t("dependency.alreadyInstalled")
-										: t("dependency.willBeDownloaded")
-								}
-								secondaryTypographyProps={{
-									sx: {
-										fontFamily: "Inter, sans-serif",
-										fontSize: "0.75rem",
-										color: "#8B949E",
+							>
+								<ListItemText
+									primary={dep.name}
+									primaryTypographyProps={{
+										sx: {
+											fontFamily: "JetBrains Mono, monospace",
+											fontSize: "0.8rem",
+											color: "#F6D32D",
+											wordBreak: "break-all",
+										},
+									}}
+								/>
+								<Box
+									sx={{
+										display: "flex",
+										gap: 2,
 										mt: 0.5,
-									},
-								}}
-							/>
-						</ListItem>
+										width: "100%",
+									}}
+								>
+									<Typography
+										sx={{
+											fontFamily: "Inter, sans-serif",
+											fontSize: "0.75rem",
+											color: "#8B949E",
+										}}
+									>
+										{t("dependency.download")}: {dep.download_size}
+									</Typography>
+									<Typography
+										sx={{
+											fontFamily: "Inter, sans-serif",
+											fontSize: "0.75rem",
+											color: "#8B949E",
+										}}
+									>
+										{t("dependency.installed")}: {dep.installed_size}
+									</Typography>
+								</Box>
+							</ListItem>
+						))}
 					</List>
 
 					<Typography
@@ -194,9 +218,7 @@ export const DependencyStatusCard = ({
 							fontStyle: "italic",
 						}}
 					>
-						{isInstalled
-							? t("dependency.fastInstallationNote")
-							: t("dependency.largerDownloadNote")}
+						{t("dependency.willBeDownloadedNote")}
 					</Typography>
 				</Box>
 			</Popover>

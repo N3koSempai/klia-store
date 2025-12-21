@@ -37,20 +37,23 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.3.0" date="2025-01-13">
+    <release version="2.4.0" date="2025-01-14">
       <description>
-        <p>New Features:</p>
+        <p>✨ New Features:</p>
         <ul>
-        <li>Added extension management system for installed applications</li>
-        <li>View and install available extensions (plugins, addons, utilities) for each app directly from My Apps</li>
-        <li>Real-time installation progress with visual feedback for extensions</li>
-        <li>Automatic detection of installed extensions with uninstall capability</li>
-        <li>Smart filtering: only shows user-installable extensions, excluding system components</li>
+        <li>📦 Smart dependency preview - See what will be downloaded before installing apps!</li>
+        <li>💾 App sizes now shown with clear dependency breakdown</li>
+        <li>🚀 30-minute caching for dependency checks - much faster load times!</li>
+        <li>🌍 Added support for 5 new languages: Portuguese, Hindi, Russian, Chinese, and Spanish!</li>
         </ul>
-        <p>UI Improvements:</p>
+        <p>⚡ Performance Improvements:</p>
         <ul>
-        <li>Changed release notes icon to a more intuitive document icon</li>
-        <li>Improved extension list UI with clear install/installed states</li>
+        <li>Optimized runtime detection - faster app detail loading</li>
+        <li>Smarter two-phase detection for apps with and without runtime dependencies</li>
+        </ul>
+        <p>🔧 Technical Improvements:</p>
+        <ul>
+        <li>Better error handling for dependency detection</li>
         </ul>
       </description>
     </release>
