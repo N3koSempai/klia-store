@@ -1,5 +1,7 @@
-use std::fs;
 use serde::Serialize;
+use std::fs;
+use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
 use tauri::{Emitter, Manager};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::ShellExt;
@@ -28,6 +30,22 @@ struct InstalledPackagesResponse {
     extensions: Vec<InstalledExtension>,
 }
 
+// Helper function to build flatpak command with optional flatpak-spawn wrapper
+fn build_flatpak_install_cmd(is_flatpak: bool, app_id: &str) -> String {
+    let base_cmd = format!("flatpak install --user flathub {}", app_id);
+    if is_flatpak {
+        format!(
+            "LANG=C printf \"y\\nn\\n\" | script -q /dev/null -c \"flatpak-spawn --host {}\"",
+            base_cmd
+        )
+    } else {
+        format!(
+            "LANG=C printf \"y\\nn\\n\" | script -q /dev/null -c \"{}\"",
+            base_cmd
+        )
+    }
+}
+
 // Helper function to extract developer name from app_id
 // Takes the second-to-last segment (penultimate)
 // Example: io.github.N3kosempai.klia-store -> N3kosempai
@@ -48,6 +66,13 @@ struct UpdateAvailable {
     app_id: String,
     new_version: String,
     branch: String,
+}
+
+#[derive(Serialize)]
+struct Dependency {
+    name: String,
+    download_size: String,
+    installed_size: String,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -93,8 +118,7 @@ async fn download_flatpakref(app: tauri::AppHandle, app_id: String) -> Result<St
 
     // Crear carpeta temp dentro del directorio de la app
     let temp_dir = app_data_dir.join("temp");
-    fs::create_dir_all(&temp_dir)
-        .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+    fs::create_dir_all(&temp_dir).map_err(|e| format!("Failed to create temp directory: {}", e))?;
 
     let flatpakref_path = temp_dir.join(format!("{}.flatpakref", app_id));
 
@@ -130,7 +154,14 @@ async fn install_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), St
         // Dentro de flatpak, usar flatpak-spawn para ejecutar en el host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "install", "-y", "--user", &flatpakref_path])
+            .args([
+                "--host",
+                "flatpak",
+                "install",
+                "-y",
+                "--user",
+                &flatpakref_path,
+            ])
             .spawn()
             .map_err(|e| format!("Failed to spawn flatpak-spawn: {}", e))?
     } else {
@@ -257,8 +288,7 @@ fn read_cache_index(app: tauri::AppHandle) -> Result<String, String> {
         return Ok("{}".to_string());
     }
 
-    fs::read_to_string(&index_path)
-        .map_err(|e| format!("Failed to read cache index: {}", e))
+    fs::read_to_string(&index_path).map_err(|e| format!("Failed to read cache index: {}", e))
 }
 
 #[tauri::command]
@@ -273,8 +303,7 @@ fn write_cache_index(app: tauri::AppHandle, content: String) -> Result<(), Strin
         .map_err(|e| format!("Failed to create cacheImages directory: {}", e))?;
 
     let index_path = cache_images_dir.join("index.json");
-    fs::write(&index_path, content)
-        .map_err(|e| format!("Failed to write cache index: {}", e))
+    fs::write(&index_path, content).map_err(|e| format!("Failed to write cache index: {}", e))
 }
 
 #[tauri::command]
@@ -330,8 +359,7 @@ async fn download_and_cache_image(
     let filename = format!("{}.{}", safe_app_id, extension);
     let file_path = cache_images_dir.join(&filename);
 
-    fs::write(&file_path, &bytes)
-        .map_err(|e| format!("Error saving image: {}", e))?;
+    fs::write(&file_path, &bytes).map_err(|e| format!("Error saving image: {}", e))?;
 
     Ok(filename)
 }
@@ -359,7 +387,9 @@ fn check_file_exists(path: String) -> bool {
 }
 
 #[tauri::command]
-async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackagesResponse, String> {
+async fn get_installed_flatpaks(
+    app: tauri::AppHandle,
+) -> Result<InstalledPackagesResponse, String> {
     let shell = app.shell();
 
     // Detect if we're running inside a flatpak
@@ -372,7 +402,12 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "list", "--columns=application,name,version,description,options,ref"])
+            .args([
+                "--host",
+                "flatpak",
+                "list",
+                "--columns=application,name,version,description,options,ref",
+            ])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
@@ -380,7 +415,10 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
         // Outside flatpak, use flatpak directly
         shell
             .command("flatpak")
-            .args(["list", "--columns=application,name,version,description,options,ref"])
+            .args([
+                "list",
+                "--columns=application,name,version,description,options,ref",
+            ])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak: {}", e))?
@@ -416,13 +454,12 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
             if is_runtime {
                 // Check if it might be an app extension using blacklist approach
                 // Exclude system/platform extensions, consider everything else as potential app extension
-                let is_system_extension =
-                    app_id.contains("org.freedesktop.Platform.") ||
-                    app_id.contains("org.freedesktop.Sdk.") ||
-                    app_id.contains(".Platform.GL32") ||
-                    app_id.contains(".Platform.VAAPI") ||
-                    app_id.contains(".Platform.Compat.i386") ||
-                    app_id.contains(".Platform.codecs");
+                let is_system_extension = app_id.contains("org.freedesktop.Platform.")
+                    || app_id.contains("org.freedesktop.Sdk.")
+                    || app_id.contains(".Platform.GL32")
+                    || app_id.contains(".Platform.VAAPI")
+                    || app_id.contains(".Platform.Compat.i386")
+                    || app_id.contains(".Platform.codecs");
 
                 let is_potential_app_extension = !is_system_extension;
 
@@ -478,52 +515,259 @@ async fn get_installed_flatpaks(app: tauri::AppHandle) -> Result<InstalledPackag
         }
     }
 
-    Ok(InstalledPackagesResponse { apps, runtimes, extensions })
+    Ok(InstalledPackagesResponse {
+        apps,
+        runtimes,
+        extensions,
+    })
 }
 
 #[tauri::command]
-async fn get_app_runtime_info(app: tauri::AppHandle, app_id: String) -> Result<String, String> {
+async fn get_install_dependencies(
+    app: tauri::AppHandle,
+    app_id: String,
+) -> Result<Vec<Dependency>, String> {
     let shell = app.shell();
 
     // Detect if we're running inside a flatpak
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
-    // Use --user to match installation scope and avoid interactive prompt
+    // First phase: Quick check with echo n (flatpak doesn't wait for input, just aborts)
     let output = if is_flatpak {
-        // Inside flatpak, use flatpak-spawn to execute on the host
         shell
-            .command("flatpak-spawn")
-            .args(["--host", "flatpak", "remote-info", "--user", "--show-metadata", "flathub", &app_id])
+            .command("sh")
+            .args([
+                "-c",
+                &format!(
+                    "LANG=C echo n | flatpak-spawn --host flatpak install --user flathub {}",
+                    app_id
+                ),
+            ])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
     } else {
-        // Outside flatpak, use flatpak directly
         shell
-            .command("flatpak")
-            .args(["remote-info", "--user", "--show-metadata", "flathub", &app_id])
+            .command("sh")
+            .args([
+                "-c",
+                &format!("LANG=C echo n | flatpak install --user flathub {}", app_id),
+            ])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak: {}", e))?
     };
 
-    if !output.status.success() {
-        let error = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Flatpak command failed: {}", error));
-    }
-
     let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined_first = format!("{}\n{}", stdout, stderr);
 
-    // Parse the metadata to extract runtime=
-    for line in stdout.lines() {
-        if line.starts_with("runtime=") {
-            if let Some(runtime) = line.strip_prefix("runtime=") {
-                return Ok(runtime.trim().to_string());
+    // Check if we got "Required runtime" message
+    let needs_runtime = combined_first.contains("Required runtime for");
+
+    // Second phase: If runtime is required, use controlled process with script
+    let (stdout, stderr) = if needs_runtime {
+        let cmd_str = build_flatpak_install_cmd(is_flatpak, &app_id);
+        let (cmd, args) = ("sh", vec!["-c", &cmd_str]);
+
+        let mut child = Command::new(cmd)
+            .args(&args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("Failed to spawn process: {}", e))?;
+
+        // Read stdout and stderr looking for the dependency list
+        use std::sync::{Arc, Mutex};
+        let output_lines = Arc::new(Mutex::new(Vec::<String>::new()));
+        let error_lines = Arc::new(Mutex::new(Vec::<String>::new()));
+        let found_list = Arc::new(Mutex::new(false));
+
+        // Clone for threads
+        let error_clone_err = Arc::clone(&error_lines);
+        let output_clone_out = Arc::clone(&output_lines);
+        let found_clone_out = Arc::clone(&found_list);
+
+        // Read stderr in thread
+        let stderr_handle = child.stderr.take().ok_or("Failed to get stderr")?;
+        let stderr_thread = std::thread::spawn(move || {
+            let reader = BufReader::new(stderr_handle);
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    error_clone_err.lock().unwrap().push(line);
+                }
+            }
+        });
+
+        // Read stdout in thread to avoid blocking on prompts without newlines
+        let stdout_handle = child.stdout.take().ok_or("Failed to get stdout")?;
+        let stdout_thread = std::thread::spawn(move || {
+            let reader = BufReader::new(stdout_handle);
+            let mut line_count_in_list = 0;
+
+            for line in reader.lines() {
+                if let Ok(line) = line {
+                    output_clone_out.lock().unwrap().push(line.clone());
+
+                    // Detect numbered dependency list entries
+                    let trimmed = line.trim();
+                    if trimmed.starts_with(|c: char| c.is_ascii_digit()) && trimmed.contains('.') {
+                        line_count_in_list += 1;
+                    }
+
+                    // Once we've seen at least 1 list entry, we have the data we need
+                    if line_count_in_list >= 1 {
+                        *found_clone_out.lock().unwrap() = true;
+                    }
+                }
+            }
+        });
+
+        // Wait with timeout for the list to be found or process to exit
+        let start = std::time::Instant::now();
+        let timeout = std::time::Duration::from_secs(7);
+        while start.elapsed() < timeout {
+            if *found_list.lock().unwrap() {
+                // Give it a short time to finish printing the whole list
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                break;
+            }
+            // Check if process exited on its own
+            if let Ok(Some(_)) = child.try_wait() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+
+        // Kill the process if still running - we have what we need or timed out
+        let _ = child.kill();
+        let _ = stdout_thread.join();
+        let _ = stderr_thread.join();
+
+        let out = output_lines.lock().unwrap().join("\n");
+        let err = error_lines.lock().unwrap().join("\n");
+
+        (out, err)
+    } else {
+        // No runtime needed, use the first phase output
+        (stdout.to_string(), stderr.to_string())
+    };
+
+    // Flatpak outputs dependency info to both stdout and stderr
+    let combined_output = format!("{}\n{}", stdout, stderr);
+
+    let mut dependencies = Vec::new();
+    let mut app_main: Option<Dependency> = None;
+    let mut required_runtime: Option<String> = None;
+
+    for line in combined_output.lines() {
+        let trimmed = line.trim();
+
+        // Skip empty lines
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        // Look for "Required runtime" format (when app isn't already downloaded)
+        // Format: "Required runtime for moe.clover.mm3d/x86_64/stable (runtime/org.kde.Platform/x86_64/5.15-23.08) found in remote flathub"
+        if line.contains("Required runtime for") {
+            if let Some(runtime_part) = line.split("(runtime/").nth(1) {
+                if let Some(runtime_name) = runtime_part.split(')').next() {
+                    required_runtime = Some(runtime_name.to_string());
+                }
+            }
+        }
+
+        // Look for lines that start with a number followed by a dot
+        // Format can be tabs or multiple spaces (especially when using 'script')
+        if let Some(rest) = trimmed.strip_prefix(|c: char| c.is_ascii_digit()) {
+            if rest.starts_with('.') {
+                // Normalize line: replace non-breaking spaces and tabs with regular spaces
+                let normalized = line.replace('\u{a0}', " ").replace('\t', " ");
+
+                // Split by multiple spaces and filter out empty parts
+                let parts: Vec<&str> = normalized.split(' ').filter(|s| !s.is_empty()).collect();
+
+                // A valid dependency line usually has: index, ID, branch, op, remote, size
+                // Example: ["1.", "org.kde.Platform", "5.15-23.08", "i", "flathub", "<", "346,1", "MB"]
+                if parts.len() >= 5 {
+                    let name = parts[1].trim().to_string();
+
+                    // The size is usually at the end. We join the last few parts if they look like a size.
+                    // e.g., ["<", "346,1", "MB"] or ["2,2", "MB"]
+                    let mut size_parts = Vec::new();
+                    let mut found_size_start = false;
+
+                    for i in 4..parts.len() {
+                        let p = parts[i];
+                        if p == "<"
+                            || p.chars().next().unwrap_or(' ').is_ascii_digit()
+                            || p == "MB"
+                            || p == "GB"
+                            || p == "kB"
+                            || p == "B"
+                        {
+                            found_size_start = true;
+                            size_parts.push(p);
+                        } else if found_size_start {
+                            // If we already started finding size parts and find something else, stop
+                            break;
+                        }
+                    }
+
+                    let size_raw = size_parts.join(" ");
+                    let size_clean = size_raw
+                        .replace("<", "")
+                        .replace("(parcial)", "")
+                        .replace("(partial)", "")
+                        .trim()
+                        .to_string();
+
+                    if !name.is_empty() && !size_clean.is_empty() {
+                        let dep = Dependency {
+                            name: name.clone(),
+                            download_size: size_clean.clone(),
+                            installed_size: size_clean,
+                        };
+
+                        if name == app_id {
+                            app_main = Some(dep);
+                        } else {
+                            dependencies.push(dep);
+                        }
+                    }
+                }
             }
         }
     }
 
-    Err("Runtime information not found in metadata".to_string())
+    // If we found a required runtime but no detailed list, create a fallback entry
+    if app_main.is_none() && required_runtime.is_some() {
+        // Add the app itself with unknown size
+        app_main = Some(Dependency {
+            name: app_id.clone(),
+            download_size: "Unknown".to_string(),
+            installed_size: "Unknown".to_string(),
+        });
+
+        // Add the runtime as a dependency
+        if let Some(runtime) = required_runtime {
+            dependencies.push(Dependency {
+                name: runtime,
+                download_size: "Unknown".to_string(),
+                installed_size: "Unknown".to_string(),
+            });
+        }
+    }
+
+    // Put app main as first element, then dependencies
+    let mut result = Vec::new();
+    if let Some(main_app) = app_main {
+        result.push(main_app);
+    }
+    result.extend(dependencies);
+
+    Ok(result)
 }
 
 #[tauri::command]
@@ -537,7 +781,13 @@ async fn get_available_updates(app: tauri::AppHandle) -> Result<Vec<UpdateAvaila
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "remote-ls", "--updates", "--columns=application,version,branch"])
+            .args([
+                "--host",
+                "flatpak",
+                "remote-ls",
+                "--updates",
+                "--columns=application,version,branch",
+            ])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
@@ -545,7 +795,11 @@ async fn get_available_updates(app: tauri::AppHandle) -> Result<Vec<UpdateAvaila
         // Outside flatpak, use flatpak directly
         shell
             .command("flatpak")
-            .args(["remote-ls", "--updates", "--columns=application,version,branch"])
+            .args([
+                "remote-ls",
+                "--updates",
+                "--columns=application,version,branch",
+            ])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak: {}", e))?
@@ -772,7 +1026,15 @@ async fn get_app_remote_metadata(app: tauri::AppHandle, app_id: String) -> Resul
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "remote-info", "--user", "--show-metadata", "flathub", &app_id])
+            .args([
+                "--host",
+                "flatpak",
+                "remote-info",
+                "--user",
+                "--show-metadata",
+                "flathub",
+                &app_id,
+            ])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
@@ -780,7 +1042,13 @@ async fn get_app_remote_metadata(app: tauri::AppHandle, app_id: String) -> Resul
         // Outside flatpak, use flatpak directly
         shell
             .command("flatpak")
-            .args(["remote-info", "--user", "--show-metadata", "flathub", &app_id])
+            .args([
+                "remote-info",
+                "--user",
+                "--show-metadata",
+                "flathub",
+                &app_id,
+            ])
             .output()
             .await
             .map_err(|e| format!("Failed to execute flatpak: {}", e))?
@@ -803,7 +1071,10 @@ struct InstallableExtension {
 }
 
 #[tauri::command]
-async fn get_installable_extensions(app: tauri::AppHandle, app_id: String) -> Result<Vec<InstallableExtension>, String> {
+async fn get_installable_extensions(
+    app: tauri::AppHandle,
+    app_id: String,
+) -> Result<Vec<InstallableExtension>, String> {
     let shell = app.shell();
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
@@ -813,7 +1084,10 @@ async fn get_installable_extensions(app: tauri::AppHandle, app_id: String) -> Re
     // Parse extension points from metadata
     let mut extension_points = Vec::new();
     for line in metadata.lines() {
-        if let Some(captures) = line.strip_prefix("[Extension ").and_then(|s| s.strip_suffix("]")) {
+        if let Some(captures) = line
+            .strip_prefix("[Extension ")
+            .and_then(|s| s.strip_suffix("]"))
+        {
             let extension_point = captures.trim().to_string();
 
             // Use a blacklist approach: exclude system/platform extensions
@@ -828,13 +1102,11 @@ async fn get_installable_extensions(app: tauri::AppHandle, app_id: String) -> Re
                 // Get the first segment after app_id (e.g., ".Debug" or ".Addon")
                 let first_segment = suffix.split('.').nth(1).unwrap_or("");
 
-                first_segment == "Debug" ||
-                first_segment == "Locale" ||
-                first_segment == "Help"
+                first_segment == "Debug" || first_segment == "Locale" || first_segment == "Help"
             } else {
                 // Platform extensions from freedesktop
-                extension_point.contains("org.freedesktop.Platform.") ||
-                extension_point.contains("org.freedesktop.Sdk.")
+                extension_point.contains("org.freedesktop.Platform.")
+                    || extension_point.contains("org.freedesktop.Sdk.")
             };
 
             if belongs_to_app && !is_system_extension {
@@ -852,7 +1124,13 @@ async fn get_installable_extensions(app: tauri::AppHandle, app_id: String) -> Re
         let output = if is_flatpak {
             shell
                 .command("flatpak-spawn")
-                .args(["--host", "flatpak", "search", "--columns=application,name", &extension_point])
+                .args([
+                    "--host",
+                    "flatpak",
+                    "search",
+                    "--columns=application,name",
+                    &extension_point,
+                ])
                 .output()
                 .await
                 .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
@@ -884,9 +1162,9 @@ async fn get_installable_extensions(app: tauri::AppHandle, app_id: String) -> Re
                     // It can be exactly equal to the extension point or start with it
                     if pkg_id.starts_with(&extension_point) {
                         // Accept if it's exactly the extension point OR if it has additional components
-                        let is_valid = pkg_id == extension_point ||
-                                      (pkg_id.len() > extension_point.len() &&
-                                       pkg_id.chars().nth(extension_point.len()) == Some('.'));
+                        let is_valid = pkg_id == extension_point
+                            || (pkg_id.len() > extension_point.len()
+                                && pkg_id.chars().nth(extension_point.len()) == Some('.'));
 
                         if is_valid {
                             installable_extensions.push(InstallableExtension {
@@ -921,7 +1199,15 @@ async fn install_extension(app: tauri::AppHandle, extension_id: String) -> Resul
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "install", "-y", "--user", "flathub", &extension_id])
+            .args([
+                "--host",
+                "flatpak",
+                "install",
+                "-y",
+                "--user",
+                "flathub",
+                &extension_id,
+            ])
             .spawn()
             .map_err(|e| format!("Failed to spawn flatpak-spawn: {}", e))?
     } else {
@@ -1043,7 +1329,7 @@ pub fn run() {
             get_cached_image_path,
             check_file_exists,
             get_installed_flatpaks,
-            get_app_runtime_info,
+            get_install_dependencies,
             get_app_remote_metadata,
             get_installable_extensions,
             get_available_updates,

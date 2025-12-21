@@ -70,12 +70,26 @@
   "dependency": {
     "alreadyInstalled": "Já instalado no seu sistema",
     "checkingRuntime": "Verificando runtime...",
+    "dependenciesToDownload": "dependências para baixar",
+    "download": "Baixar",
     "fastInstallationNote": "A instalação será rápida, pois o runtime já está em cache.",
+    "installed": "Instalado",
+    "installationRequirements": "Requisitos de Instalação",
     "largerDownloadNote": "A primeira instalação pode demorar mais, pois precisa baixar as dependências do runtime.",
     "runtimeDependencies": "Dependências de Runtime",
     "runtimeDownload": "Download de Runtime",
     "runtimeReady": "Runtime Pronto",
-    "willBeDownloaded": "Será baixado durante a instalação"
+    "willBeDownloaded": "Será baixado durante a instalação",
+    "willBeDownloadedNote": "Essas dependências serão baixadas e instaladas automaticamente quando você instalar o aplicativo.",
+    "downloadSize": "Tamanho do Download",
+    "storageBreakdown": "Detalhamento de Armazenamento",
+    "totalDownload": "Download Total",
+    "appCoreSize": "Tamanho Base do App",
+    "dependencies": "Dependências",
+    "sharedRuntimesNote": "💡 Os runtimes são compartilhados. Você pode não precisar baixá-los se outro aplicativo já os instalou.",
+    "dependencyRequired": "Dependência necessária",
+    "dependenciesRequired": "Dependências necessárias",
+    "noDependenciesRequired": "Nenhuma dependência necessária"
   },
   "developerProfile": {
     "availableSoftware": "Software Disponível",

@@ -70,12 +70,26 @@
   "dependency": {
     "alreadyInstalled": "系统中已安装",
     "checkingRuntime": "正在检查运行时...",
+    "dependenciesToDownload": "个依赖项需要下载",
+    "download": "下载",
     "fastInstallationNote": "由于运行时已缓存，安装将会很快。",
+    "installed": "已安装",
+    "installationRequirements": "安装要求",
     "largerDownloadNote": "首次安装可能需要较长时间，因为需要下载运行时依赖项。",
     "runtimeDependencies": "运行时依赖项",
     "runtimeDownload": "运行时下载",
     "runtimeReady": "运行时就绪",
-    "willBeDownloaded": "将在安装期间下载"
+    "willBeDownloaded": "将在安装期间下载",
+    "willBeDownloadedNote": "这些依赖项将在您安装应用程序时自动下载和安装。",
+    "downloadSize": "下载大小",
+    "storageBreakdown": "存储详情",
+    "totalDownload": "总下载量",
+    "appCoreSize": "应用核心大小",
+    "dependencies": "依赖项",
+    "sharedRuntimesNote": "💡 运行时是共享的。如果其他应用已安装这些运行时，您可能无需下载它们。",
+    "dependencyRequired": "需要依赖项",
+    "dependenciesRequired": "需要依赖项",
+    "noDependenciesRequired": "无需依赖项"
   },
   "developerProfile": {
     "availableSoftware": "可用软件",

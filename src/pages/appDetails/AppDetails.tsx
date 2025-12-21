@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../components/CachedImage";
-import { DependencyStatusCard } from "../../components/DependencyStatusCard";
+import { DependencyInfoPopover } from "../../components/DependencyInfoPopover";
 import { GitHubStarBadge } from "../../components/GitHubStarBadge";
 import { Terminal } from "../../components/Terminal";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
@@ -237,7 +237,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				</Box>
 
 				{/* Install Button and Runtime Status */}
-				<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+				<Box sx={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 200 }}>
 					<Button
 						variant="contained"
 						size="large"
@@ -282,15 +282,26 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 								: t("appDetails.install")}
 					</Button>
 
-					{/* Runtime Dependency Status Chip */}
+					{/* Dependency Info Popover */}
 					{!isInstalled && installStatus === "idle" && (
-						<Box>
-							<DependencyStatusCard
-								runtimeRef={runtimeCheck.runtimeRef}
-								isInstalled={runtimeCheck.isInstalled}
-								loading={runtimeCheck.loading}
+						runtimeCheck.loading ? (
+							<Skeleton
+								variant="rounded"
+								width="100%"
+								height={72}
+								sx={{
+									bgcolor: "rgba(255, 255, 255, 0.05)",
+								}}
 							/>
-						</Box>
+						) : runtimeCheck.dependencies.length > 0 ? (
+							<DependencyInfoPopover
+								appSize={runtimeCheck.dependencies[0].download_size}
+								dependencies={runtimeCheck.dependencies.slice(1).map(dep => ({
+									id: dep.name,
+									size: dep.download_size,
+								}))}
+							/>
+						) : null
 					)}
 				</Box>
 			</Box>

@@ -65,17 +65,32 @@
     "noResults": "No se encontraron resultados",
     "retry": "Reintentar",
     "save": "Guardar",
-    "search": "Buscar"
+    "search": "Buscar",
+    "unknown": "Desconocido"
   },
   "dependency": {
     "alreadyInstalled": "Ya instalado en su sistema",
     "checkingRuntime": "Comprobando entorno de ejecución...",
+    "dependenciesToDownload": "dependencias para descargar",
+    "download": "Descarga",
     "fastInstallationNote": "La instalación será rápida ya que el entorno de ejecución ya está en caché.",
+    "installed": "Instalado",
+    "installationRequirements": "Requisitos de instalación",
     "largerDownloadNote": "La primera instalación puede tardar más, ya que necesita descargar las dependencias del entorno de ejecución.",
     "runtimeDependencies": "Dependencias del entorno",
     "runtimeDownload": "Descarga del entorno",
     "runtimeReady": "Entorno listo",
-    "willBeDownloaded": "Se descargará durante la instalación"
+    "willBeDownloaded": "Se descargará durante la instalación",
+    "willBeDownloadedNote": "Estas dependencias se descargarán e instalarán automáticamente cuando instales la aplicación.",
+    "downloadSize": "Tamaño de descarga",
+    "storageBreakdown": "Desglose de almacenamiento",
+    "totalDownload": "Descarga total",
+    "appCoreSize": "Tamaño base de la app",
+    "dependencies": "Dependencias",
+    "sharedRuntimesNote": "💡 Los entornos de ejecución son compartidos. Es posible que no necesites descargarlos si otra aplicación ya los instaló.",
+    "dependencyRequired": "Dependencia requerida",
+    "dependenciesRequired": "Dependencias requeridas",
+    "noDependenciesRequired": "No se requieren dependencias"
   },
   "developerProfile": {
     "availableSoftware": "Software disponible",

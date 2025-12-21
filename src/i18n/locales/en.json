@@ -64,18 +64,31 @@
     "retry": "Retry",
     "save": "Save",
     "search": "Search",
-    "initializing": "Initializing Klia Store...",
-    "errorInitializing": "Error initializing app:"
+    "unknown": "Unknown"
   },
   "dependency": {
     "alreadyInstalled": "Already installed on your system",
     "checkingRuntime": "Checking runtime...",
-    "fastInstallationNote": "Installation will be fast since the runtime is already cached.",
-    "largerDownloadNote": "First installation may take longer as it needs to download runtime dependencies.",
+    "dependenciesToDownload": "dependencies to download",
+    "download": "Download",
+    "fastInstallationNote": "Installation will be fast as the runtime is already cached.",
+    "installationRequirements": "Installation Requirements",
+    "installed": "Installed",
+    "largerDownloadNote": "First installation might take longer as it needs to download runtime dependencies.",
     "runtimeDependencies": "Runtime Dependencies",
     "runtimeDownload": "Runtime Download",
     "runtimeReady": "Runtime Ready",
-    "willBeDownloaded": "Will be downloaded during installation"
+    "willBeDownloaded": "Will be downloaded during installation",
+    "willBeDownloadedNote": "These dependencies will be automatically downloaded and installed when you install the application.",
+    "downloadSize": "Download Size",
+    "storageBreakdown": "Storage Breakdown",
+    "totalDownload": "Total Download",
+    "appCoreSize": "App Core Size",
+    "dependencies": "Dependencies",
+    "sharedRuntimesNote": "💡 Runtimes are shared. You may not need to download these if another app already installed them.",
+    "dependencyRequired": "Dependency required",
+    "dependenciesRequired": "Dependencies required",
+    "noDependenciesRequired": "No dependencies required"
   },
   "developerProfile": {
     "availableSoftware": "Available Software",
