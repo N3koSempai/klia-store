@@ -2105,8 +2105,10 @@ dependencies = [
 name = "klia-store"
 version = "2.4.0"
 dependencies = [
+ "hex",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

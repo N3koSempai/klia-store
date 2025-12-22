@@ -1,4 +1,5 @@
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
@@ -276,40 +277,33 @@ fn get_cache_image_dir(app: tauri::AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn read_cache_index(app: tauri::AppHandle) -> Result<String, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-
-    let index_path = app_data_dir.join("cacheImages").join("index.json");
-
-    if !index_path.exists() {
-        return Ok("{}".to_string());
-    }
-
-    fs::read_to_string(&index_path).map_err(|e| format!("Failed to read cache index: {}", e))
-}
-
-#[tauri::command]
-fn write_cache_index(app: tauri::AppHandle, content: String) -> Result<(), String> {
+fn clear_old_cache(app: tauri::AppHandle) -> Result<(), String> {
     let app_data_dir = app
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
     let cache_images_dir = app_data_dir.join("cacheImages");
-    fs::create_dir_all(&cache_images_dir)
-        .map_err(|e| format!("Failed to create cacheImages directory: {}", e))?;
-
     let index_path = cache_images_dir.join("index.json");
-    fs::write(&index_path, content).map_err(|e| format!("Failed to write cache index: {}", e))
+
+    if index_path.exists() {
+        println!("[Cache] Old cache system detected (index.json found). Clearing...");
+        if cache_images_dir.exists() {
+            fs::remove_dir_all(&cache_images_dir)
+                .map_err(|e| format!("Failed to clear old cache directory: {}", e))?;
+
+            // Recreate the directory
+            fs::create_dir_all(&cache_images_dir)
+                .map_err(|e| format!("Failed to recreate cache directory: {}", e))?;
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]
 async fn download_and_cache_image(
     app: tauri::AppHandle,
-    app_id: String,
+    _app_id: String,
     image_url: String,
 ) -> Result<String, String> {
     let app_data_dir = app
@@ -353,10 +347,13 @@ async fn download_and_cache_image(
         .await
         .map_err(|e| format!("Error reading image bytes: {}", e))?;
 
-    // Generar nombre de archivo único usando el app_id
-    // Reemplazar caracteres inválidos para nombres de archivo (. y :::)
-    let safe_app_id = app_id.replace(".", "_").replace(":::", "_screenshot_");
-    let filename = format!("{}.{}", safe_app_id, extension);
+    // Generar nombre de archivo único usando el hash de la URL
+    let mut hasher = Sha256::new();
+    hasher.update(image_url.as_bytes());
+    let hash_result = hasher.finalize();
+    let hash_hex = hex::encode(hash_result);
+
+    let filename = format!("{}.{}", hash_hex, extension);
     let file_path = cache_images_dir.join(&filename);
 
     fs::write(&file_path, &bytes).map_err(|e| format!("Error saving image: {}", e))?;
@@ -1323,8 +1320,7 @@ pub fn run() {
             initialize_app,
             get_app_data_path,
             get_cache_image_dir,
-            read_cache_index,
-            write_cache_index,
+            clear_old_cache,
             download_and_cache_image,
             get_cached_image_path,
             check_file_exists,
