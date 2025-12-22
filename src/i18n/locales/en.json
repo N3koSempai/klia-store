@@ -88,7 +88,8 @@
     "sharedRuntimesNote": "💡 Runtimes are shared. You may not need to download these if another app already installed them.",
     "dependencyRequired": "Dependency required",
     "dependenciesRequired": "Dependencies required",
-    "noDependenciesRequired": "No dependencies required"
+    "noDependenciesRequired": "No dependencies required",
+    "locale": "locale"
   },
   "developerProfile": {
     "availableSoftware": "Available Software",

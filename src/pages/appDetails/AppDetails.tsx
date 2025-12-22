@@ -300,6 +300,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 									id: dep.name,
 									size: dep.download_size,
 								}))}
+								appId={app.id}
 							/>
 						) : null
 					)}

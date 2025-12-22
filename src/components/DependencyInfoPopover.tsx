@@ -16,14 +16,20 @@ interface Dependency {
   size: string;
 }
 
+interface ProcessedDependency extends Dependency {
+  localeSize?: string; // Size of associated .Locale package
+}
+
 interface DependencyInfoPopoverProps {
   appSize: string;
   dependencies: Dependency[];
+  appId: string; // App ID to determine core .Locale package
 }
 
 export function DependencyInfoPopover({
   appSize,
   dependencies,
+  appId,
 }: DependencyInfoPopoverProps) {
   const { t } = useTranslation();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
@@ -37,6 +43,55 @@ export function DependencyInfoPopover({
   };
 
   const open = Boolean(anchorEl);
+
+  // Process dependencies to separate .Locale packages
+  const processDependencies = (): {
+    coreLocaleSize: string | null;
+    processedDeps: ProcessedDependency[];
+  } => {
+    const coreLocaleName = `${appId}.Locale`;
+    let coreLocaleSize: string | null = null;
+    const depsMap = new Map<string, ProcessedDependency>();
+    const localeMap = new Map<string, string>(); // Map of base package name to locale size
+
+    // First pass: collect all .Locale packages
+    for (const dep of dependencies) {
+      if (dep.id.endsWith(".Locale")) {
+        const baseName = dep.id.slice(0, -7); // Remove ".Locale"
+
+        // Check if this is the core app's .Locale package
+        if (dep.id === coreLocaleName) {
+          coreLocaleSize = dep.size;
+        } else {
+          // Store locale for matching with dependency later
+          localeMap.set(baseName, dep.size);
+        }
+      }
+    }
+
+    // Second pass: process all non-.Locale packages and match with their locales
+    for (const dep of dependencies) {
+      // Skip all .Locale packages (already processed)
+      if (dep.id.endsWith(".Locale")) {
+        continue;
+      }
+
+      // Regular dependency - check if it has a matching .Locale
+      const localeSize = localeMap.get(dep.id);
+      depsMap.set(dep.id, {
+        id: dep.id,
+        size: dep.size,
+        localeSize: localeSize || undefined
+      });
+    }
+
+    return {
+      coreLocaleSize,
+      processedDeps: Array.from(depsMap.values()),
+    };
+  };
+
+  const { coreLocaleSize, processedDeps } = processDependencies();
 
   // Calculate total size
   const parseSize = (size: string): number => {
@@ -56,13 +111,20 @@ export function DependencyInfoPopover({
   };
 
   const appSizeMB = parseSize(appSize);
-  const depsSizeMB = dependencies.reduce(
-    (sum, dep) => sum + parseSize(dep.size),
+  const coreLocaleSizeMB = coreLocaleSize ? parseSize(coreLocaleSize) : 0;
+  const depsSizeMB = processedDeps.reduce(
+    (sum, dep) => {
+      const mainSize = parseSize(dep.size);
+      const localeSize = dep.localeSize ? parseSize(dep.localeSize) : 0;
+      return sum + mainSize + localeSize;
+    },
     0,
   );
-  const totalSizeMB = appSizeMB + depsSizeMB;
+  const totalSizeMB = appSizeMB + coreLocaleSizeMB + depsSizeMB;
   const hasUnknownSize =
-    appSize === "Unknown" || dependencies.some((dep) => dep.size === "Unknown");
+    appSize === "Unknown" ||
+    (coreLocaleSize && coreLocaleSize === "Unknown") ||
+    processedDeps.some((dep) => dep.size === "Unknown" || dep.localeSize === "Unknown");
 
   const formatSize = (mb: number, originalSize?: string): string => {
     if (originalSize === "Unknown") return t("common.unknown");
@@ -72,7 +134,7 @@ export function DependencyInfoPopover({
     return `${mb.toFixed(1)} MB`;
   };
 
-  const hasDependencies = dependencies.length > 0;
+  const hasDependencies = processedDeps.length > 0;
 
   // Visual state based on dependencies
   const borderColor = hasDependencies ? "warning.main" : "success.main";
@@ -83,7 +145,7 @@ export function DependencyInfoPopover({
     <CheckCircleOutlineIcon sx={{ fontSize: "1rem", color: accentColor }} />
   );
   const statusText = hasDependencies
-    ? `${dependencies.length} ${dependencies.length > 1 ? t("dependency.dependenciesRequired") : t("dependency.dependencyRequired")}`
+    ? `${processedDeps.length} ${processedDeps.length > 1 ? t("dependency.dependenciesRequired") : t("dependency.dependencyRequired")}`
     : t("dependency.noDependenciesRequired");
 
   return (
@@ -236,16 +298,31 @@ export function DependencyInfoPopover({
               >
                 {t("dependency.appCoreSize")}
               </Typography>
-              <Typography
-                sx={{
-                  fontFamily: "JetBrains Mono, monospace",
-                  fontSize: "0.875rem",
-                  color: "rgba(255,255,255,0.9)",
-                  fontWeight: 600,
-                }}
-              >
-                {formatSize(appSizeMB, appSize)}
-              </Typography>
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                <Typography
+                  sx={{
+                    fontFamily: "JetBrains Mono, monospace",
+                    fontSize: "0.875rem",
+                    color: "rgba(255,255,255,0.9)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {formatSize(appSizeMB, appSize)}
+                </Typography>
+                {coreLocaleSize && (
+                  <Typography
+                    sx={{
+                      fontFamily: "JetBrains Mono, monospace",
+                      fontSize: "0.6875rem",
+                      color: "rgba(255,255,255,0.5)",
+                      fontWeight: 500,
+                      mt: 0.25,
+                    }}
+                  >
+                    + {formatSize(coreLocaleSizeMB, coreLocaleSize)} ({t("dependency.locale")})
+                  </Typography>
+                )}
+              </Box>
             </Box>
           </Box>
 
@@ -275,7 +352,7 @@ export function DependencyInfoPopover({
               </Typography>
 
               <Stack spacing={1}>
-                {dependencies.map((dep, index) => (
+                {processedDeps.map((dep, index) => (
                   <Box
                     key={index}
                     sx={{
@@ -285,7 +362,7 @@ export function DependencyInfoPopover({
                       gap: 2,
                       py: 0.75,
                       borderBottom:
-                        index < dependencies.length - 1
+                        index < processedDeps.length - 1
                           ? "1px solid rgba(255,255,255,0.05)"
                           : "none",
                     }}
@@ -303,17 +380,32 @@ export function DependencyInfoPopover({
                     >
                       {dep.id}
                     </Typography>
-                    <Typography
-                      sx={{
-                        fontFamily: "JetBrains Mono, monospace",
-                        fontSize: "0.8125rem",
-                        color: "rgba(255,255,255,0.9)",
-                        fontWeight: 600,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {formatSize(parseSize(dep.size), dep.size)}
-                    </Typography>
+                    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                      <Typography
+                        sx={{
+                          fontFamily: "JetBrains Mono, monospace",
+                          fontSize: "0.8125rem",
+                          color: "rgba(255,255,255,0.9)",
+                          fontWeight: 600,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {formatSize(parseSize(dep.size), dep.size)}
+                      </Typography>
+                      {dep.localeSize && (
+                        <Typography
+                          sx={{
+                            fontFamily: "JetBrains Mono, monospace",
+                            fontSize: "0.6875rem",
+                            color: "rgba(255,255,255,0.5)",
+                            fontWeight: 500,
+                            mt: 0.25,
+                          }}
+                        >
+                          + {formatSize(parseSize(dep.localeSize), dep.localeSize)} ({t("dependency.locale")})
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
                 ))}
               </Stack>

@@ -89,7 +89,8 @@
     "sharedRuntimesNote": "💡 运行时是共享的。如果其他应用已安装这些运行时，您可能无需下载它们。",
     "dependencyRequired": "需要依赖项",
     "dependenciesRequired": "需要依赖项",
-    "noDependenciesRequired": "无需依赖项"
+    "noDependenciesRequired": "无需依赖项",
+    "locale": "语言包"
   },
   "developerProfile": {
     "availableSoftware": "可用软件",

@@ -89,7 +89,8 @@
     "sharedRuntimesNote": "💡 Os runtimes são compartilhados. Você pode não precisar baixá-los se outro aplicativo já os instalou.",
     "dependencyRequired": "Dependência necessária",
     "dependenciesRequired": "Dependências necessárias",
-    "noDependenciesRequired": "Nenhuma dependência necessária"
+    "noDependenciesRequired": "Nenhuma dependência necessária",
+    "locale": "idiomas"
   },
   "developerProfile": {
     "availableSoftware": "Software Disponível",

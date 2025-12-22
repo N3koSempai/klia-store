@@ -90,7 +90,8 @@
     "sharedRuntimesNote": "💡 Los entornos de ejecución son compartidos. Es posible que no necesites descargarlos si otra aplicación ya los instaló.",
     "dependencyRequired": "Dependencia requerida",
     "dependenciesRequired": "Dependencias requeridas",
-    "noDependenciesRequired": "No se requieren dependencias"
+    "noDependenciesRequired": "No se requieren dependencias",
+    "locale": "idiomas"
   },
   "developerProfile": {
     "availableSoftware": "Software disponible",
