@@ -1,9 +1,23 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
+interface QueueItem {
+  appId: string;
+  imageUrl: string;
+  priority: number; // 0 = high (visible), 1 = low (hidden)
+  resolve: (value: string) => void;
+  reject: (reason?: any) => void;
+  retryCount?: number;
+}
+
 export class ImageCacheManager {
   private static instance: ImageCacheManager;
   private cacheDir: string | null = null;
   private initPromise: Promise<void> | null = null;
+  private queue: QueueItem[] = [];
+  private activeDownloads = 0;
+  private readonly MAX_CONCURRENT_DOWNLOADS = 6;
+  private readonly MAX_RETRIES = 2;
+  private readonly DELAY_BETWEEN_DOWNLOADS = 150; // ms
 
   private constructor() {}
 
@@ -96,11 +110,24 @@ export class ImageCacheManager {
     }
   }
 
-  async cacheImage(appId: string, imageUrl: string): Promise<string> {
-    await this.initialize();
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
+  private isTemporaryError(error: any): boolean {
+    const errorMsg = String(error).toLowerCase();
+    // Errores temporales: timeout, network, connection
+    return (
+      errorMsg.includes("timeout") ||
+      errorMsg.includes("error sending request") ||
+      errorMsg.includes("connection") ||
+      errorMsg.includes("network")
+    );
+  }
+
+  private async downloadImage(appId: string, imageUrl: string, retryCount = 0): Promise<string> {
     console.log(
-      `[ImageCache] Downloading and caching image for ${appId}: ${imageUrl}`,
+      `[ImageCache] Downloading and caching image for ${appId}: ${imageUrl}${retryCount > 0 ? ` (retry ${retryCount})` : ''}`,
     );
 
     try {
@@ -125,11 +152,59 @@ export class ImageCacheManager {
       return convertedPath;
     } catch (error) {
       console.error(`[ImageCache] Error caching image for ${appId}:`, error);
+
+      // Si es un error temporal y aún quedan reintentos
+      if (this.isTemporaryError(error) && retryCount < this.MAX_RETRIES) {
+        // Exponential backoff: 500ms, 1000ms, 2000ms...
+        const backoffDelay = 500 * Math.pow(2, retryCount);
+        console.log(`[ImageCache] Retrying in ${backoffDelay}ms...`);
+        await this.sleep(backoffDelay);
+        return this.downloadImage(appId, imageUrl, retryCount + 1);
+      }
+
       throw error;
     }
   }
 
-  async getOrCacheImage(appId: string, imageUrl: string): Promise<string> {
+  private async processQueue(): Promise<void> {
+    if (this.activeDownloads >= this.MAX_CONCURRENT_DOWNLOADS || this.queue.length === 0) {
+      return;
+    }
+
+    // Ordenar por prioridad (0 primero = visibles primero)
+    this.queue.sort((a, b) => a.priority - b.priority);
+
+    const item = this.queue.shift();
+    if (!item) return;
+
+    this.activeDownloads++;
+
+    // Delay antes de iniciar descarga para espaciar las requests
+    if (this.activeDownloads > 1) {
+      await this.sleep(this.DELAY_BETWEEN_DOWNLOADS);
+    }
+
+    try {
+      const result = await this.downloadImage(item.appId, item.imageUrl, item.retryCount || 0);
+      item.resolve(result);
+    } catch (error) {
+      item.reject(error);
+    } finally {
+      this.activeDownloads--;
+      this.processQueue(); // Procesar siguiente en cola
+    }
+  }
+
+  async cacheImage(appId: string, imageUrl: string, priority: number = 1): Promise<string> {
+    await this.initialize();
+
+    return new Promise((resolve, reject) => {
+      this.queue.push({ appId, imageUrl, priority, resolve, reject });
+      this.processQueue();
+    });
+  }
+
+  async getOrCacheImage(appId: string, imageUrl: string, priority: number = 1): Promise<string> {
     // Primero intentar obtener de caché usando la URL
     const cachedPath = await this.getCachedImagePath(imageUrl);
 
@@ -137,8 +212,8 @@ export class ImageCacheManager {
       return cachedPath;
     }
 
-    // Si no está en caché, descargar y cachear
-    return await this.cacheImage(appId, imageUrl);
+    // Si no está en caché, descargar y cachear con prioridad
+    return await this.cacheImage(appId, imageUrl, priority);
   }
 }
 

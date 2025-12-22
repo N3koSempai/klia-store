@@ -1,6 +1,6 @@
 import { Box, Skeleton } from "@mui/material";
 import { BrokenImage } from "@mui/icons-material";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { imageCacheManager } from "../utils/imageCache";
 
 interface CachedImageProps {
@@ -13,6 +13,7 @@ interface CachedImageProps {
 	variant?: "rectangular" | "circular" | "rounded";
 	showErrorPlaceholder?: boolean; // If false, keeps loading skeleton instead of showing error
 	maxRetries?: number; // Maximum number of retries (default: 1)
+	isScreenshot?: boolean; // If true, skips lazy loading and priority queue (for carousels)
 }
 
 // In-memory cache to remember failed images across component mounts/unmounts
@@ -29,6 +30,7 @@ export const CachedImage = ({
 	variant = "rectangular",
 	showErrorPlaceholder = true,
 	maxRetries = 1,
+	isScreenshot = false,
 }: CachedImageProps) => {
 	const keyToUse = cacheKey || appId;
 
@@ -41,6 +43,36 @@ export const CachedImage = ({
 	const [imageLoaded, setImageLoaded] = useState(!!cachedSrc);
 	const [hasError, setHasError] = useState(cachedError);
 	const [retryCount, setRetryCount] = useState(0);
+	const [isVisible, setIsVisible] = useState(isScreenshot); // Screenshots always visible
+	const containerRef = useRef<HTMLDivElement>(null);
+	const imageRef = useRef<HTMLImageElement>(null);
+
+	// IntersectionObserver for lazy loading (only for non-screenshots)
+	useEffect(() => {
+		if (isScreenshot) return;
+
+		const elementToObserve = containerRef.current || imageRef.current;
+		if (!elementToObserve) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach((entry) => {
+					if (entry.isIntersecting) {
+						setIsVisible(true);
+					}
+				});
+			},
+			{
+				rootMargin: "50px", // Start loading 50px before visible
+			}
+		);
+
+		observer.observe(elementToObserve);
+
+		return () => {
+			observer.disconnect();
+		};
+	}, [isScreenshot]);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -59,14 +91,23 @@ export const CachedImage = ({
 			return;
 		}
 
+		// Only load if visible (or is screenshot)
+		if (!isVisible) {
+			return;
+		}
+
 		const loadImage = async () => {
 			try {
 				setIsLoading(true);
 				setImageLoaded(false);
 
+				// Priority: 0 for visible (high), 1 for not visible yet (low)
+				const priority = isVisible ? 0 : 1;
+
 				const cachedPath = await imageCacheManager.getOrCacheImage(
 					keyToUse,
 					imageUrl,
+					isScreenshot ? 0 : priority, // Screenshots always high priority
 				);
 
 				if (isMounted) {
@@ -77,18 +118,37 @@ export const CachedImage = ({
 			} catch (err) {
 				console.error("Error loading cached image:", err);
 				if (isMounted) {
-					// If cache fails, try with original URL
-					if (retryCount < maxRetries) {
-						setImageSrc(imageUrl);
-						setRetryCount(retryCount + 1);
-					} else {
-						// Max retries reached
+					const errorMsg = String(err).toLowerCase();
+					const isTemporaryError =
+						errorMsg.includes("timeout") ||
+						errorMsg.includes("error sending request") ||
+						errorMsg.includes("connection") ||
+						errorMsg.includes("network");
+
+					// Solo marcar como error permanente si no es temporal
+					// o si ya se agotaron los reintentos del imageCache (que tiene su propio retry)
+					if (!isTemporaryError) {
+						// Error permanente (404, etc)
 						if (showErrorPlaceholder) {
 							setHasError(true);
 							failedImagesCache.add(keyToUse);
 						}
+						setIsLoading(false);
+					} else {
+						// Error temporal - intentar con URL original como fallback
+						if (retryCount < maxRetries) {
+							setImageSrc(imageUrl);
+							setRetryCount(retryCount + 1);
+							setIsLoading(false);
+						} else {
+							// Después de todos los reintentos, mantener skeleton
+							// pero no marcar como error permanente (podría funcionar después)
+							if (showErrorPlaceholder) {
+								setHasError(true);
+							}
+							setIsLoading(false);
+						}
 					}
-					setIsLoading(false);
 				}
 			}
 		};
@@ -107,12 +167,13 @@ export const CachedImage = ({
 		return () => {
 			isMounted = false;
 		};
-	}, [appId, imageUrl, cacheKey, keyToUse, retryCount, maxRetries, showErrorPlaceholder]);
+	}, [appId, imageUrl, cacheKey, keyToUse, retryCount, maxRetries, showErrorPlaceholder, isVisible, isScreenshot]);
 
 	// If there's a definitive error, show placeholder
 	if (hasError) {
 		return (
 			<Box
+				ref={containerRef}
 				sx={{
 					width: "100%",
 					height: "100%",
@@ -133,7 +194,7 @@ export const CachedImage = ({
 	// Show skeleton while fetching path OR while image is loading in browser
 	if (isLoading || !imageLoaded) {
 		return (
-			<Box sx={{ position: "relative", width: "100%", height: "100%" }}>
+			<Box ref={containerRef} sx={{ position: "relative", width: "100%", height: "100%" }}>
 				{!imageLoaded && (
 					<Skeleton
 						variant={variant}
@@ -185,6 +246,7 @@ export const CachedImage = ({
 
 	return (
 		<img
+			ref={imageRef}
 			src={imageSrc}
 			alt={alt}
 			style={style}
