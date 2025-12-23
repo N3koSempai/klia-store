@@ -73,7 +73,10 @@ export async function executeFlatpakOperation(
 			unlistenCompleted = await listen<number>("install-completed", (event) => {
 				const exitCode = event.payload;
 				const success = exitCode === 0;
-				console.log("[executeFlatpakOperation] Completed with exit code:", exitCode);
+				console.log(
+					"[executeFlatpakOperation] Completed with exit code:",
+					exitCode,
+				);
 
 				// Cleanup listeners
 				unlistenOutput?.();
@@ -87,12 +90,17 @@ export async function executeFlatpakOperation(
 				});
 			});
 
-			console.log("[executeFlatpakOperation] Listeners set up, executing command...");
+			console.log(
+				"[executeFlatpakOperation] Listeners set up, executing command...",
+			);
 			// Start the operation
 			await command();
 			console.log("[executeFlatpakOperation] Command executed");
 		} catch (error) {
-			console.error("[executeFlatpakOperation] Error executing command:", error);
+			console.error(
+				"[executeFlatpakOperation] Error executing command:",
+				error,
+			);
 			// Cleanup listeners on error
 			unlistenOutput?.();
 			unlistenError?.();

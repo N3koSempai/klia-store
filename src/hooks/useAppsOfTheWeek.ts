@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { apiService } from "../services/api";
 import type { AppOfTheWeekWithDetails } from "../types";
 import { dbCacheManager } from "../utils/dbCache";
@@ -20,7 +20,8 @@ export const useAppsOfTheWeek = () => {
 				}
 
 				// Check if we need to update based on DB timestamp
-				const shouldUpdate = await dbCacheManager.shouldUpdateSection("appsOfTheWeek");
+				const shouldUpdate =
+					await dbCacheManager.shouldUpdateSection("appsOfTheWeek");
 				setShouldFetch(shouldUpdate || cached.length === 0);
 			} catch (error) {
 				console.error("Error loading cache:", error);
@@ -53,7 +54,10 @@ export const useAppsOfTheWeek = () => {
 								appStream: appStream,
 							} as AppOfTheWeekWithDetails;
 						} catch (error) {
-							console.error(`Error fetching appstream for ${app.app_id}:`, error);
+							console.error(
+								`Error fetching appstream for ${app.app_id}:`,
+								error,
+							);
 							return {
 								...app,
 								name: app.app_id,

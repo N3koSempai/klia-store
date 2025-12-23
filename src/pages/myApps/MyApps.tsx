@@ -1,5 +1,6 @@
 import { ArrowBack, InfoOutlined, SystemUpdateAlt } from "@mui/icons-material";
 import {
+	alpha,
 	Box,
 	Button,
 	Chip,
@@ -10,7 +11,6 @@ import {
 	IconButton,
 	Stack,
 	Typography,
-	alpha,
 	useTheme,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
@@ -152,13 +152,8 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const [isReloadingUpdates, setIsReloadingUpdates] = useState(false);
 
 	// Use custom hooks for operations
-	const {
-		updateApp,
-		updatingApp,
-		isUpdating,
-		updateOutput,
-		clearUpdate,
-	} = useUpdateApp();
+	const { updateApp, updatingApp, isUpdating, updateOutput, clearUpdate } =
+		useUpdateApp();
 
 	const {
 		uninstallApp,
@@ -277,7 +272,13 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 
 		// Reload updates list after completion
 		await reloadAvailableUpdates();
-	}, [installedApps, hasUpdate, updateCount, updateAll, reloadAvailableUpdates]);
+	}, [
+		installedApps,
+		hasUpdate,
+		updateCount,
+		updateAll,
+		reloadAvailableUpdates,
+	]);
 
 	const handleCloseUpdateAllModal = useCallback(async () => {
 		setUpdateAllModalOpen(false);
@@ -395,7 +396,9 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 										<SystemUpdateAlt />
 									)
 								}
-								disabled={isUpdatingAll || isReloadingUpdates || isLoadingUpdates}
+								disabled={
+									isUpdatingAll || isReloadingUpdates || isLoadingUpdates
+								}
 								size="large"
 								sx={{
 									px: 3,

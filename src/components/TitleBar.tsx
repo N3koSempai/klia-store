@@ -1,11 +1,19 @@
-import { Apps, Close, CropSquare, FilterNone, Remove } from "@mui/icons-material";
+import {
+	Apps,
+	Close,
+	CropSquare,
+	FilterNone,
+	Remove,
+} from "@mui/icons-material";
 import { Box, Stack, Typography, useTheme } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
 
 const TitleBar = () => {
 	const theme = useTheme();
-	const [appWindow, setAppWindow] = useState<ReturnType<typeof getCurrentWindow> | null>(null);
+	const [appWindow, setAppWindow] = useState<ReturnType<
+		typeof getCurrentWindow
+	> | null>(null);
 	const [isMaximized, setIsMaximized] = useState(false);
 
 	// Inicializar la ventana de Tauri

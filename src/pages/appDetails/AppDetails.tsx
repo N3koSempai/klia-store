@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../components/CachedImage";
@@ -46,12 +46,21 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		"idle" | "installing" | "success" | "error"
 	>("idle");
 
+	// Use ref to track isInstalling state in event listeners
+	const isInstallingRef = useRef(false);
+
+	// Update ref when isInstalling changes
+	useEffect(() => {
+		isInstallingRef.current = isInstalling;
+	}, [isInstalling]);
+
 	// Check if app is already installed
 	const isInstalled = isAppInstalled(app.id);
 
-	// Escuchar eventos de instalación
+	// Escuchar eventos de instalación (legacy)
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Event listeners should only be set up once on mount
 	useEffect(() => {
+		// Legacy install events
 		const unlistenOutput = listen<string>("install-output", (event) => {
 			setInstallOutput((prev) => [...prev, event.payload]);
 		});
@@ -85,6 +94,106 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 			unlistenOutput.then((fn) => fn());
 			unlistenError.then((fn) => fn());
 			unlistenCompleted.then((fn) => fn());
+
+			// Cleanup: kill PTY process if active when leaving the page
+			if (runtimeCheck.processActive) {
+				invoke("kill_pty_process", { appId: app.id }).catch(console.error);
+			}
+		};
+	}, []);
+
+	// PTY events - always listen, but only process during installation
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Event listeners should only be set up once on mount
+	useEffect(() => {
+		let unlistenPtyOutput: (() => void) | null = null;
+		let unlistenPtyError: (() => void) | null = null;
+		let unlistenPtyTerminated: (() => void) | null = null;
+
+		const setupListeners = async () => {
+			console.log("[AppDetails] Setting up PTY listeners");
+
+			// PTY events for interactive installation
+			unlistenPtyOutput = await listen<[string, string]>(
+				"pty-output",
+				(event) => {
+					const [appId, line] = event.payload;
+					console.log("[AppDetails] PTY event received - appId:", appId, "our app:", app.id, "installing:", isInstallingRef.current, "line:", line);
+
+					// Only process if this is our app AND we're installing (using ref for current value)
+					if (appId === app.id && isInstallingRef.current) {
+						console.log("[AppDetails] ✓ Processing PTY output during install");
+
+						// Clean ANSI codes before displaying
+						const cleanLine = stripAnsi(line);
+						console.log("[AppDetails] Clean line:", cleanLine);
+
+						// Only add non-empty lines
+						if (cleanLine.trim()) {
+							setInstallOutput((prev) => {
+								const newOutput = [...prev, cleanLine];
+								console.log("[AppDetails] Updated output, lines:", newOutput.length);
+								return newOutput;
+							});
+						}
+
+						// Don't try to detect completion from progress - flatpak can reset counters
+						// when installing runtime vs app. Just rely on pty-terminated event.
+					}
+				},
+			);
+			console.log("[AppDetails] PTY output listener set up");
+
+			unlistenPtyError = await listen<[string, string]>(
+				"pty-error",
+				(event) => {
+					const [appId, line] = event.payload;
+					if (appId === app.id && isInstallingRef.current) {
+						console.log("[AppDetails] PTY error during install:", line);
+						setInstallOutput((prev) => [...prev, `Error: ${line}`]);
+					}
+				},
+			);
+
+			unlistenPtyTerminated = await listen<string>(
+				"pty-terminated",
+				(event) => {
+					if (event.payload === app.id && isInstallingRef.current) {
+						console.log("[AppDetails] PTY terminated during install");
+
+						// Process terminated, mark installation based on output
+						setInstallOutput((prev) => {
+							const hasSuccess = prev.some((l) =>
+								l.match(/(Installing|Updating)\s+\d+\/\d+.*100%/)
+							);
+
+							setTimeout(() => {
+								setIsInstalling(false);
+								if (hasSuccess) {
+									setInstallStatus("success");
+									setInstallOutput((p) => [
+										...p,
+										"",
+										t("appDetails.installationCompletedSuccess"),
+									]);
+									setInstalledApp(app.id, true);
+								} else {
+									setInstallStatus("error");
+								}
+							}, 500); // Small delay to show final output
+
+							return prev;
+						});
+					}
+				},
+			);
+		};
+
+		setupListeners();
+
+		return () => {
+			unlistenPtyOutput?.();
+			unlistenPtyError?.();
+			unlistenPtyTerminated?.();
 		};
 	}, []);
 
@@ -111,20 +220,43 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		}
 	};
 
+	// Function to strip ANSI escape codes
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: Need to strip ANSI codes from terminal output
+	const stripAnsi = (str: string) => {
+		return str
+			.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "")
+			.replace(/\x1b\[(\?)?[0-9;]*[a-zA-Z]/g, "")
+			.replace(/\[(\d+)n/g, "");
+	};
+
 	const handleInstall = async () => {
+		// Set installing state and ref IMMEDIATELY
+		isInstallingRef.current = true;
 		setIsInstalling(true);
 		setInstallStatus("installing");
-		setInstallOutput([
-			t("appDetails.preparingInstallation"),
-			t("appDetails.downloadingReference"),
-			"",
-		]);
+		setInstallOutput([t("appDetails.preparingInstallation"), ""]);
+
+		console.log("[AppDetails] handleInstall - ref set to:", isInstallingRef.current);
 
 		try {
-			await invoke("install_flatpak", {
-				appId: app.id,
-			});
+			// If there's an active PTY process from dependency check, reuse it
+			if (runtimeCheck.processActive) {
+				console.log("[AppDetails] Using existing PTY process, sending 'y'");
+				// Send 'y' to continue with installation
+				await invoke("send_to_pty", {
+					appId: app.id,
+					input: "y",
+				});
+				console.log("[AppDetails] 'y' sent successfully to PTY");
+			} else {
+				console.log("[AppDetails] No PTY process active, using legacy install");
+				// Fallback to old method if no process is active
+				await invoke("install_flatpak", {
+					appId: app.id,
+				});
+			}
 		} catch (error) {
+			console.error("[AppDetails] Install error:", error);
 			setIsInstalling(false);
 			setInstallStatus("error");
 			setInstallOutput((prev) => [
@@ -237,7 +369,14 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				</Box>
 
 				{/* Install Button and Runtime Status */}
-				<Box sx={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 200 }}>
+				<Box
+					sx={{
+						display: "flex",
+						flexDirection: "column",
+						gap: 1,
+						minWidth: 200,
+					}}
+				>
 					<Button
 						variant="contained"
 						size="large"
@@ -283,8 +422,9 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 					</Button>
 
 					{/* Dependency Info Popover */}
-					{!isInstalled && installStatus === "idle" && (
-						runtimeCheck.loading ? (
+					{!isInstalled &&
+						installStatus === "idle" &&
+						(runtimeCheck.loading ? (
 							<Skeleton
 								variant="rounded"
 								width="100%"
@@ -296,14 +436,13 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 						) : runtimeCheck.dependencies.length > 0 ? (
 							<DependencyInfoPopover
 								appSize={runtimeCheck.dependencies[0].download_size}
-								dependencies={runtimeCheck.dependencies.slice(1).map(dep => ({
+								dependencies={runtimeCheck.dependencies.slice(1).map((dep) => ({
 									id: dep.name,
 									size: dep.download_size,
 								}))}
 								appId={app.id}
 							/>
-						) : null
-					)}
+						) : null)}
 				</Box>
 			</Box>
 

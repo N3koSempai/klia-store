@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { apiService } from "../services/api";
 import type { AppOfTheDayWithDetails } from "../types";
 import { dbCacheManager } from "../utils/dbCache";
 
 export const useAppOfTheDay = () => {
-	const [cachedData, setCachedData] = useState<AppOfTheDayWithDetails | null>(null);
+	const [cachedData, setCachedData] = useState<AppOfTheDayWithDetails | null>(
+		null,
+	);
 	const [shouldFetch, setShouldFetch] = useState(false);
 	const [isChecking, setIsChecking] = useState(true);
 
@@ -20,7 +22,8 @@ export const useAppOfTheDay = () => {
 				}
 
 				// Check if we need to update based on DB timestamp
-				const shouldUpdate = await dbCacheManager.shouldUpdateSection("appOfTheDay");
+				const shouldUpdate =
+					await dbCacheManager.shouldUpdateSection("appOfTheDay");
 				setShouldFetch(shouldUpdate || !cached);
 			} catch (error) {
 				console.error("Error loading cache:", error);

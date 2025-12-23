@@ -46,15 +46,17 @@ export const UpdateAllModal = ({
 	// Total items = user apps + 1 (system updates as one unit)
 	const totalItems = totalApps + (systemUpdatesCount > 0 ? 1 : 0);
 	const overallProgress =
-		totalItems > 0 ? ((currentAppIndex / totalItems) * 100) : 0;
+		totalItems > 0 ? (currentAppIndex / totalItems) * 100 : 0;
 
 	// Use system progress if updating system, otherwise use app progress
-	const displayProgress = isUpdatingSystem ? systemUpdateProgress : currentAppProgress;
+	const displayProgress = isUpdatingSystem
+		? systemUpdateProgress
+		: currentAppProgress;
 
 	// Determine what to display for current app
 	const displayName = isUpdatingSystem
 		? t("myApps.systemAndRuntimeUpdates")
-		: (currentAppName || t("myApps.waiting"));
+		: currentAppName || t("myApps.waiting");
 
 	return (
 		<Dialog
@@ -134,9 +136,7 @@ export const UpdateAllModal = ({
 								},
 							}}
 						>
-							{showTerminal
-								? t("myApps.hideDetails")
-								: t("myApps.showDetails")}
+							{showTerminal ? t("myApps.hideDetails") : t("myApps.showDetails")}
 						</Button>
 					</Box>
 

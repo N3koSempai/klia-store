@@ -6,8 +6,8 @@ import {
 	Divider,
 	IconButton,
 	Paper,
-	Typography,
 	styled,
+	Typography,
 } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
@@ -109,7 +109,12 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 					<Typography
 						variant="body1"
 						color="text.secondary"
-						sx={{ textAlign: "center", maxWidth: "600px", lineHeight: 1.7, mt: 1 }}
+						sx={{
+							textAlign: "center",
+							maxWidth: "600px",
+							lineHeight: 1.7,
+							mt: 1,
+						}}
 					>
 						{t("about.description")}
 					</Typography>
@@ -122,7 +127,8 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 							width: "100%",
 							maxWidth: "500px",
 							textAlign: "center",
-							background: "linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(66, 165, 245, 0.05) 100%)",
+							background:
+								"linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(66, 165, 245, 0.05) 100%)",
 							border: "1px solid rgba(25, 118, 210, 0.2)",
 							mt: 2,
 						}}
@@ -213,7 +219,11 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 							</Typography>
 							<Box
 								component="button"
-								onClick={() => handleOpenLink("https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md")}
+								onClick={() =>
+									handleOpenLink(
+										"https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md",
+									)
+								}
 								sx={{
 									color: "primary.main",
 									textDecoration: "none",
@@ -242,7 +252,11 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 							</Typography>
 							<Box
 								component="button"
-								onClick={() => handleOpenLink("https://github.com/N3koSempai/KliaStore/blob/master/CONTRIBUTING.md")}
+								onClick={() =>
+									handleOpenLink(
+										"https://github.com/N3koSempai/KliaStore/blob/master/CONTRIBUTING.md",
+									)
+								}
 								sx={{
 									color: "primary.main",
 									textDecoration: "none",

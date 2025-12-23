@@ -1,10 +1,4 @@
-import {
-	Box,
-	Paper,
-	Skeleton,
-	Typography,
-	alpha,
-} from "@mui/material";
+import { alpha, Box, Paper, Skeleton, Typography } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
@@ -33,7 +27,10 @@ export const AppsOfTheDaySection = ({
 
 	return (
 		<Box sx={{ mb: 6 }}>
-			<Typography variant="h5" sx={{ mb: 3, fontFamily: 'IBM Plex Sans', fontWeight: 600 }}>
+			<Typography
+				variant="h5"
+				sx={{ mb: 3, fontFamily: "IBM Plex Sans", fontWeight: 600 }}
+			>
 				{t("home.appsOfTheWeek")}
 			</Typography>
 
@@ -45,16 +42,21 @@ export const AppsOfTheDaySection = ({
 
 			<Box
 				sx={{
-					display: 'flex',
+					display: "flex",
 					gap: 2,
-					overflowX: 'auto',
+					overflowX: "auto",
 					pb: 2,
 					px: 1,
 					py: 1,
-					'&::-webkit-scrollbar': { height: 6 },
-					'&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
-					'&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 3 },
-					'&::-webkit-scrollbar-thumb:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+					"&::-webkit-scrollbar": { height: 6 },
+					"&::-webkit-scrollbar-track": { bgcolor: "transparent" },
+					"&::-webkit-scrollbar-thumb": {
+						bgcolor: "rgba(255,255,255,0.1)",
+						borderRadius: 3,
+					},
+					"&::-webkit-scrollbar-thumb:hover": {
+						bgcolor: "rgba(255,255,255,0.2)",
+					},
 				}}
 			>
 				{isLoading || !data
@@ -70,9 +72,26 @@ export const AppsOfTheDaySection = ({
 									borderRadius: 3,
 								}}
 							>
-								<Box sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-									<Skeleton variant="rectangular" width={72} height={72} sx={{ borderRadius: 2, mb: 2 }} />
-									<Skeleton variant="text" width="80%" height={24} sx={{ mb: 1 }} />
+								<Box
+									sx={{
+										p: 3,
+										display: "flex",
+										flexDirection: "column",
+										alignItems: "center",
+									}}
+								>
+									<Skeleton
+										variant="rectangular"
+										width={72}
+										height={72}
+										sx={{ borderRadius: 2, mb: 2 }}
+									/>
+									<Skeleton
+										variant="text"
+										width="80%"
+										height={24}
+										sx={{ mb: 1 }}
+									/>
 									<Skeleton variant="text" width="100%" />
 									<Skeleton variant="text" width="90%" />
 								</Box>
@@ -97,18 +116,18 @@ export const AppsOfTheDaySection = ({
 											borderColor: "primary.main",
 											boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
 											zIndex: 1,
-										}
+										},
 									}}
 									onClick={() => app.appStream && onAppSelect(app.appStream)}
 								>
 									<Box
 										sx={{
 											p: 3,
-											height: '100%',
-											display: 'flex',
-											flexDirection: 'column',
-											alignItems: 'center',
-											textAlign: 'center'
+											height: "100%",
+											display: "flex",
+											flexDirection: "column",
+											alignItems: "center",
+											textAlign: "center",
 										}}
 									>
 										<Box
@@ -118,10 +137,10 @@ export const AppsOfTheDaySection = ({
 												bgcolor: "#21262d",
 												borderRadius: 2,
 												mb: 2,
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												overflow: 'hidden'
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "center",
+												overflow: "hidden",
 											}}
 										>
 											{app.icon ? (
@@ -141,10 +160,22 @@ export const AppsOfTheDaySection = ({
 												</Typography>
 											)}
 										</Box>
-										<Typography variant="h6" sx={{ fontFamily: 'IBM Plex Sans', fontWeight: 700, mb: 1, fontSize: '1.1rem' }}>
+										<Typography
+											variant="h6"
+											sx={{
+												fontFamily: "IBM Plex Sans",
+												fontWeight: 700,
+												mb: 1,
+												fontSize: "1.1rem",
+											}}
+										>
 											{app.name || app.app_id}
 										</Typography>
-										<Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.3, fontSize: '0.85rem' }}>
+										<Typography
+											variant="body2"
+											color="text.secondary"
+											sx={{ lineHeight: 1.3, fontSize: "0.85rem" }}
+										>
 											{app.summary || t("home.noDescription")}
 										</Typography>
 									</Box>
@@ -166,12 +197,12 @@ export const AppsOfTheDaySection = ({
 								<Box
 									sx={{
 										p: 3,
-										height: '100%',
-										display: 'flex',
-										flexDirection: 'column',
-										alignItems: 'center',
-										justifyContent: 'center',
-										textAlign: 'center'
+										height: "100%",
+										display: "flex",
+										flexDirection: "column",
+										alignItems: "center",
+										justifyContent: "center",
+										textAlign: "center",
 									}}
 								>
 									<Box
@@ -181,9 +212,9 @@ export const AppsOfTheDaySection = ({
 											bgcolor: alpha("#4A86CF", 0.1),
 											borderRadius: 2,
 											mb: 2,
-											display: 'flex',
-											alignItems: 'center',
-											justifyContent: 'center',
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
 										}}
 									>
 										<Typography
@@ -194,7 +225,11 @@ export const AppsOfTheDaySection = ({
 											+
 										</Typography>
 									</Box>
-									<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+									<Typography
+										variant="body2"
+										color="text.secondary"
+										sx={{ mb: 1 }}
+									>
 										{t("home.wantYourAppHere")}
 									</Typography>
 									<Box

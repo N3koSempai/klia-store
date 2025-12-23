@@ -123,17 +123,35 @@ export const CategoryApps = ({
 											variant="rectangular"
 											width={64}
 											height={64}
-											sx={{ borderRadius: 2, flexShrink: 0, bgcolor: "rgba(255,255,255,0.1)" }}
+											sx={{
+												borderRadius: 2,
+												flexShrink: 0,
+												bgcolor: "rgba(255,255,255,0.1)",
+											}}
 										/>
 										<Box sx={{ flexGrow: 1, minWidth: 0 }}>
-											<Skeleton variant="text" sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }} />
-											<Skeleton variant="text" width="50%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
+											<Skeleton
+												variant="text"
+												sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }}
+											/>
+											<Skeleton
+												variant="text"
+												width="50%"
+												sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+											/>
 										</Box>
 									</Box>
 									{/* Skeleton for summary */}
 									<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-										<Skeleton variant="text" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
-										<Skeleton variant="text" width="90%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
+										<Skeleton
+											variant="text"
+											sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+										/>
+										<Skeleton
+											variant="text"
+											width="90%"
+											sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+										/>
 									</CardContent>
 								</Card>
 							</Box>
@@ -163,7 +181,13 @@ export const CategoryApps = ({
 									}}
 									onClick={() => handleAppClick(app)}
 								>
-									<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+									<Box
+										sx={{
+											height: "100%",
+											display: "flex",
+											flexDirection: "column",
+										}}
+									>
 										{/* App icon and name section - wider than tall */}
 										<Box
 											sx={{
@@ -202,7 +226,10 @@ export const CategoryApps = ({
 														}}
 													/>
 												) : (
-													<Typography variant="caption" sx={{ color: "#8B949E" }}>
+													<Typography
+														variant="caption"
+														sx={{ color: "#8B949E" }}
+													>
 														{t("home.noIcon")}
 													</Typography>
 												)}

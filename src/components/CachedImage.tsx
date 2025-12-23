@@ -1,6 +1,6 @@
-import { Box, Skeleton } from "@mui/material";
 import { BrokenImage } from "@mui/icons-material";
-import { useEffect, useState, useRef } from "react";
+import { Box, Skeleton } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
 import { imageCacheManager } from "../utils/imageCache";
 
 interface CachedImageProps {
@@ -64,7 +64,7 @@ export const CachedImage = ({
 			},
 			{
 				rootMargin: "50px", // Start loading 50px before visible
-			}
+			},
 		);
 
 		observer.observe(elementToObserve);
@@ -167,7 +167,17 @@ export const CachedImage = ({
 		return () => {
 			isMounted = false;
 		};
-	}, [appId, imageUrl, cacheKey, keyToUse, retryCount, maxRetries, showErrorPlaceholder, isVisible, isScreenshot]);
+	}, [
+		appId,
+		imageUrl,
+		cacheKey,
+		keyToUse,
+		retryCount,
+		maxRetries,
+		showErrorPlaceholder,
+		isVisible,
+		isScreenshot,
+	]);
 
 	// If there's a definitive error, show placeholder
 	if (hasError) {
@@ -181,7 +191,8 @@ export const CachedImage = ({
 					alignItems: "center",
 					justifyContent: "center",
 					bgcolor: "action.hover",
-					borderRadius: variant === "rounded" ? 2 : variant === "circular" ? "50%" : 0,
+					borderRadius:
+						variant === "rounded" ? 2 : variant === "circular" ? "50%" : 0,
 					...style,
 				}}
 				className={className}
@@ -194,7 +205,10 @@ export const CachedImage = ({
 	// Show skeleton while fetching path OR while image is loading in browser
 	if (isLoading || !imageLoaded) {
 		return (
-			<Box ref={containerRef} sx={{ position: "relative", width: "100%", height: "100%" }}>
+			<Box
+				ref={containerRef}
+				sx={{ position: "relative", width: "100%", height: "100%" }}
+			>
 				{!imageLoaded && (
 					<Skeleton
 						variant={variant}
