@@ -1,5 +1,4 @@
 use serde::Serialize;
-use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio, Child, ChildStdin};
@@ -373,13 +372,11 @@ async fn download_and_cache_image(
         .await
         .map_err(|e| format!("Error reading image bytes: {}", e))?;
 
-    // Generar nombre de archivo único usando el hash de la URL
-    let mut hasher = Sha256::new();
-    hasher.update(image_url.as_bytes());
-    let hash_result = hasher.finalize();
-    let hash_hex = hex::encode(hash_result);
+    // Generar nombre de archivo único usando xxHash3 (mucho más rápido que SHA-256)
+    use xxhash_rust::xxh3::xxh3_64;
+    let hash = xxh3_64(image_url.as_bytes());
 
-    let filename = format!("{}.{}", hash_hex, extension);
+    let filename = format!("{:x}.{}", hash, extension);
     let file_path = cache_images_dir.join(&filename);
 
     fs::write(&file_path, &bytes).map_err(|e| format!("Error saving image: {}", e))?;

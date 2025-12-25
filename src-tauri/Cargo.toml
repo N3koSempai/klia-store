@@ -1,6 +1,6 @@
 [package]
 name = "klia-store"
-version = "2.4.0"
+version = "2.5.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -27,8 +27,7 @@ tauri-plugin-shell = "2.3.1"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
-sha2 = "0.10.9"
-hex = "0.4.3"
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
 [profile.release]
 panic = "abort"
