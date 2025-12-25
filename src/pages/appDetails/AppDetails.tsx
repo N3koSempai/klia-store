@@ -1,6 +1,18 @@
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import { ArrowBack, ChevronLeft, ChevronRight } from "@mui/icons-material";
-import { Box, Button, IconButton, Skeleton, Typography } from "@mui/material";
+import {
+	ArrowBack,
+	ChevronLeft,
+	ChevronRight,
+	Delete,
+} from "@mui/icons-material";
+import {
+	Box,
+	Button,
+	IconButton,
+	Skeleton,
+	Tooltip,
+	Typography,
+} from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
@@ -8,6 +20,7 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
+import { AppActionButton } from "../../components/AppActionButton";
 import { AppMetaCapsule } from "../../components/AppMetaCapsule";
 import { CachedImage } from "../../components/CachedImage";
 import { DependencyInfoPopover } from "../../components/DependencyInfoPopover";
@@ -58,6 +71,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const [installStatus, setInstallStatus] = useState<
 		"idle" | "installing" | "success" | "error"
 	>("idle");
+	const [isUninstalling, setIsUninstalling] = useState(false);
 
 	// Use ref to track isInstalling state in event listeners
 	const isInstallingRef = useRef(false);
@@ -323,6 +337,38 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		setInstallOutput([]);
 	};
 
+	const handleLaunchApp = async () => {
+		if (isInstalled) {
+			try {
+				await invoke("launch_flatpak", { appId: app.app_id });
+			} catch (error) {
+				console.error("Error launching app:", error);
+			}
+		}
+	};
+
+	const handleUninstall = async () => {
+		if (isInstalled) {
+			setIsUninstalling(true);
+			try {
+				await invoke("uninstall_flatpak", { appId: app.app_id });
+				setInstalledApp(app.app_id, false);
+			} catch (error) {
+				console.error("Error uninstalling app:", error);
+			} finally {
+				setIsUninstalling(false);
+			}
+		}
+	};
+
+	// Determine button status
+	const getButtonStatus = (): "installed" | "missing" | "busy" => {
+		if (isUninstalling) return "busy";
+		if (installStatus === "installing") return "busy";
+		if (isInstalled) return "installed";
+		return "missing";
+	};
+
 	return (
 		<Box sx={{ p: 3, minHeight: "100vh" }}>
 			{/* Botón de regreso */}
@@ -409,49 +455,36 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 						minWidth: 200,
 					}}
 				>
-					<Button
-						variant="contained"
-						size="large"
-						onClick={handleInstall}
-						disabled={
-							isInstalled ||
-							installStatus === "installing" ||
-							installStatus === "success"
-						}
-						sx={{
-							px: 4,
-							py: 1.5,
-							fontSize: "1rem",
-							fontWeight: "bold",
-							bgcolor:
-								isInstalled || installStatus === "success"
-									? "success.main"
-									: installStatus === "installing"
-										? "grey.600"
-										: "primary.main",
-							"&:hover": {
-								bgcolor:
-									isInstalled || installStatus === "success"
-										? "success.dark"
-										: installStatus === "installing"
-											? "grey.600"
-											: "primary.dark",
-							},
-							"&.Mui-disabled": {
-								bgcolor:
-									isInstalled || installStatus === "success"
-										? "success.main"
-										: "grey.600",
-								color: "white",
-							},
-						}}
-					>
-						{isInstalled || installStatus === "success"
-							? t("appDetails.installed")
-							: installStatus === "installing"
-								? t("appDetails.installing")
-								: t("appDetails.install")}
-					</Button>
+					<Box sx={{ display: "flex", gap: 1 }}>
+						<AppActionButton
+							status={getButtonStatus()}
+							busyAction={isUninstalling ? "uninstalling" : "installing"}
+							onAction={isInstalled ? handleLaunchApp : handleInstall}
+							fullWidth
+						/>
+						{isInstalled && !isUninstalling && (
+							<Tooltip title={t("appDetails.uninstall")} arrow>
+								<IconButton
+									onClick={handleUninstall}
+									sx={{
+										bgcolor: "rgba(255, 255, 255, 0.05)",
+										border: "1px solid rgba(255, 255, 255, 0.1)",
+										borderRadius: "6px",
+										width: 48,
+										height: 48,
+										transition: "all 0.2s",
+										"&:hover": {
+											bgcolor: "rgba(239, 68, 68, 0.1)",
+											borderColor: "rgba(239, 68, 68, 0.3)",
+											color: "#ef4444",
+										},
+									}}
+								>
+									<Delete />
+								</IconButton>
+							</Tooltip>
+						)}
+					</Box>
 
 					{/* Dependency Info Popover */}
 					{!isInstalled &&

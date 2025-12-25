@@ -25,13 +25,27 @@ export const AppMetaCapsule = ({
 		return count.toString();
 	};
 
-	// Parse license format: "LicenseRef-proprietary=https://..."
+	// Parse and normalize license format
 	const parseLicense = (licenseStr: string): { text: string; url?: string } => {
-		const match = licenseStr.match(/LicenseRef-proprietary=(.+)/);
-		if (match) {
-			return { text: "Proprietary", url: match[1] };
+		// Handle LicenseRef-proprietary=URL format
+		const proprietaryMatch = licenseStr.match(/LicenseRef-proprietary=(.+)/);
+		if (proprietaryMatch) {
+			return { text: "Proprietary", url: proprietaryMatch[1] };
 		}
-		return { text: licenseStr, url: undefined };
+
+		// Normalize common licenses
+		const licenseMap: Record<string, string> = {
+			"GPL-3.0-or-later": "GPL-3.0+",
+			"GPL-2.0-or-later": "GPL-2.0+",
+			"LGPL-3.0-or-later": "LGPL-3.0+",
+			"LGPL-2.1-or-later": "LGPL-2.1+",
+			"MIT License": "MIT",
+			"Apache License 2.0": "Apache-2.0",
+			"BSD 3-Clause": "BSD-3",
+			"BSD 2-Clause": "BSD-2",
+		};
+
+		return { text: licenseMap[licenseStr] || licenseStr, url: undefined };
 	};
 
 	const licenseInfo = parseLicense(license);

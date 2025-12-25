@@ -980,6 +980,33 @@ async fn update_system_flatpaks(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn launch_flatpak(app_id: String) -> Result<(), String> {
+    // Detect if we're running inside a flatpak
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    let output = if is_flatpak {
+        // Inside flatpak, use flatpak-spawn to execute on the host
+        Command::new("flatpak-spawn")
+            .args(["--host", "flatpak", "run", &app_id])
+            .output()
+            .map_err(|e| format!("Failed to launch app: {}", e))?
+    } else {
+        // Outside flatpak, use flatpak directly
+        Command::new("flatpak")
+            .args(["run", &app_id])
+            .output()
+            .map_err(|e| format!("Failed to launch app: {}", e))?
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed to launch app: {}", stderr));
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), String> {
     app.emit(
         "install-output",
@@ -1540,6 +1567,7 @@ pub fn run() {
             get_available_updates,
             update_flatpak,
             update_system_flatpaks,
+            launch_flatpak,
             uninstall_flatpak,
             install_extension,
             uninstall_extension,
