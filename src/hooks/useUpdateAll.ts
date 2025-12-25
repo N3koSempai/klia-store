@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
 import type { InstalledAppInfo } from "../store/installedAppsStore";
-import { checkAvailableUpdates } from "../utils/updateChecker";
 import {
 	updateFlatpakApp,
 	updateSystemFlatpaks,
 } from "../utils/flatpakOperations";
+import { checkAvailableUpdates } from "../utils/updateChecker";
 
 interface UpdateAllProgress {
 	totalApps: number;
@@ -27,9 +27,7 @@ interface UseUpdateAllReturn {
 	clearUpdateAll: () => void;
 }
 
-export function useUpdateAll(
-	onComplete?: () => void,
-): UseUpdateAllReturn {
+export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 	const [isUpdatingAll, setIsUpdatingAll] = useState(false);
 	const [updateAllProgress, setUpdateAllProgress] = useState<UpdateAllProgress>(
 		{

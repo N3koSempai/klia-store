@@ -1,14 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <component type="desktop-application">
   <id>io.github.N3kosempai.klia-store</id>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>LicenseRef-proprietary=https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md</project_license>
+  <project_license
+    >LicenseRef-proprietary=https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md</project_license>
   <name>Klia Store</name>
   <summary>Flatpak application store</summary>
   <description>
     <p>A modern application store for managing Flatpak applications.</p>
   </description>
-  <launchable type="desktop-id">io.github.N3kosempai.klia-store.desktop</launchable>
+  <launchable
+        type="desktop-id"
+    >io.github.N3kosempai.klia-store.desktop</launchable>
   <developer id="io.github.N3kosempai">
     <name>N3koSempai</name>
   </developer>
@@ -18,45 +21,49 @@
   <screenshots>
     <screenshot type="default">
       <caption>Main application window showing start page</caption>
-      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot1.webp</image>
+      <image
+            >https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot1.webp</image>
     </screenshot>
     <screenshot>
       <caption>Application home screen</caption>
-      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot2.webp</image>
+      <image
+            >https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot2.webp</image>
     </screenshot>
     <screenshot>
       <caption>search functionality in the home view</caption>
-      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot3.webp</image>
+      <image
+            >https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot3.webp</image>
     </screenshot>
     <screenshot>
       <caption>Modal for install an specific application</caption>
-      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot4.webp</image>
+      <image
+            >https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot4.webp</image>
     </screenshot>
   </screenshots>
   <provides>
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.4.0" date="2025-01-14">
+    <release version="2.5.0" date="2025-01-15">
       <description>
-        <p>✨ New Features:</p>
+        <p>✨ What's New:</p>
         <ul>
-        <li>📦 Smart dependency preview - See what will be downloaded before installing apps!</li>
-        <li>💾 App sizes now shown with clear dependency breakdown</li>
-        <li>🚀 30-minute caching for dependency checks - much faster load times!</li>
-        <li>🌍 Added support for 5 new languages: Portuguese, Hindi, Russian, Chinese, and Spanish!</li>
+        <li
+                    >🎨 Redesigned app details with beautiful metadata badges showing verification status, license, and popularity</li>
+        <li>🚀 Launch apps directly from Klia Store with a single tap</li>
+        <li>🗑️ Uninstall apps quickly with the new action button</li>
+        <li>🇯🇵 Added Japanese language support</li>
+        <li
+                    >⚡ Dramatically faster image loading with advanced caching technology</li>
         </ul>
-        <p>⚡ Performance Improvements:</p>
+        <p>💎 Refinements:</p>
         <ul>
-        <li>Optimized runtime detection - faster app detail loading</li>
-        <li>Smarter two-phase detection for apps with and without runtime dependencies</li>
-        </ul>
-        <p>🔧 Technical Improvements:</p>
-        <ul>
-        <li>Better error handling for dependency detection</li>
+        <li>Smoother app browsing with improved data handling</li>
+        <li>More reliable app information display</li>
+        <li>Enhanced visual feedback throughout the interface</li>
         </ul>
       </description>
     </release>
   </releases>
-  <content_rating type="oars-1.1"/>
+  <content_rating type="oars-1.1" />
 </component>

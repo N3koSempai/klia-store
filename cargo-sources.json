@@ -7698,6 +7698,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/xxhash-rust/xxhash-rust-0.8.15.crate",
+        "sha256": "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3",
+        "dest": "cargo/vendor/xxhash-rust-0.8.15"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3\", \"files\": {}}",
+        "dest": "cargo/vendor/xxhash-rust-0.8.15",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/yoke/yoke-0.8.1.crate",
         "sha256": "72d6e5c6afb84d73944e5cedb052c4680d5657337201555f9f2a16b7406d4954",
         "dest": "cargo/vendor/yoke-0.8.1"
@@ -7905,7 +7918,7 @@
     },
     {
         "type": "inline",
-        "contents": "[source.vendored-sources]\ndirectory = \"cargo/vendor\"\n\n[source.crates-io]\nreplace-with = \"vendored-sources\"\n",
+        "contents": "[source]\n[source.vendored-sources]\ndirectory = \"cargo/vendor\"\n\n[source.crates-io]\nreplace-with = \"vendored-sources\"\n",
         "dest": "cargo",
         "dest-filename": "config"
     }

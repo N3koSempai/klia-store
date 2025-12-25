@@ -11,12 +11,12 @@ import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../components/CachedImage";
 import { useCategoryApps } from "../../hooks/useCategoryApps";
-import type { AppStream, CategoryApp } from "../../types";
+import type { CategoryApp } from "../../types";
 
 interface CategoryAppsProps {
 	categoryId: string;
 	onBack: () => void;
-	onAppSelect: (app: AppStream) => void;
+	onAppSelect: (app: CategoryApp) => void;
 }
 
 export const CategoryApps = ({
@@ -28,15 +28,7 @@ export const CategoryApps = ({
 	const { data, isLoading, error } = useCategoryApps(categoryId);
 
 	const handleAppClick = (categoryApp: CategoryApp) => {
-		// Transform CategoryApp to AppStream format expected by AppDetails
-		const appStream: AppStream = {
-			id: categoryApp.app_id,
-			name: categoryApp.name,
-			summary: categoryApp.summary,
-			description: categoryApp.description,
-			icon: categoryApp.icon,
-		};
-		onAppSelect(appStream);
+		onAppSelect(categoryApp);
 	};
 
 	return (
@@ -123,17 +115,35 @@ export const CategoryApps = ({
 											variant="rectangular"
 											width={64}
 											height={64}
-											sx={{ borderRadius: 2, flexShrink: 0, bgcolor: "rgba(255,255,255,0.1)" }}
+											sx={{
+												borderRadius: 2,
+												flexShrink: 0,
+												bgcolor: "rgba(255,255,255,0.1)",
+											}}
 										/>
 										<Box sx={{ flexGrow: 1, minWidth: 0 }}>
-											<Skeleton variant="text" sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }} />
-											<Skeleton variant="text" width="50%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
+											<Skeleton
+												variant="text"
+												sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }}
+											/>
+											<Skeleton
+												variant="text"
+												width="50%"
+												sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+											/>
 										</Box>
 									</Box>
 									{/* Skeleton for summary */}
 									<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-										<Skeleton variant="text" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
-										<Skeleton variant="text" width="90%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
+										<Skeleton
+											variant="text"
+											sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+										/>
+										<Skeleton
+											variant="text"
+											width="90%"
+											sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+										/>
 									</CardContent>
 								</Card>
 							</Box>
@@ -163,7 +173,13 @@ export const CategoryApps = ({
 									}}
 									onClick={() => handleAppClick(app)}
 								>
-									<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+									<Box
+										sx={{
+											height: "100%",
+											display: "flex",
+											flexDirection: "column",
+										}}
+									>
 										{/* App icon and name section - wider than tall */}
 										<Box
 											sx={{
@@ -202,7 +218,10 @@ export const CategoryApps = ({
 														}}
 													/>
 												) : (
-													<Typography variant="caption" sx={{ color: "#8B949E" }}>
+													<Typography
+														variant="caption"
+														sx={{ color: "#8B949E" }}
+													>
 														{t("home.noIcon")}
 													</Typography>
 												)}

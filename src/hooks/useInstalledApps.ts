@@ -26,8 +26,12 @@ interface InstalledPackagesResponse {
 }
 
 export const useInstalledApps = () => {
-	const { setInstalledAppsInfo, setInstalledExtensions, setAvailableUpdates, setInstalledRuntimes } =
-		useInstalledAppsStore();
+	const {
+		setInstalledAppsInfo,
+		setInstalledExtensions,
+		setAvailableUpdates,
+		setInstalledRuntimes,
+	} = useInstalledAppsStore();
 
 	useEffect(() => {
 		const loadInstalledPackages = async () => {
@@ -69,5 +73,10 @@ export const useInstalledApps = () => {
 
 		// Execute asynchronously without blocking
 		loadInstalledPackages();
-	}, [setInstalledAppsInfo, setInstalledExtensions, setAvailableUpdates, setInstalledRuntimes]);
+	}, [
+		setInstalledAppsInfo,
+		setInstalledExtensions,
+		setAvailableUpdates,
+		setInstalledRuntimes,
+	]);
 };

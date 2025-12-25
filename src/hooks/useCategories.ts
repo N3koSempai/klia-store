@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { apiService } from "../services/api";
 import { dbCacheManager } from "../utils/dbCache";
 
@@ -19,7 +19,10 @@ export const useCategories = () => {
 				}
 
 				// Check if we need to update based on DB timestamp (weekly cache = 7 days)
-				const shouldUpdate = await dbCacheManager.shouldUpdateSection("categories", 7);
+				const shouldUpdate = await dbCacheManager.shouldUpdateSection(
+					"categories",
+					7,
+				);
 				setShouldFetch(shouldUpdate || cached.length === 0);
 			} catch (error) {
 				console.error("Error loading cache:", error);

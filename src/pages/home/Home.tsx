@@ -1,5 +1,6 @@
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import {
+	alpha,
 	Box,
 	Card,
 	CardContent,
@@ -10,7 +11,6 @@ import {
 	Skeleton,
 	Stack,
 	Typography,
-	alpha,
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,18 +21,22 @@ import { CachedImage } from "../../components/CachedImage";
 import { NotificationMenu } from "../../components/NotificationMenu";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
-import type { AppStream, CategoryApp } from "../../types";
+import type { CategoryApp } from "../../types";
 import { AppsOfTheDaySection } from "./components/AppsOfTheDaySection";
 import { CategoriesSection } from "./components/CategoriesSection";
 import { FeaturedSection } from "./components/FeaturedSection";
 
 interface HomeProps {
-	onAppSelect: (app: AppStream) => void;
+	onAppSelect: (app: CategoryApp) => void;
 	onCategorySelect: (categoryId: string) => void;
 	onMyAppsClick: () => void;
 }
 
-export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps) => {
+export const Home = ({
+	onAppSelect,
+	onCategorySelect,
+	onMyAppsClick,
+}: HomeProps) => {
 	const { t } = useTranslation();
 	const { getUpdateCount } = useInstalledAppsStore();
 	const updateCount = getUpdateCount();
@@ -55,14 +59,7 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 	};
 
 	const handleAppClick = (categoryApp: CategoryApp) => {
-		const appStream: AppStream = {
-			id: categoryApp.app_id,
-			name: categoryApp.name,
-			summary: categoryApp.summary,
-			description: categoryApp.description,
-			icon: categoryApp.icon,
-		};
-		onAppSelect(appStream);
+		onAppSelect(categoryApp);
 	};
 
 	const showSearchResults = searchQuery.trim().length > 0;
@@ -78,7 +75,13 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 		>
 			<Container maxWidth="xl" sx={{ pt: 4 }}>
 				{/* Search Bar with My Apps Button */}
-				<Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mb: 6 }}>
+				<Stack
+					direction="row"
+					spacing={2}
+					alignItems="center"
+					justifyContent="center"
+					sx={{ mb: 6 }}
+				>
 					{/* Botón My Apps */}
 					<Paper
 						component="button"
@@ -96,10 +99,16 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 							alignItems: "center",
 							gap: 1,
 							transition: "all 0.2s",
-							"&:hover": { borderColor: "primary.main", bgcolor: alpha("#4A86CF", 0.05) }
+							"&:hover": {
+								borderColor: "primary.main",
+								bgcolor: alpha("#4A86CF", 0.05),
+							},
 						}}
 					>
-						<Typography variant="button" sx={{textTransform: 'none', fontWeight: 700}}>
+						<Typography
+							variant="button"
+							sx={{ textTransform: "none", fontWeight: 700 }}
+						>
 							{t("home.myApps")}
 						</Typography>
 						{updateCount > 0 && (
@@ -107,7 +116,7 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 								label={updateCount}
 								size="small"
 								color="error"
-								sx={{ height: 20, fontSize: '0.75rem', fontWeight: 'bold' }}
+								sx={{ height: 20, fontSize: "0.75rem", fontWeight: "bold" }}
 							/>
 						)}
 					</Paper>
@@ -182,16 +191,34 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 														variant="rectangular"
 														width={64}
 														height={64}
-														sx={{ borderRadius: 2, flexShrink: 0, bgcolor: "rgba(255,255,255,0.1)" }}
+														sx={{
+															borderRadius: 2,
+															flexShrink: 0,
+															bgcolor: "rgba(255,255,255,0.1)",
+														}}
 													/>
 													<Box sx={{ flexGrow: 1, minWidth: 0 }}>
-														<Skeleton variant="text" sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }} />
-														<Skeleton variant="text" width="50%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
+														<Skeleton
+															variant="text"
+															sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }}
+														/>
+														<Skeleton
+															variant="text"
+															width="50%"
+															sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+														/>
 													</Box>
 												</Box>
 												<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-													<Skeleton variant="text" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
-													<Skeleton variant="text" width="90%" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
+													<Skeleton
+														variant="text"
+														sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+													/>
+													<Skeleton
+														variant="text"
+														width="90%"
+														sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+													/>
 												</CardContent>
 											</Card>
 										</Box>
@@ -221,7 +248,13 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 												}}
 												onClick={() => handleAppClick(app)}
 											>
-												<Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+												<Box
+													sx={{
+														height: "100%",
+														display: "flex",
+														flexDirection: "column",
+													}}
+												>
 													<Box
 														sx={{
 															p: 2,
@@ -258,7 +291,10 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 																	}}
 																/>
 															) : (
-																<Typography variant="caption" sx={{ color: "#8B949E" }}>
+																<Typography
+																	variant="caption"
+																	sx={{ color: "#8B949E" }}
+																>
 																	{t("home.noIcon")}
 																</Typography>
 															)}
@@ -290,7 +326,9 @@ export const Home = ({ onAppSelect, onCategorySelect, onMyAppsClick }: HomeProps
 														</Box>
 													</Box>
 
-													<CardContent sx={{ flexGrow: 1, pt: 1, width: "100%" }}>
+													<CardContent
+														sx={{ flexGrow: 1, pt: 1, width: "100%" }}
+													>
 														<Typography
 															variant="body2"
 															sx={{

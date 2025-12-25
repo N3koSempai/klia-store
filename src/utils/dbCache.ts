@@ -102,7 +102,10 @@ export class DBCacheManager {
 		return date.toISOString().split("T")[0]; // YYYY-MM-DD
 	}
 
-	async shouldUpdateSection(sectionName: string, maxDaysOld = 0): Promise<boolean> {
+	async shouldUpdateSection(
+		sectionName: string,
+		maxDaysOld = 0,
+	): Promise<boolean> {
 		await this.initialize();
 		if (!this.db) throw new Error("Database not initialized");
 

@@ -1,11 +1,4 @@
-import {
-	Box,
-	Grid,
-	Paper,
-	Skeleton,
-	Typography,
-	alpha,
-} from "@mui/material";
+import { alpha, Box, Grid, Paper, Skeleton, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { useCategories } from "../../../hooks/useCategories";
@@ -22,7 +15,10 @@ export const CategoriesSection = ({
 
 	return (
 		<Box>
-			<Typography variant="h5" sx={{ mb: 3, fontFamily: 'IBM Plex Sans', fontWeight: 600 }}>
+			<Typography
+				variant="h5"
+				sx={{ mb: 3, fontFamily: "IBM Plex Sans", fontWeight: 600 }}
+			>
 				{t("home.categories")}
 			</Typography>
 
@@ -67,7 +63,7 @@ export const CategoriesSection = ({
 											borderColor: "secondary.main",
 											bgcolor: alpha("#F6D32D", 0.05),
 											transform: "translateX(4px)",
-											boxShadow: "0 0 15px rgba(246, 211, 45, 0.1)"
+											boxShadow: "0 0 15px rgba(246, 211, 45, 0.1)",
 										},
 									}}
 									onClick={() => onCategorySelect(category)}
@@ -76,8 +72,8 @@ export const CategoriesSection = ({
 										variant="body2"
 										sx={{
 											fontWeight: 600,
-											fontFamily: 'IBM Plex Sans',
-											color: "text.primary"
+											fontFamily: "IBM Plex Sans",
+											color: "text.primary",
 										}}
 									>
 										{category}

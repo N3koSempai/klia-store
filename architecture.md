@@ -98,17 +98,15 @@ Smart caching system that stores app images locally to reduce bandwidth and impr
 
 #### Architecture
 - **Location**: `~/.local/share/io.github.N3kosempai.klia-store/cacheImages/`
-- **Index File**: `index.json` - Maps `appId` to cached image filename
-- **Image Files**: Named using pattern `{appId}.{extension}`
-
-### Components
+- **Hashing System**: Uses SHA-256 hash of the image URL as the filename.
+- **Image Files**: Named using pattern `{url_hash}.{extension}`
 
 #### Frontend (`src/utils/imageCache.ts`)
 - `ImageCacheManager`: Singleton class managing cache operations
 - Methods:
-  - `getOrCacheImage(appId, imageUrl)`: Main method - checks cache first, downloads if needed
-  - `getCachedImagePath(appId)`: Retrieves cached image path
-  - `cacheImage(appId, imageUrl)`: Downloads and caches new image
+  - `getOrCacheImage(appId, imageUrl)`: Main method - checks cache first (by URL hash), downloads if needed
+  - `getCachedImagePath(imageUrl)`: Calculates URL hash and checks for existing file with common extensions
+  - `cacheImage(appId, imageUrl)`: Downloads and caches new image using URL hash
 - Uses `convertFileSrc()` to convert file paths to Tauri-compatible URLs
 
 #### CachedImage Component (`src/components/CachedImage.tsx`)
@@ -122,22 +120,23 @@ Smart caching system that stores app images locally to reduce bandwidth and impr
 #### Rust Backend (`src-tauri/src/lib.rs`)
 Tauri commands:
 - `get_cache_image_dir()`: Returns cacheImages directory path
-- `read_cache_index()`: Reads index.json (returns `{}` if not exists)
-- `write_cache_index(content)`: Writes/updates index.json
-- `download_and_cache_image(app_id, image_url)`: Downloads image, saves to disk, returns filename
+- `clear_old_cache()`: Detects and removes the old index.json based system
+- `download_and_cache_image(app_id, image_url)`: Downloads image, hashes URL for filename, saves to disk
 - `get_cached_image_path(filename)`: Converts filename to full path
 
 ### Cache Flow
 1. **First Load**:
    - `CachedImage` calls `getOrCacheImage()`
-   - Check index.json for appId
+   - Calculate SHA-256 hash of `imageUrl`
+   - Check if file `{hash}.{ext}` exists in `cacheImages`
    - Not found → Download image from URL
-   - Save to disk as `{appId}.{ext}`
-   - Update index.json with mapping
+   - Save to disk as `{hash}.{ext}`
    - Return cached path
 
 2. **Subsequent Loads**:
-   - Check index.json for appId
+   - `CachedImage` calls `getOrCacheImage()`
+   - Calculate SHA-256 hash of `imageUrl`
+   - Check if file `{hash}.{ext}` exists
    - Found → Return cached path directly
    - Skip download entirely
 

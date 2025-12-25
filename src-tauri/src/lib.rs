@@ -1,8 +1,10 @@
 use serde::Serialize;
 use std::fs;
-use std::io::{BufRead, BufReader};
-use std::process::{Command, Stdio};
-use tauri::{Emitter, Manager};
+use std::io::{BufRead, BufReader, Write};
+use std::process::{Command, Stdio, Child, ChildStdin};
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use tauri::{Emitter, Manager, State};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::ShellExt;
 
@@ -30,7 +32,31 @@ struct InstalledPackagesResponse {
     extensions: Vec<InstalledExtension>,
 }
 
-// Helper function to build flatpak command with optional flatpak-spawn wrapper
+// Persistent PTY process manager
+struct PtyProcess {
+    child: Child,
+    stdin: ChildStdin,
+}
+
+type ProcessMap = Arc<Mutex<HashMap<String, PtyProcess>>>;
+
+// Helper function to build interactive flatpak PTY command (no auto-responses)
+fn build_flatpak_interactive_cmd(is_flatpak: bool, app_id: &str) -> String {
+    let base_cmd = format!("flatpak install --user flathub {}", app_id);
+    if is_flatpak {
+        format!(
+            "LANG=C script -q /dev/null -c \"flatpak-spawn --host {}\"",
+            base_cmd
+        )
+    } else {
+        format!(
+            "LANG=C script -q /dev/null -c \"{}\"",
+            base_cmd
+        )
+    }
+}
+
+// Helper function to build flatpak command with optional flatpak-spawn wrapper (legacy - for backward compat)
 fn build_flatpak_install_cmd(is_flatpak: bool, app_id: &str) -> String {
     let base_cmd = format!("flatpak install --user flathub {}", app_id);
     if is_flatpak {
@@ -276,40 +302,33 @@ fn get_cache_image_dir(app: tauri::AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn read_cache_index(app: tauri::AppHandle) -> Result<String, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-
-    let index_path = app_data_dir.join("cacheImages").join("index.json");
-
-    if !index_path.exists() {
-        return Ok("{}".to_string());
-    }
-
-    fs::read_to_string(&index_path).map_err(|e| format!("Failed to read cache index: {}", e))
-}
-
-#[tauri::command]
-fn write_cache_index(app: tauri::AppHandle, content: String) -> Result<(), String> {
+fn clear_old_cache(app: tauri::AppHandle) -> Result<(), String> {
     let app_data_dir = app
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
     let cache_images_dir = app_data_dir.join("cacheImages");
-    fs::create_dir_all(&cache_images_dir)
-        .map_err(|e| format!("Failed to create cacheImages directory: {}", e))?;
-
     let index_path = cache_images_dir.join("index.json");
-    fs::write(&index_path, content).map_err(|e| format!("Failed to write cache index: {}", e))
+
+    if index_path.exists() {
+        println!("[Cache] Old cache system detected (index.json found). Clearing...");
+        if cache_images_dir.exists() {
+            fs::remove_dir_all(&cache_images_dir)
+                .map_err(|e| format!("Failed to clear old cache directory: {}", e))?;
+
+            // Recreate the directory
+            fs::create_dir_all(&cache_images_dir)
+                .map_err(|e| format!("Failed to recreate cache directory: {}", e))?;
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]
 async fn download_and_cache_image(
     app: tauri::AppHandle,
-    app_id: String,
+    _app_id: String,
     image_url: String,
 ) -> Result<String, String> {
     let app_data_dir = app
@@ -353,10 +372,11 @@ async fn download_and_cache_image(
         .await
         .map_err(|e| format!("Error reading image bytes: {}", e))?;
 
-    // Generar nombre de archivo único usando el app_id
-    // Reemplazar caracteres inválidos para nombres de archivo (. y :::)
-    let safe_app_id = app_id.replace(".", "_").replace(":::", "_screenshot_");
-    let filename = format!("{}.{}", safe_app_id, extension);
+    // Generar nombre de archivo único usando xxHash3 (mucho más rápido que SHA-256)
+    use xxhash_rust::xxh3::xxh3_64;
+    let hash = xxh3_64(image_url.as_bytes());
+
+    let filename = format!("{:x}.{}", hash, extension);
     let file_path = cache_images_dir.join(&filename);
 
     fs::write(&file_path, &bytes).map_err(|e| format!("Error saving image: {}", e))?;
@@ -957,6 +977,33 @@ async fn update_system_flatpaks(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn launch_flatpak(app_id: String) -> Result<(), String> {
+    // Detect if we're running inside a flatpak
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    let output = if is_flatpak {
+        // Inside flatpak, use flatpak-spawn to execute on the host
+        Command::new("flatpak-spawn")
+            .args(["--host", "flatpak", "run", &app_id])
+            .output()
+            .map_err(|e| format!("Failed to launch app: {}", e))?
+    } else {
+        // Outside flatpak, use flatpak directly
+        Command::new("flatpak")
+            .args(["run", &app_id])
+            .output()
+            .map_err(|e| format!("Failed to launch app: {}", e))?
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed to launch app: {}", stderr));
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), String> {
     app.emit(
         "install-output",
@@ -1306,9 +1353,192 @@ async fn uninstall_extension(app: tauri::AppHandle, extension_id: String) -> Res
     Ok(())
 }
 
+// Start an interactive PTY process for flatpak install (check dependencies + optional install)
+#[tauri::command]
+async fn start_flatpak_interactive(
+    app: tauri::AppHandle,
+    processes: State<'_, ProcessMap>,
+    app_id: String,
+) -> Result<(), String> {
+    eprintln!("[start_flatpak_interactive] Starting for app_id: {}", app_id);
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+    let cmd_str = build_flatpak_interactive_cmd(is_flatpak, &app_id);
+    eprintln!("[start_flatpak_interactive] Command: {}", cmd_str);
+
+    let mut child = Command::new("sh")
+        .args(["-c", &cmd_str])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn process: {}", e))?;
+
+    let stdin = child.stdin.take().ok_or("Failed to get stdin")?;
+    let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
+    let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
+
+    eprintln!("[start_flatpak_interactive] Process spawned successfully");
+
+    // Store the process
+    {
+        let mut map = processes.lock().unwrap();
+        map.insert(app_id.clone(), PtyProcess { child, stdin });
+        eprintln!("[start_flatpak_interactive] Process stored in map");
+    }
+
+    // Read stdout in background thread - read byte by byte to capture \r updates
+    let app_clone = app.clone();
+    let app_id_clone = app_id.clone();
+    std::thread::spawn(move || {
+        use std::io::Read;
+        let mut buffer = [0u8; 1024];
+        let mut stdout_reader = stdout;
+
+        loop {
+            match stdout_reader.read(&mut buffer) {
+                Ok(0) => break, // EOF
+                Ok(n) => {
+                    let chunk = String::from_utf8_lossy(&buffer[..n]).to_string();
+                    // Split by both \n and \r to send individual lines
+                    for line in chunk.split(&['\n', '\r']) {
+                        if !line.is_empty() {
+                            let _ = app_clone.emit("pty-output", (app_id_clone.clone(), line.to_string()));
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[start_flatpak_interactive] Error reading stdout: {}", e);
+                    break;
+                }
+            }
+        }
+    });
+
+    // Read stderr in background thread
+    let app_clone2 = app.clone();
+    let app_id_clone2 = app_id.clone();
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                let _ = app_clone2.emit("pty-error", (app_id_clone2.clone(), line));
+            }
+        }
+    });
+
+    // Monitor process termination in background thread
+    let app_clone3 = app.clone();
+    let app_id_clone3 = app_id.clone();
+    let processes_clone = processes.inner().clone();
+    std::thread::spawn(move || {
+        // Poll the process status every 500ms
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+
+            let mut map = processes_clone.lock().unwrap();
+            if let Some(pty_process) = map.get_mut(&app_id_clone3) {
+                match pty_process.child.try_wait() {
+                    Ok(Some(status)) => {
+                        eprintln!("[start_flatpak_interactive] Process terminated with status: {:?}", status);
+                        // Process has exited, emit event and remove from map
+                        let _ = app_clone3.emit("pty-terminated", app_id_clone3.clone());
+                        map.remove(&app_id_clone3);
+                        break;
+                    }
+                    Ok(None) => {
+                        // Still running, continue
+                    }
+                    Err(e) => {
+                        eprintln!("[start_flatpak_interactive] Error checking process: {}", e);
+                        map.remove(&app_id_clone3);
+                        break;
+                    }
+                }
+            } else {
+                // Process was removed externally
+                break;
+            }
+        }
+    });
+
+    Ok(())
+}
+
+// Send input to a running PTY process
+#[tauri::command]
+async fn send_to_pty(
+    processes: State<'_, ProcessMap>,
+    app_id: String,
+    input: String,
+) -> Result<(), String> {
+    eprintln!("[send_to_pty] Attempting to send '{}' to app_id: {}", input, app_id);
+    let mut map = processes.lock().unwrap();
+
+    if let Some(pty_process) = map.get_mut(&app_id) {
+        eprintln!("[send_to_pty] Process found, writing to stdin");
+        pty_process.stdin
+            .write_all(format!("{}\n", input).as_bytes())
+            .map_err(|e| format!("Failed to write to stdin: {}", e))?;
+        pty_process.stdin
+            .flush()
+            .map_err(|e| format!("Failed to flush stdin: {}", e))?;
+        eprintln!("[send_to_pty] Successfully sent input");
+        Ok(())
+    } else {
+        eprintln!("[send_to_pty] ERROR: No process found for app_id: {}", app_id);
+        Err(format!("No process found for app_id: {}", app_id))
+    }
+}
+
+// Kill a PTY process
+#[tauri::command]
+async fn kill_pty_process(
+    app: tauri::AppHandle,
+    processes: State<'_, ProcessMap>,
+    app_id: String,
+) -> Result<(), String> {
+    let mut map = processes.lock().unwrap();
+
+    if let Some(mut pty_process) = map.remove(&app_id) {
+        let _ = pty_process.child.kill();
+        let _ = pty_process.child.wait();
+        let _ = app.emit("pty-terminated", app_id);
+        Ok(())
+    } else {
+        Err(format!("No process found for app_id: {}", app_id))
+    }
+}
+
+// Check if PTY process is still running
+#[tauri::command]
+async fn check_pty_process(
+    processes: State<'_, ProcessMap>,
+    app_id: String,
+) -> Result<bool, String> {
+    let mut map = processes.lock().unwrap();
+
+    if let Some(pty_process) = map.get_mut(&app_id) {
+        match pty_process.child.try_wait() {
+            Ok(Some(_)) => {
+                // Process has exited, remove it
+                map.remove(&app_id);
+                Ok(false)
+            }
+            Ok(None) => Ok(true), // Still running
+            Err(_) => {
+                map.remove(&app_id);
+                Ok(false)
+            }
+        }
+    } else {
+        Ok(false)
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(ProcessMap::default())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
@@ -1323,8 +1553,7 @@ pub fn run() {
             initialize_app,
             get_app_data_path,
             get_cache_image_dir,
-            read_cache_index,
-            write_cache_index,
+            clear_old_cache,
             download_and_cache_image,
             get_cached_image_path,
             check_file_exists,
@@ -1335,9 +1564,14 @@ pub fn run() {
             get_available_updates,
             update_flatpak,
             update_system_flatpaks,
+            launch_flatpak,
             uninstall_flatpak,
             install_extension,
-            uninstall_extension
+            uninstall_extension,
+            start_flatpak_interactive,
+            send_to_pty,
+            kill_pty_process,
+            check_pty_process
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

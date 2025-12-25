@@ -118,7 +118,9 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 		set({ isLoadingUpdates: isLoading }),
 
 	setInstalledRuntimes: (runtimes: string[]) => {
-		console.log(`[installedAppsStore] Setting ${runtimes.length} runtimes, unique: ${new Set(runtimes).size}`);
+		console.log(
+			`[installedAppsStore] Setting ${runtimes.length} runtimes, unique: ${new Set(runtimes).size}`,
+		);
 		console.log("[installedAppsStore] First 5 runtimes:", runtimes.slice(0, 5));
 		return set({ installedRuntimes: new Set(runtimes) });
 	},
