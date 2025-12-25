@@ -21,13 +21,13 @@ import { CachedImage } from "../../components/CachedImage";
 import { NotificationMenu } from "../../components/NotificationMenu";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
-import type { AppStream, CategoryApp } from "../../types";
+import type { CategoryApp } from "../../types";
 import { AppsOfTheDaySection } from "./components/AppsOfTheDaySection";
 import { CategoriesSection } from "./components/CategoriesSection";
 import { FeaturedSection } from "./components/FeaturedSection";
 
 interface HomeProps {
-	onAppSelect: (app: AppStream) => void;
+	onAppSelect: (app: CategoryApp) => void;
 	onCategorySelect: (categoryId: string) => void;
 	onMyAppsClick: () => void;
 }
@@ -59,14 +59,7 @@ export const Home = ({
 	};
 
 	const handleAppClick = (categoryApp: CategoryApp) => {
-		const appStream: AppStream = {
-			id: categoryApp.app_id,
-			name: categoryApp.name,
-			summary: categoryApp.summary,
-			description: categoryApp.description,
-			icon: categoryApp.icon,
-		};
-		onAppSelect(appStream);
+		onAppSelect(categoryApp);
 	};
 
 	const showSearchResults = searchQuery.trim().length > 0;

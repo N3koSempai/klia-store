@@ -10,13 +10,13 @@ import {
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../components/CachedImage";
-import type { AppStream, CategoryApp } from "../../types";
+import type { CategoryApp } from "../../types";
 
 interface SearchResultsProps {
 	results: CategoryApp[];
 	isLoading: boolean;
 	onBack: () => void;
-	onAppSelect: (app: AppStream) => void;
+	onAppSelect: (app: CategoryApp) => void;
 	query: string;
 }
 
@@ -29,14 +29,7 @@ export const SearchResults = ({
 }: SearchResultsProps) => {
 	const { t } = useTranslation();
 	const handleAppClick = (categoryApp: CategoryApp) => {
-		const appStream: AppStream = {
-			id: categoryApp.app_id,
-			name: categoryApp.name,
-			summary: categoryApp.summary,
-			description: categoryApp.description,
-			icon: categoryApp.icon,
-		};
-		onAppSelect(appStream);
+		onAppSelect(categoryApp);
 	};
 
 	return (

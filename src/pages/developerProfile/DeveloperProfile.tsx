@@ -14,14 +14,14 @@ import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../components/CachedImage";
 import { useDeveloperApps } from "../../hooks/useDeveloperApps";
 import { apiService } from "../../services/api";
-import type { AppStream, CategoryApp } from "../../types";
+import type { CategoryApp } from "../../types";
 
 interface DeveloperProfileProps {
 	developerId: string;
 	developerName: string;
 	appId?: string; // Optional: app_id to fallback if developer search fails
 	onBack: () => void;
-	onAppSelect: (app: AppStream) => void;
+	onAppSelect: (app: CategoryApp) => void;
 }
 
 export const DeveloperProfile = ({
@@ -88,14 +88,7 @@ export const DeveloperProfile = ({
 	const showLoading = isLoading || isRetrying;
 
 	const handleAppClick = (categoryApp: CategoryApp) => {
-		const appStream: AppStream = {
-			id: categoryApp.app_id,
-			name: categoryApp.name,
-			summary: categoryApp.summary,
-			description: categoryApp.description,
-			icon: categoryApp.icon,
-		};
-		onAppSelect(appStream);
+		onAppSelect(categoryApp);
 	};
 
 	// Generate avatar initial from developer name

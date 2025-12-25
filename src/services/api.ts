@@ -6,6 +6,7 @@ import type {
 	AppSummary,
 	AppsOfTheWeekResponse,
 	Category,
+	CategoryApp,
 	CategoryAppsResponse,
 	SearchRequest,
 	SearchResponse,
@@ -155,6 +156,45 @@ export const apiService = {
 
 		const data = await response.json();
 		return data as SearchResponse;
+	},
+
+	async getCategoryApp(
+		appId: string,
+		locale: string = "en",
+	): Promise<CategoryApp | null> {
+		const searchRequest: SearchRequest = {
+			query: appId,
+			hits_per_page: 5, // Get more results to find exact match
+		};
+
+		console.log("[getCategoryApp] Searching for:", appId);
+
+		const response = await tauriFetch(
+			`${API_BASE_URL}/search?locale=${locale}`,
+			{
+				method: "POST",
+				headers: {
+					accept: "application/json",
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(searchRequest),
+			},
+		);
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const data = (await response.json()) as SearchResponse;
+		console.log("[getCategoryApp] Search results:", data.hits.length, "hits");
+		console.log("[getCategoryApp] First hit app_id:", data.hits[0]?.app_id);
+		console.log("[getCategoryApp] Looking for:", appId);
+
+		// Find exact match in results
+		const exactMatch = data.hits.find((hit) => hit.app_id === appId);
+		console.log("[getCategoryApp] Exact match found:", !!exactMatch);
+
+		return exactMatch || null;
 	},
 
 	async getDeveloperApps(

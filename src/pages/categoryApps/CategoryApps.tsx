@@ -11,12 +11,12 @@ import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../components/CachedImage";
 import { useCategoryApps } from "../../hooks/useCategoryApps";
-import type { AppStream, CategoryApp } from "../../types";
+import type { CategoryApp } from "../../types";
 
 interface CategoryAppsProps {
 	categoryId: string;
 	onBack: () => void;
-	onAppSelect: (app: AppStream) => void;
+	onAppSelect: (app: CategoryApp) => void;
 }
 
 export const CategoryApps = ({
@@ -28,15 +28,7 @@ export const CategoryApps = ({
 	const { data, isLoading, error } = useCategoryApps(categoryId);
 
 	const handleAppClick = (categoryApp: CategoryApp) => {
-		// Transform CategoryApp to AppStream format expected by AppDetails
-		const appStream: AppStream = {
-			id: categoryApp.app_id,
-			name: categoryApp.name,
-			summary: categoryApp.summary,
-			description: categoryApp.description,
-			icon: categoryApp.icon,
-		};
-		onAppSelect(appStream);
+		onAppSelect(categoryApp);
 	};
 
 	return (

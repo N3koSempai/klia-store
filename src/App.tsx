@@ -10,14 +10,14 @@ import { DeveloperProfile } from "./pages/developerProfile/DeveloperProfile";
 import { Home } from "./pages/home/Home";
 import { MyApps } from "./pages/myApps/MyApps";
 import { Welcome } from "./pages/welcome/Welcome";
-import type { AppStream } from "./types";
+import type { CategoryApp } from "./types";
 import "./App.css";
 
 type ViewType = "home" | "appDetails" | "category" | "myApps" | "developer";
 
 interface NavigationState {
 	view: ViewType;
-	app?: AppStream;
+	app?: CategoryApp;
 	category?: string;
 	developerId?: string;
 	developerName?: string;
@@ -86,7 +86,7 @@ function App() {
 		}
 	};
 
-	const handleAppSelect = (app: AppStream) => {
+	const handleAppSelect = (app: CategoryApp) => {
 		navigateTo({ view: "appDetails", app });
 	};
 

@@ -14,15 +14,28 @@ export const useAppsOfTheWeek = () => {
 		const loadCache = async () => {
 			try {
 				const cached = await dbCacheManager.getCachedAppsOfTheWeek();
+				let needsRefresh = false;
+
 				if (cached.length > 0) {
-					console.log("Using cached apps of the week");
-					setCachedData(cached);
+					console.log("[useAppsOfTheWeek] Using cached apps of the week");
+
+					// Check if any cached app is missing categoryApp
+					const missingCategoryApp = cached.some((app) => !app.categoryApp);
+					if (missingCategoryApp) {
+						console.log(
+							"[useAppsOfTheWeek] Some apps missing categoryApp, forcing refresh",
+						);
+						needsRefresh = true;
+					} else {
+						console.log("[useAppsOfTheWeek] All apps have categoryApp");
+						setCachedData(cached);
+					}
 				}
 
 				// Check if we need to update based on DB timestamp
 				const shouldUpdate =
 					await dbCacheManager.shouldUpdateSection("appsOfTheWeek");
-				setShouldFetch(shouldUpdate || cached.length === 0);
+				setShouldFetch(shouldUpdate || cached.length === 0 || needsRefresh);
 			} catch (error) {
 				console.error("Error loading cache:", error);
 				setShouldFetch(true);
@@ -45,6 +58,27 @@ export const useAppsOfTheWeek = () => {
 				const appsWithDetails = await Promise.all(
 					response.apps.map(async (app) => {
 						try {
+							// Try to get full CategoryApp first
+							const categoryApp = await apiService.getCategoryApp(app.app_id);
+
+							if (categoryApp) {
+								return {
+									...app,
+									name: categoryApp.name,
+									icon: categoryApp.icon,
+									summary: categoryApp.summary,
+									appStream: {
+										id: categoryApp.app_id,
+										name: categoryApp.name,
+										summary: categoryApp.summary,
+										description: categoryApp.description,
+										icon: categoryApp.icon,
+									},
+									categoryApp: categoryApp,
+								} as AppOfTheWeekWithDetails;
+							}
+
+							// Fallback to old method
 							const appStream = await apiService.getAppStream(app.app_id);
 							return {
 								...app,

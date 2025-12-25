@@ -44,6 +44,7 @@ export interface AppOfTheWeekWithDetails extends AppOfTheWeek {
 	icon?: string;
 	summary?: string;
 	appStream?: AppStream;
+	categoryApp?: CategoryApp;
 }
 
 export interface AppStream {
@@ -96,6 +97,7 @@ export interface AppOfTheDayWithDetails extends AppOfTheDayResponse {
 	name?: string;
 	icon?: string;
 	appStream?: AppStream;
+	categoryApp?: CategoryApp;
 }
 
 export interface CategoryApp {

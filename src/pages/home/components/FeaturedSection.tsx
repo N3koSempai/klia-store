@@ -3,11 +3,43 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
 import { useAppOfTheDay } from "../../../hooks/useAppOfTheDay";
-import type { AppStream } from "../../../types";
+import type { AppStream, CategoryApp } from "../../../types";
 
 interface FeaturedSectionProps {
-	onAppSelect: (app: AppStream) => void;
+	onAppSelect: (app: CategoryApp) => void;
 }
+
+// Helper to convert AppStream to CategoryApp with defaults
+const appStreamToCategoryApp = (appStream: AppStream): CategoryApp => ({
+	app_id: appStream.id,
+	name: appStream.name,
+	summary: appStream.summary,
+	description: appStream.description || "",
+	icon: appStream.icon || appStream.icons?.[0]?.url || "",
+	id: appStream.id,
+	type: "desktop-application",
+	keywords: null,
+	translations: {},
+	project_license: "Unknown",
+	is_free_license: true,
+	main_categories: "",
+	sub_categories: [],
+	developer_name: "",
+	verification_verified: false,
+	verification_method: "",
+	verification_login_name: null,
+	verification_login_provider: null,
+	verification_login_is_organization: null,
+	verification_website: null,
+	verification_timestamp: null,
+	runtime: "",
+	updated_at: 0,
+	arches: [],
+	added_at: 0,
+	trending: 0,
+	installs_last_month: 0,
+	isMobileFriendly: false,
+});
 
 // Promoted app card component (disabled by default)
 interface PromotedAppCardData {
@@ -128,11 +160,33 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 						},
 					}}
 					onClick={() => {
-						const appStream =
-							currentSlide.type === "backend"
-								? currentSlide.data?.appStream
-								: currentSlide.data.appStream;
-						if (appStream) onAppSelect(appStream);
+						if (currentSlide.type === "backend") {
+							// Use categoryApp if available, otherwise convert appStream
+							const categoryApp = currentSlide.data?.categoryApp;
+							console.log(
+								"[FeaturedSection] Click - has categoryApp:",
+								!!categoryApp,
+							);
+							console.log(
+								"[FeaturedSection] categoryApp license:",
+								categoryApp?.project_license,
+							);
+							if (categoryApp) {
+								onAppSelect(categoryApp);
+							} else if (currentSlide.data?.appStream) {
+								console.log("[FeaturedSection] Using appStream fallback");
+								onAppSelect(
+									appStreamToCategoryApp(currentSlide.data.appStream),
+								);
+							}
+						} else {
+							// Promoted app
+							if (currentSlide.data.appStream) {
+								onAppSelect(
+									appStreamToCategoryApp(currentSlide.data.appStream),
+								);
+							}
+						}
 					}}
 				>
 					<Box sx={{ p: 5 }}>

@@ -16,15 +16,34 @@ export const useAppOfTheDay = () => {
 		const loadCache = async () => {
 			try {
 				const cached = await dbCacheManager.getCachedAppOfTheDay();
+				let needsRefresh = false;
+
 				if (cached) {
-					console.log("Using cached app of the day");
-					setCachedData(cached);
+					console.log("[useAppOfTheDay] Using cached app of the day");
+					console.log(
+						"[useAppOfTheDay] Cached has categoryApp:",
+						!!cached.categoryApp,
+					);
+					console.log(
+						"[useAppOfTheDay] Cached license:",
+						cached.categoryApp?.project_license,
+					);
+
+					// If cached data doesn't have categoryApp, force refresh
+					if (!cached.categoryApp) {
+						console.log(
+							"[useAppOfTheDay] Cache missing categoryApp, forcing refresh",
+						);
+						needsRefresh = true;
+					} else {
+						setCachedData(cached);
+					}
 				}
 
 				// Check if we need to update based on DB timestamp
 				const shouldUpdate =
 					await dbCacheManager.shouldUpdateSection("appOfTheDay");
-				setShouldFetch(shouldUpdate || !cached);
+				setShouldFetch(shouldUpdate || !cached || needsRefresh);
 			} catch (error) {
 				console.error("Error loading cache:", error);
 				setShouldFetch(true);
@@ -43,13 +62,50 @@ export const useAppOfTheDay = () => {
 			try {
 				console.log("Fetching fresh app of the day from API");
 				const response = await apiService.getAppOfTheDay();
-				const appStream = await apiService.getAppStream(response.app_id);
-				const appData = {
-					...response,
-					name: appStream.name,
-					icon: appStream.icon || appStream.icons?.[0]?.url,
-					appStream: appStream,
-				} as AppOfTheDayWithDetails;
+
+				// Try to get full CategoryApp first
+				console.log(
+					"[useAppOfTheDay] Fetching CategoryApp for:",
+					response.app_id,
+				);
+				const categoryApp = await apiService.getCategoryApp(response.app_id);
+				console.log(
+					"[useAppOfTheDay] CategoryApp result:",
+					categoryApp ? "FOUND" : "NOT FOUND",
+				);
+
+				let appData: AppOfTheDayWithDetails;
+
+				if (categoryApp) {
+					console.log(
+						"[useAppOfTheDay] Using CategoryApp with license:",
+						categoryApp.project_license,
+					);
+					// Use CategoryApp data - convert to AppStream format for appStream field
+					appData = {
+						...response,
+						name: categoryApp.name,
+						icon: categoryApp.icon,
+						appStream: {
+							id: categoryApp.app_id,
+							name: categoryApp.name,
+							summary: categoryApp.summary,
+							description: categoryApp.description,
+							icon: categoryApp.icon,
+						},
+						categoryApp: categoryApp, // Add full CategoryApp
+					} as AppOfTheDayWithDetails;
+				} else {
+					console.log("[useAppOfTheDay] Falling back to AppStream");
+					// Fallback to old method
+					const appStream = await apiService.getAppStream(response.app_id);
+					appData = {
+						...response,
+						name: appStream.name,
+						icon: appStream.icon || appStream.icons?.[0]?.url,
+						appStream: appStream,
+					} as AppOfTheDayWithDetails;
+				}
 
 				await dbCacheManager.cacheAppOfTheDay(appData);
 				setCachedData(appData);

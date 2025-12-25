@@ -4,10 +4,42 @@ import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../../components/CachedImage";
 import { useAppsOfTheWeek } from "../../../hooks/useAppsOfTheWeek";
-import type { AppStream } from "../../../types";
+import type { AppStream, CategoryApp } from "../../../types";
+
+// Helper to convert AppStream to CategoryApp with defaults
+const appStreamToCategoryApp = (appStream: AppStream): CategoryApp => ({
+	app_id: appStream.id,
+	name: appStream.name,
+	summary: appStream.summary,
+	description: appStream.description || "",
+	icon: appStream.icon || appStream.icons?.[0]?.url || "",
+	id: appStream.id,
+	type: "desktop-application",
+	keywords: null,
+	translations: {},
+	project_license: "Unknown",
+	is_free_license: true,
+	main_categories: "",
+	sub_categories: [],
+	developer_name: "",
+	verification_verified: false,
+	verification_method: "",
+	verification_login_name: null,
+	verification_login_provider: null,
+	verification_login_is_organization: null,
+	verification_website: null,
+	verification_timestamp: null,
+	runtime: "",
+	updated_at: 0,
+	arches: [],
+	added_at: 0,
+	trending: 0,
+	installs_last_month: 0,
+	isMobileFriendly: false,
+});
 
 interface AppsOfTheDaySectionProps {
-	onAppSelect: (app: AppStream) => void;
+	onAppSelect: (app: CategoryApp) => void;
 }
 
 export const AppsOfTheDaySection = ({
@@ -118,7 +150,14 @@ export const AppsOfTheDaySection = ({
 											zIndex: 1,
 										},
 									}}
-									onClick={() => app.appStream && onAppSelect(app.appStream)}
+									onClick={() => {
+										// Use categoryApp if available, otherwise convert appStream
+										if (app.categoryApp) {
+											onAppSelect(app.categoryApp);
+										} else if (app.appStream) {
+											onAppSelect(appStreamToCategoryApp(app.appStream));
+										}
+									}}
 								>
 									<Box
 										sx={{

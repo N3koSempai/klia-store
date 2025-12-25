@@ -13,6 +13,7 @@ export interface DependenciesCheckResult {
 	loading: boolean;
 	error: string | null;
 	processActive: boolean;
+	queueInstallConfirmation: () => void;
 }
 
 /**
@@ -27,7 +28,10 @@ export function useRuntimeCheck(appId: string): DependenciesCheckResult {
 	const [error, setError] = useState<string | null>(null);
 	const [processActive, setProcessActive] = useState(false);
 	const [outputLines, setOutputLines] = useState<string[]>([]);
-	const [needsRuntimeResponse, setNeedsRuntimeResponse] = useState(false);
+	const [_needsRuntimeResponse, setNeedsRuntimeResponse] = useState(false);
+	const [pendingInstallConfirmation, setPendingInstallConfirmation] =
+		useState(false);
+	const [promptReady, setPromptReady] = useState(false);
 
 	useEffect(() => {
 		let unlistenOutput: (() => void) | null = null;
@@ -84,6 +88,7 @@ export function useRuntimeCheck(appId: string): DependenciesCheckResult {
 								);
 								if (loadingTimeoutId) clearTimeout(loadingTimeoutId);
 								setLoading(false);
+								setPromptReady(true);
 							}
 						}
 					},
@@ -139,7 +144,7 @@ export function useRuntimeCheck(appId: string): DependenciesCheckResult {
 			);
 			if (singleLineMatch) {
 				console.log("[useRuntimeCheck] Single-line dependency format detected");
-				const [, refName, remote, size] = singleLineMatch;
+				const [, refName, _remote, size] = singleLineMatch;
 				deps.push({
 					name: refName,
 					download_size: size,
@@ -206,10 +211,27 @@ export function useRuntimeCheck(appId: string): DependenciesCheckResult {
 		parseDependencies();
 	}, [outputLines]);
 
+	// Auto-send 'y' when prompt is ready and there's a pending confirmation
+	useEffect(() => {
+		if (promptReady && pendingInstallConfirmation && processActive) {
+			console.log(
+				"[useRuntimeCheck] Prompt ready and install pending, sending 'y'",
+			);
+			invoke("send_to_pty", { appId, input: "y" }).catch(console.error);
+			setPendingInstallConfirmation(false);
+		}
+	}, [promptReady, pendingInstallConfirmation, processActive, appId]);
+
+	const queueInstallConfirmation = () => {
+		console.log("[useRuntimeCheck] Install confirmation queued");
+		setPendingInstallConfirmation(true);
+	};
+
 	return {
 		dependencies,
 		loading,
 		error,
 		processActive,
+		queueInstallConfirmation,
 	};
 }

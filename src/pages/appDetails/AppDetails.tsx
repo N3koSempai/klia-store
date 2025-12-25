@@ -8,6 +8,7 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
+import { AppMetaCapsule } from "../../components/AppMetaCapsule";
 import { CachedImage } from "../../components/CachedImage";
 import { DependencyInfoPopover } from "../../components/DependencyInfoPopover";
 import { GitHubStarBadge } from "../../components/GitHubStarBadge";
@@ -16,23 +17,35 @@ import { useAppScreenshots } from "../../hooks/useAppScreenshots";
 import { useRepoStats } from "../../hooks/useRepoStats";
 import { useRuntimeCheck } from "../../hooks/useRuntimeCheck";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
-import type { AppStream } from "../../types";
+import type { AppStream, CategoryApp } from "../../types";
 
 interface AppDetailsProps {
-	app: AppStream;
+	app: CategoryApp;
 	onBack: () => void;
 }
 
 export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const { t } = useTranslation();
+
+	// Convert CategoryApp to AppStream for hooks that need it
+	const appStream: AppStream = {
+		id: app.app_id,
+		name: app.name,
+		summary: app.summary,
+		description: app.description,
+		icon: app.icon,
+		screenshots: undefined,
+		urls: undefined,
+	};
+
 	const {
 		screenshots,
 		urls,
 		isLoading: isLoadingScreenshots,
-	} = useAppScreenshots(app);
+	} = useAppScreenshots(appStream);
 	const { isAppInstalled, setInstalledApp } = useInstalledAppsStore();
-	const { stars, repoUrl } = useRepoStats(app.id, urls);
-	const runtimeCheck = useRuntimeCheck(app.id);
+	const { stars, repoUrl } = useRepoStats(app.app_id, urls);
+	const runtimeCheck = useRuntimeCheck(app.app_id);
 	const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
 	// Generate stable UUIDs for screenshots
@@ -55,7 +68,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	}, [isInstalling]);
 
 	// Check if app is already installed
-	const isInstalled = isAppInstalled(app.id);
+	const isInstalled = isAppInstalled(app.app_id);
 
 	// Escuchar eventos de instalación (legacy)
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Event listeners should only be set up once on mount
@@ -79,7 +92,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				]);
 				setInstallStatus("success");
 				// Mark app as installed in the store
-				setInstalledApp(app.id, true);
+				setInstalledApp(app.app_id, true);
 			} else {
 				setInstallOutput((prev) => [
 					...prev,
@@ -97,7 +110,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
 			// Cleanup: kill PTY process if active when leaving the page
 			if (runtimeCheck.processActive) {
-				invoke("kill_pty_process", { appId: app.id }).catch(console.error);
+				invoke("kill_pty_process", { appId: app.app_id }).catch(console.error);
 			}
 		};
 	}, []);
@@ -117,10 +130,19 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				"pty-output",
 				(event) => {
 					const [appId, line] = event.payload;
-					console.log("[AppDetails] PTY event received - appId:", appId, "our app:", app.id, "installing:", isInstallingRef.current, "line:", line);
+					console.log(
+						"[AppDetails] PTY event received - appId:",
+						appId,
+						"our app:",
+						app.app_id,
+						"installing:",
+						isInstallingRef.current,
+						"line:",
+						line,
+					);
 
 					// Only process if this is our app AND we're installing (using ref for current value)
-					if (appId === app.id && isInstallingRef.current) {
+					if (appId === app.app_id && isInstallingRef.current) {
 						console.log("[AppDetails] ✓ Processing PTY output during install");
 
 						// Clean ANSI codes before displaying
@@ -131,7 +153,10 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 						if (cleanLine.trim()) {
 							setInstallOutput((prev) => {
 								const newOutput = [...prev, cleanLine];
-								console.log("[AppDetails] Updated output, lines:", newOutput.length);
+								console.log(
+									"[AppDetails] Updated output, lines:",
+									newOutput.length,
+								);
 								return newOutput;
 							});
 						}
@@ -147,7 +172,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				"pty-error",
 				(event) => {
 					const [appId, line] = event.payload;
-					if (appId === app.id && isInstallingRef.current) {
+					if (appId === app.app_id && isInstallingRef.current) {
 						console.log("[AppDetails] PTY error during install:", line);
 						setInstallOutput((prev) => [...prev, `Error: ${line}`]);
 					}
@@ -157,13 +182,13 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 			unlistenPtyTerminated = await listen<string>(
 				"pty-terminated",
 				(event) => {
-					if (event.payload === app.id && isInstallingRef.current) {
+					if (event.payload === app.app_id && isInstallingRef.current) {
 						console.log("[AppDetails] PTY terminated during install");
 
 						// Process terminated, mark installation based on output
 						setInstallOutput((prev) => {
 							const hasSuccess = prev.some((l) =>
-								l.match(/(Installing|Updating)\s+\d+\/\d+.*100%/)
+								l.match(/(Installing|Updating)\s+\d+\/\d+.*100%/),
 							);
 
 							setTimeout(() => {
@@ -175,7 +200,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 										"",
 										t("appDetails.installationCompletedSuccess"),
 									]);
-									setInstalledApp(app.id, true);
+									setInstalledApp(app.app_id, true);
 								} else {
 									setInstallStatus("error");
 								}
@@ -236,23 +261,25 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		setInstallStatus("installing");
 		setInstallOutput([t("appDetails.preparingInstallation"), ""]);
 
-		console.log("[AppDetails] handleInstall - ref set to:", isInstallingRef.current);
+		console.log(
+			"[AppDetails] handleInstall - ref set to:",
+			isInstallingRef.current,
+		);
 
 		try {
 			// If there's an active PTY process from dependency check, reuse it
 			if (runtimeCheck.processActive) {
-				console.log("[AppDetails] Using existing PTY process, sending 'y'");
-				// Send 'y' to continue with installation
-				await invoke("send_to_pty", {
-					appId: app.id,
-					input: "y",
-				});
-				console.log("[AppDetails] 'y' sent successfully to PTY");
+				console.log(
+					"[AppDetails] Using existing PTY process, queuing confirmation",
+				);
+				// Queue the 'y' confirmation - it will be sent when prompt is ready
+				runtimeCheck.queueInstallConfirmation();
+				console.log("[AppDetails] Install confirmation queued");
 			} else {
 				console.log("[AppDetails] No PTY process active, using legacy install");
 				// Fallback to old method if no process is active
 				await invoke("install_flatpak", {
-					appId: app.id,
+					appId: app.app_id,
 				});
 			}
 		} catch (error) {
@@ -270,7 +297,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const handleDownloadLog = async () => {
 		const logContent = installOutput.join("\n");
 		const timestamp = new Date().toISOString().replace(/:/g, "-").split(".")[0];
-		const defaultFileName = `install-log-${app.id}-${timestamp}.txt`;
+		const defaultFileName = `install-log-${app.app_id}-${timestamp}.txt`;
 
 		try {
 			const filePath = await save({
@@ -331,7 +358,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 					>
 						{app.icon ? (
 							<CachedImage
-								appId={app.id}
+								appId={app.app_id}
 								imageUrl={app.icon}
 								alt={app.name}
 								variant="rounded"
@@ -358,13 +385,18 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 						</Typography>
 
 						{/* Metadata Row */}
-						{stars !== null && repoUrl && (
-							<Box
-								sx={{ display: "flex", flexDirection: "row", gap: 2, mt: 1.5 }}
-							>
+						<Box
+							sx={{ display: "flex", flexDirection: "row", gap: 2, mt: 1.5 }}
+						>
+							{stars !== null && repoUrl && (
 								<GitHubStarBadge count={stars} url={repoUrl} />
-							</Box>
-						)}
+							)}
+							<AppMetaCapsule
+								isVerified={app.verification_verified}
+								license={app.project_license}
+								downloads={app.installs_last_month}
+							/>
+						</Box>
 					</Box>
 				</Box>
 
@@ -440,7 +472,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 									id: dep.name,
 									size: dep.download_size,
 								}))}
-								appId={app.id}
+								appId={app.app_id}
 							/>
 						) : null)}
 				</Box>
@@ -569,10 +601,10 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 												}}
 											>
 												<CachedImage
-													appId={app.id}
+													appId={app.app_id}
 													imageUrl={largestSize.src}
 													alt={`Screenshot ${index + 1}`}
-													cacheKey={`${app.id}:::${index + 1}`}
+													cacheKey={`${app.app_id}:::${index + 1}`}
 													variant="rounded"
 													showErrorPlaceholder={false}
 													maxRetries={3}
