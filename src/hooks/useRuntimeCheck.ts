@@ -38,7 +38,7 @@ export function useRuntimeCheck(appId: string): DependenciesCheckResult {
 		let unlistenError: (() => void) | null = null;
 		let unlistenTerminated: (() => void) | null = null;
 		let runtimeResponseSent = false;
-		let loadingTimeoutId: NodeJS.Timeout | null = null;
+		let loadingTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 		const startProcess = async () => {
 			try {
