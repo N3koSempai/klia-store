@@ -328,7 +328,7 @@ fn clear_old_cache(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 async fn download_and_cache_image(
     app: tauri::AppHandle,
-    _app_id: String,
+    app_id: String,
     image_url: String,
 ) -> Result<String, String> {
     let app_data_dir = app
@@ -339,6 +339,36 @@ async fn download_and_cache_image(
     let cache_images_dir = app_data_dir.join("cacheImages");
     fs::create_dir_all(&cache_images_dir)
         .map_err(|e| format!("Failed to create cacheImages directory: {}", e))?;
+
+    // Determinar extensión desde la URL (consistente con check_cached_image_exists)
+    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
+        "svg"
+    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
+        "webp"
+    } else if image_url.ends_with(".jpg") || image_url.ends_with(".jpeg") || image_url.contains(".jpg?") || image_url.contains(".jpeg?") {
+        "jpg"
+    } else {
+        "png" // default
+    };
+
+    // Generar nombre de archivo único usando xxHash3
+    // Si app_id no está vacío y es diferente de image_url, usarlo como key (caso de cacheKey)
+    // Si no, usar image_url (caso normal)
+    use xxhash_rust::xxh3::xxh3_64;
+    let key_to_hash = if !app_id.is_empty() && app_id != image_url {
+        app_id
+    } else {
+        image_url.clone()
+    };
+
+    let hash = xxh3_64(key_to_hash.as_bytes());
+    let filename = format!("{:x}.{}", hash, extension);
+    let file_path = cache_images_dir.join(&filename);
+
+    // Si el archivo ya existe, no descargar de nuevo
+    if file_path.exists() {
+        return Ok(filename);
+    }
 
     // Descargar la imagen
     let client = reqwest::Client::new();
@@ -352,32 +382,10 @@ async fn download_and_cache_image(
         return Err(format!("HTTP Error: {}", response.status()));
     }
 
-    let content_type = response
-        .headers()
-        .get("content-type")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("image/png");
-
-    // Determinar extensión del archivo
-    let extension = match content_type {
-        ct if ct.contains("png") => "png",
-        ct if ct.contains("jpeg") || ct.contains("jpg") => "jpg",
-        ct if ct.contains("svg") => "svg",
-        ct if ct.contains("webp") => "webp",
-        _ => "png",
-    };
-
     let bytes = response
         .bytes()
         .await
         .map_err(|e| format!("Error reading image bytes: {}", e))?;
-
-    // Generar nombre de archivo único usando xxHash3 (mucho más rápido que SHA-256)
-    use xxhash_rust::xxh3::xxh3_64;
-    let hash = xxh3_64(image_url.as_bytes());
-
-    let filename = format!("{:x}.{}", hash, extension);
-    let file_path = cache_images_dir.join(&filename);
 
     fs::write(&file_path, &bytes).map_err(|e| format!("Error saving image: {}", e))?;
 
@@ -404,6 +412,73 @@ fn get_cached_image_path(app: tauri::AppHandle, filename: String) -> Result<Stri
 #[tauri::command]
 fn check_file_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
+}
+
+#[tauri::command]
+fn get_cached_image_filename(cache_key: String, image_url: String) -> String {
+    use xxhash_rust::xxh3::xxh3_64;
+    // Si hay cacheKey, usar eso; si no, usar imageUrl
+    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
+        cache_key
+    } else {
+        image_url.clone()
+    };
+
+    let hash = xxh3_64(key_to_hash.as_bytes());
+
+    // Determinar extensión basándose en la URL
+    let extension = if image_url.ends_with(".svg") {
+        "svg"
+    } else if image_url.ends_with(".webp") {
+        "webp"
+    } else if image_url.ends_with(".jpg") || image_url.ends_with(".jpeg") {
+        "jpg"
+    } else {
+        "png"
+    };
+
+    format!("{:x}.{}", hash, extension)
+}
+
+#[tauri::command]
+fn check_cached_image_exists(app: tauri::AppHandle, cache_key: String, image_url: String) -> Result<String, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+
+    let cache_images_dir = app_data_dir.join("cacheImages");
+
+    use xxhash_rust::xxh3::xxh3_64;
+
+    // Si hay cacheKey, usar eso; si no, usar imageUrl
+    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
+        cache_key
+    } else {
+        image_url.clone()
+    };
+
+    let hash = xxh3_64(key_to_hash.as_bytes());
+
+    // Determinar extensión desde la URL (que siempre tiene la URL real de la imagen)
+    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
+        "svg"
+    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
+        "webp"
+    } else if image_url.ends_with(".jpg") || image_url.ends_with(".jpeg") || image_url.contains(".jpg?") || image_url.contains(".jpeg?") {
+        "jpg"
+    } else {
+        "png" // default
+    };
+
+    let filename = format!("{:x}.{}", hash, extension);
+    let file_path = cache_images_dir.join(&filename);
+
+    if file_path.exists() {
+        Ok(filename)
+    } else {
+        Err("Image not found in cache".to_string())
+    }
 }
 
 #[tauri::command]
@@ -1556,6 +1631,8 @@ pub fn run() {
             clear_old_cache,
             download_and_cache_image,
             get_cached_image_path,
+            get_cached_image_filename,
+            check_cached_image_exists,
             check_file_exists,
             get_installed_flatpaks,
             get_install_dependencies,

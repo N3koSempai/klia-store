@@ -60,52 +60,40 @@ export class ImageCacheManager {
 		return this.initPromise;
 	}
 
-	private async hashUrl(url: string): Promise<string> {
-		const msgUint8 = new TextEncoder().encode(url);
-		const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-		const hashArray = Array.from(new Uint8Array(hashBuffer));
-		const hashHex = hashArray
-			.map((b) => b.toString(16).padStart(2, "0"))
-			.join("");
-		return hashHex;
-	}
-
-	async getCachedImagePath(imageUrl: string): Promise<string | null> {
+	async getCachedImagePath(
+		cacheKeyOrUrl: string,
+		imageUrl?: string,
+	): Promise<string | null> {
 		await this.initialize();
 
 		try {
-			const hash = await this.hashUrl(imageUrl);
-			// Probamos con las extensiones comunes ya que el sistema de archivos
-			// ahora usa el hash como nombre base.
-			const extensions = ["png", "jpg", "svg", "webp"];
+			// Si no hay imageUrl, usar cacheKeyOrUrl para ambos
+			const actualImageUrl = imageUrl || cacheKeyOrUrl;
+			const cacheKey = cacheKeyOrUrl;
 
-			for (const ext of extensions) {
-				const filename = `${hash}.${ext}`;
-				const fullPath = await invoke<string>("get_cached_image_path", {
-					filename,
-				});
+			// Verificar si ya existe en caché - el backend retorna el filename si existe
+			const filename = await invoke<string>("check_cached_image_exists", {
+				cacheKey,
+				imageUrl: actualImageUrl,
+			});
 
-				const exists = await invoke<boolean>("check_file_exists", {
-					path: fullPath,
-				});
+			// Si llegamos aquí, el archivo existe (no lanzó error)
+			const fullPath = await invoke<string>("get_cached_image_path", {
+				filename,
+			});
 
-				if (exists) {
-					let convertedPath = convertFileSrc(fullPath);
+			let convertedPath = convertFileSrc(fullPath);
 
-					// Si detectamos doble encoding (%2F), decodificar una vez
-					if (convertedPath.includes("%2F")) {
-						const url = new URL(convertedPath);
-						const decodedPathname = decodeURIComponent(url.pathname);
-						convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
-					}
-
-					return convertedPath;
-				}
+			// Si detectamos doble encoding (%2F), decodificar una vez
+			if (convertedPath.includes("%2F")) {
+				const url = new URL(convertedPath);
+				const decodedPathname = decodeURIComponent(url.pathname);
+				convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
 			}
 
-			return null;
+			return convertedPath;
 		} catch (error) {
-			console.error("[ImageCache] Error getting cached image:", error);
+			// El error significa que no existe en caché
 			return null;
 		}
 	}
