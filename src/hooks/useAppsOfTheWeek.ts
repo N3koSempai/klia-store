@@ -51,70 +51,41 @@ export const useAppsOfTheWeek = () => {
 	const query = useQuery({
 		queryKey: ["appsOfTheWeek"],
 		queryFn: async () => {
-			try {
-				console.log("Fetching fresh apps of the week from API");
-				const response = await apiService.getAppsOfTheWeek();
+			console.log("Fetching fresh apps of the week from API");
+			const response = await apiService.getAppsOfTheWeek();
 
-				const appsWithDetails = await Promise.all(
-					response.apps.map(async (app) => {
-						try {
-							// Try to get full CategoryApp first
-							const categoryApp = await apiService.getCategoryApp(app.app_id);
+			const appsWithDetails = await Promise.all(
+				response.apps.map(async (app) => {
+					const categoryApp = await apiService.getCategoryApp(app.app_id);
 
-							if (categoryApp) {
-								return {
-									...app,
-									name: categoryApp.name,
-									icon: categoryApp.icon,
-									summary: categoryApp.summary,
-									appStream: {
-										id: categoryApp.app_id,
-										name: categoryApp.name,
-										summary: categoryApp.summary,
-										description: categoryApp.description,
-										icon: categoryApp.icon,
-									},
-									categoryApp: categoryApp,
-								} as AppOfTheWeekWithDetails;
-							}
+					if (!categoryApp) {
+						throw new Error(`CategoryApp not found for ${app.app_id}`);
+					}
 
-							// Fallback to old method
-							const appStream = await apiService.getAppStream(app.app_id);
-							return {
-								...app,
-								name: appStream.name,
-								icon: appStream.icon || appStream.icons?.[0]?.url,
-								summary: appStream.summary,
-								appStream: appStream,
-							} as AppOfTheWeekWithDetails;
-						} catch (error) {
-							console.error(
-								`Error fetching appstream for ${app.app_id}:`,
-								error,
-							);
-							return {
-								...app,
-								name: app.app_id,
-							} as AppOfTheWeekWithDetails;
-						}
-					}),
-				);
+					return {
+						...app,
+						name: categoryApp.name,
+						icon: categoryApp.icon,
+						summary: categoryApp.summary,
+						appStream: {
+							id: categoryApp.app_id,
+							name: categoryApp.name,
+							summary: categoryApp.summary,
+							description: categoryApp.description,
+							icon: categoryApp.icon,
+						},
+						categoryApp: categoryApp,
+					} as AppOfTheWeekWithDetails;
+				}),
+			);
 
-				await dbCacheManager.cacheAppsOfTheWeek(appsWithDetails);
-				setCachedData(appsWithDetails);
-				return appsWithDetails;
-			} catch (error) {
-				console.error("Failed to fetch apps of the week:", error);
-				// If API fails and we have cache, use it
-				if (cachedData.length > 0) {
-					console.log("API failed, using cached apps of the week");
-					return cachedData;
-				}
-				throw error;
-			}
+			await dbCacheManager.cacheAppsOfTheWeek(appsWithDetails);
+			setCachedData(appsWithDetails);
+			return appsWithDetails;
 		},
 		enabled: shouldFetch,
-		retry: false,
+		retry: 3,
+		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 	});
 
 	// If checking cache, show as loading

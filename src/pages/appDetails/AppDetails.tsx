@@ -499,14 +499,26 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 								}}
 							/>
 						) : runtimeCheck.dependencies.length > 0 ? (
-							<DependencyInfoPopover
-								appSize={runtimeCheck.dependencies[0].download_size}
-								dependencies={runtimeCheck.dependencies.slice(1).map((dep) => ({
-									id: dep.name,
-									size: dep.download_size,
-								}))}
-								appId={app.app_id}
-							/>
+							(() => {
+								// Separar la app principal de las dependencias
+								const mainAppDep = runtimeCheck.dependencies.find(
+									(dep) => dep.name === app.app_id,
+								);
+								const deps = runtimeCheck.dependencies.filter(
+									(dep) => dep.name !== app.app_id,
+								);
+
+								return (
+									<DependencyInfoPopover
+										appSize={mainAppDep?.download_size || "Unknown"}
+										dependencies={deps.map((dep) => ({
+											id: dep.name,
+											size: dep.download_size,
+										}))}
+										appId={app.app_id}
+									/>
+								);
+							})()
 						) : null)}
 				</Box>
 			</Box>
