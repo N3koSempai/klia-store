@@ -169,6 +169,7 @@ export class DBCacheManager {
 				icon: row.icon || undefined,
 				day: parsedData.day,
 				appStream: parsedData.appStream,
+				categoryApp: parsedData.categoryApp,
 			};
 		} catch (error) {
 			console.error("Error reading app of the day cache:", error);
@@ -187,6 +188,7 @@ export class DBCacheManager {
 		const dataStr = JSON.stringify({
 			day: app.day,
 			appStream: app.appStream,
+			categoryApp: app.categoryApp,
 		});
 
 		await this.db.execute(
@@ -226,6 +228,7 @@ export class DBCacheManager {
 					icon: row.icon || undefined,
 					summary: parsedData.summary,
 					appStream: parsedData.appStream,
+					categoryApp: parsedData.categoryApp,
 				};
 			});
 		} catch (error) {
@@ -247,6 +250,7 @@ export class DBCacheManager {
 				isFullscreen: app.isFullscreen,
 				summary: app.summary,
 				appStream: app.appStream,
+				categoryApp: app.categoryApp,
 			});
 
 			await this.db.execute(
