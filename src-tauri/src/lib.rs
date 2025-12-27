@@ -1,9 +1,9 @@
 use serde::Serialize;
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Command, Stdio, Child, ChildStdin};
+use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 use tauri::{Emitter, Manager, State};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::ShellExt;
@@ -49,10 +49,7 @@ fn build_flatpak_interactive_cmd(is_flatpak: bool, app_id: &str) -> String {
             base_cmd
         )
     } else {
-        format!(
-            "LANG=C script -q /dev/null -c \"{}\"",
-            base_cmd
-        )
+        format!("LANG=C script -q /dev/null -c \"{}\"", base_cmd)
     }
 }
 
@@ -108,125 +105,91 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-async fn download_flatpakref(app: tauri::AppHandle, app_id: String) -> Result<String, String> {
-    let url = format!(
-        "https://dl.flathub.org/repo/appstream/{}.flatpakref",
-        app_id
-    );
-
-    app.emit(
-        "install-output",
-        format!("Descargando referencia desde {}", url),
-    )
-    .map_err(|e| format!("Failed to emit: {}", e))?;
-
-    let client = reqwest::Client::new();
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("Error descargando flatpakref: {}", e))?;
-
-    if !response.status().is_success() {
-        return Err(format!("Error HTTP: {}", response.status()));
-    }
-
-    let content = response
-        .text()
-        .await
-        .map_err(|e| format!("Error leyendo contenido: {}", e))?;
-
-    // Obtener el directorio de datos de la app
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-
-    // Crear carpeta temp dentro del directorio de la app
-    let temp_dir = app_data_dir.join("temp");
-    fs::create_dir_all(&temp_dir).map_err(|e| format!("Failed to create temp directory: {}", e))?;
-
-    let flatpakref_path = temp_dir.join(format!("{}.flatpakref", app_id));
-
-    fs::write(&flatpakref_path, &content).map_err(|e| format!("Error guardando archivo: {}", e))?;
-
-    app.emit(
-        "install-output",
-        format!("✓ Referencia descargada: {:?}", flatpakref_path),
-    )
-    .map_err(|e| format!("Failed to emit: {}", e))?;
-
-    Ok(flatpakref_path.to_string_lossy().to_string())
-}
-
-#[tauri::command]
 async fn install_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), String> {
-    // Paso 1: Descargar el flatpakref
-    let flatpakref_path = download_flatpakref(app.clone(), app_id.clone()).await?;
-
-    // Paso 2: Instalar desde el archivo flatpakref
-    app.emit(
-        "install-output",
-        "Iniciando instalación desde archivo local...",
-    )
-    .map_err(|e| format!("Failed to emit: {}", e))?;
-
-    let shell = app.shell();
-
-    // Detectar si estamos en un flatpak
+    eprintln!("[install_flatpak] Starting for app_id: {}", app_id);
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+    let cmd_str = build_flatpak_interactive_cmd(is_flatpak, &app_id);
+    eprintln!("[install_flatpak] Command: {}", cmd_str);
 
-    let (mut rx, _child) = if is_flatpak {
-        // Dentro de flatpak, usar flatpak-spawn para ejecutar en el host
-        shell
-            .command("flatpak-spawn")
-            .args([
-                "--host",
-                "flatpak",
-                "install",
-                "-y",
-                "--user",
-                &flatpakref_path,
-            ])
-            .spawn()
-            .map_err(|e| format!("Failed to spawn flatpak-spawn: {}", e))?
-    } else {
-        // Fuera de flatpak, usar flatpak directamente
-        shell
-            .command("flatpak")
-            .args(["install", "-y", "--user", &flatpakref_path])
-            .spawn()
-            .map_err(|e| format!("Failed to spawn flatpak: {}", e))?
-    };
+    let mut child = Command::new("sh")
+        .args(["-c", &cmd_str])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn process: {}", e))?;
 
-    // Leer la salida en tiempo real
-    while let Some(event) = rx.recv().await {
-        match event {
-            tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
-                let output = String::from_utf8_lossy(&line);
-                app.emit("install-output", output.to_string())
-                    .map_err(|e| format!("Failed to emit event: {}", e))?;
-            }
-            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
-                let output = String::from_utf8_lossy(&line);
-                app.emit("install-output", output.to_string())
-                    .map_err(|e| format!("Failed to emit event: {}", e))?;
-            }
-            tauri_plugin_shell::process::CommandEvent::Error(err) => {
-                app.emit("install-error", err)
-                    .map_err(|e| format!("Failed to emit error: {}", e))?;
-            }
-            tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
-                // Limpiar archivo temporal
-                let _ = fs::remove_file(&flatpakref_path);
+    let mut stdin = child.stdin.take().ok_or("Failed to get stdin")?;
+    let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
+    let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
 
-                app.emit("install-completed", payload.code.unwrap_or(-1))
-                    .map_err(|e| format!("Failed to emit completion: {}", e))?;
-                break;
+    eprintln!("[install_flatpak] Process spawned successfully");
+
+    // Send 'y' confirmation after a short delay
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        let _ = stdin.write_all(b"y\n");
+        let _ = stdin.flush();
+        eprintln!("[install_flatpak] Sent 'y' confirmation");
+    });
+
+    // Read stdout in background thread - read byte by byte to capture \r updates
+    // EXACTLY like start_flatpak_interactive
+    let app_clone = app.clone();
+    let app_id_clone = app_id.clone();
+    std::thread::spawn(move || {
+        use std::io::Read;
+        let mut buffer = [0u8; 1024];
+        let mut stdout_reader = stdout;
+
+        loop {
+            match stdout_reader.read(&mut buffer) {
+                Ok(0) => break, // EOF
+                Ok(n) => {
+                    let chunk = String::from_utf8_lossy(&buffer[..n]).to_string();
+                    // Split by \n but preserve \r to allow frontend to handle line overwrites
+                    for line in chunk.split('\n') {
+                        if !line.is_empty() {
+                            let _ = app_clone
+                                .emit("pty-output", (app_id_clone.clone(), line.to_string()));
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[install_flatpak] Error reading stdout: {}", e);
+                    break;
+                }
             }
-            _ => {}
         }
-    }
+    });
+
+    // Read stderr in background thread
+    // EXACTLY like start_flatpak_interactive
+    let app_clone2 = app.clone();
+    let app_id_clone2 = app_id.clone();
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                let _ = app_clone2.emit("pty-error", (app_id_clone2.clone(), line));
+            }
+        }
+    });
+
+    // Monitor process termination in background thread
+    // EXACTLY like start_flatpak_interactive
+    let app_clone3 = app.clone();
+    let app_id_clone3 = app_id.clone();
+    std::thread::spawn(move || {
+        // Wait for the child process to complete
+        let status = child.wait();
+        eprintln!(
+            "[install_flatpak] Process terminated with status: {:?}",
+            status
+        );
+        // Emit termination event
+        let _ = app_clone3.emit("pty-terminated", app_id_clone3);
+    });
 
     Ok(())
 }
@@ -345,7 +308,11 @@ async fn download_and_cache_image(
         "svg"
     } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
         "webp"
-    } else if image_url.ends_with(".jpg") || image_url.ends_with(".jpeg") || image_url.contains(".jpg?") || image_url.contains(".jpeg?") {
+    } else if image_url.ends_with(".jpg")
+        || image_url.ends_with(".jpeg")
+        || image_url.contains(".jpg?")
+        || image_url.contains(".jpeg?")
+    {
         "jpg"
     } else {
         "png" // default
@@ -441,7 +408,11 @@ fn get_cached_image_filename(cache_key: String, image_url: String) -> String {
 }
 
 #[tauri::command]
-fn check_cached_image_exists(app: tauri::AppHandle, cache_key: String, image_url: String) -> Result<String, String> {
+fn check_cached_image_exists(
+    app: tauri::AppHandle,
+    cache_key: String,
+    image_url: String,
+) -> Result<String, String> {
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -465,7 +436,11 @@ fn check_cached_image_exists(app: tauri::AppHandle, cache_key: String, image_url
         "svg"
     } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
         "webp"
-    } else if image_url.ends_with(".jpg") || image_url.ends_with(".jpeg") || image_url.contains(".jpg?") || image_url.contains(".jpeg?") {
+    } else if image_url.ends_with(".jpg")
+        || image_url.ends_with(".jpeg")
+        || image_url.contains(".jpg?")
+        || image_url.contains(".jpeg?")
+    {
         "jpg"
     } else {
         "png" // default
@@ -1435,7 +1410,10 @@ async fn start_flatpak_interactive(
     processes: State<'_, ProcessMap>,
     app_id: String,
 ) -> Result<(), String> {
-    eprintln!("[start_flatpak_interactive] Starting for app_id: {}", app_id);
+    eprintln!(
+        "[start_flatpak_interactive] Starting for app_id: {}",
+        app_id
+    );
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
     let cmd_str = build_flatpak_interactive_cmd(is_flatpak, &app_id);
     eprintln!("[start_flatpak_interactive] Command: {}", cmd_str);
@@ -1474,10 +1452,11 @@ async fn start_flatpak_interactive(
                 Ok(0) => break, // EOF
                 Ok(n) => {
                     let chunk = String::from_utf8_lossy(&buffer[..n]).to_string();
-                    // Split by both \n and \r to send individual lines
-                    for line in chunk.split(&['\n', '\r']) {
+                    // Split by \n but preserve \r to allow frontend to handle line overwrites
+                    for line in chunk.split('\n') {
                         if !line.is_empty() {
-                            let _ = app_clone.emit("pty-output", (app_id_clone.clone(), line.to_string()));
+                            let _ = app_clone
+                                .emit("pty-output", (app_id_clone.clone(), line.to_string()));
                         }
                     }
                 }
@@ -1514,7 +1493,10 @@ async fn start_flatpak_interactive(
             if let Some(pty_process) = map.get_mut(&app_id_clone3) {
                 match pty_process.child.try_wait() {
                     Ok(Some(status)) => {
-                        eprintln!("[start_flatpak_interactive] Process terminated with status: {:?}", status);
+                        eprintln!(
+                            "[start_flatpak_interactive] Process terminated with status: {:?}",
+                            status
+                        );
                         // Process has exited, emit event and remove from map
                         let _ = app_clone3.emit("pty-terminated", app_id_clone3.clone());
                         map.remove(&app_id_clone3);
@@ -1546,21 +1528,29 @@ async fn send_to_pty(
     app_id: String,
     input: String,
 ) -> Result<(), String> {
-    eprintln!("[send_to_pty] Attempting to send '{}' to app_id: {}", input, app_id);
+    eprintln!(
+        "[send_to_pty] Attempting to send '{}' to app_id: {}",
+        input, app_id
+    );
     let mut map = processes.lock().unwrap();
 
     if let Some(pty_process) = map.get_mut(&app_id) {
         eprintln!("[send_to_pty] Process found, writing to stdin");
-        pty_process.stdin
+        pty_process
+            .stdin
             .write_all(format!("{}\n", input).as_bytes())
             .map_err(|e| format!("Failed to write to stdin: {}", e))?;
-        pty_process.stdin
+        pty_process
+            .stdin
             .flush()
             .map_err(|e| format!("Failed to flush stdin: {}", e))?;
         eprintln!("[send_to_pty] Successfully sent input");
         Ok(())
     } else {
-        eprintln!("[send_to_pty] ERROR: No process found for app_id: {}", app_id);
+        eprintln!(
+            "[send_to_pty] ERROR: No process found for app_id: {}",
+            app_id
+        );
         Err(format!("No process found for app_id: {}", app_id))
     }
 }
@@ -1623,7 +1613,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             install_flatpak,
-            download_flatpakref,
             check_first_launch,
             initialize_app,
             get_app_data_path,
