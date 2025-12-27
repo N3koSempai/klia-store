@@ -1,9 +1,9 @@
 use serde::Serialize;
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Command, Stdio, Child, ChildStdin};
+use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 use tauri::{Emitter, Manager, State};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::ShellExt;
@@ -40,24 +40,21 @@ struct PtyProcess {
 
 type ProcessMap = Arc<Mutex<HashMap<String, PtyProcess>>>;
 
-// Helper function to build interactive flatpak PTY command (no auto-responses)
+// Helper function to build interactive flatpak PTY command with -y flag (automatic confirmation)
 fn build_flatpak_interactive_cmd(is_flatpak: bool, app_id: &str) -> String {
-    let base_cmd = format!("flatpak install --user flathub {}", app_id);
+    let base_cmd = format!("flatpak install -y --user flathub {}", app_id);
     if is_flatpak {
         format!(
             "LANG=C script -q /dev/null -c \"flatpak-spawn --host {}\"",
             base_cmd
         )
     } else {
-        format!(
-            "LANG=C script -q /dev/null -c \"{}\"",
-            base_cmd
-        )
+        format!("LANG=C script -q /dev/null -c \"{}\"", base_cmd)
     }
 }
 
-// Helper function to build flatpak command with optional flatpak-spawn wrapper (legacy - for backward compat)
-fn build_flatpak_install_cmd(is_flatpak: bool, app_id: &str) -> String {
+// Helper function for dependency checking (with auto-yes responses)
+fn build_flatpak_dependency_check_cmd(is_flatpak: bool, app_id: &str) -> String {
     let base_cmd = format!("flatpak install --user flathub {}", app_id);
     if is_flatpak {
         format!(
@@ -105,130 +102,6 @@ struct Dependency {
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-#[tauri::command]
-async fn download_flatpakref(app: tauri::AppHandle, app_id: String) -> Result<String, String> {
-    let url = format!(
-        "https://dl.flathub.org/repo/appstream/{}.flatpakref",
-        app_id
-    );
-
-    app.emit(
-        "install-output",
-        format!("Descargando referencia desde {}", url),
-    )
-    .map_err(|e| format!("Failed to emit: {}", e))?;
-
-    let client = reqwest::Client::new();
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("Error descargando flatpakref: {}", e))?;
-
-    if !response.status().is_success() {
-        return Err(format!("Error HTTP: {}", response.status()));
-    }
-
-    let content = response
-        .text()
-        .await
-        .map_err(|e| format!("Error leyendo contenido: {}", e))?;
-
-    // Obtener el directorio de datos de la app
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-
-    // Crear carpeta temp dentro del directorio de la app
-    let temp_dir = app_data_dir.join("temp");
-    fs::create_dir_all(&temp_dir).map_err(|e| format!("Failed to create temp directory: {}", e))?;
-
-    let flatpakref_path = temp_dir.join(format!("{}.flatpakref", app_id));
-
-    fs::write(&flatpakref_path, &content).map_err(|e| format!("Error guardando archivo: {}", e))?;
-
-    app.emit(
-        "install-output",
-        format!("✓ Referencia descargada: {:?}", flatpakref_path),
-    )
-    .map_err(|e| format!("Failed to emit: {}", e))?;
-
-    Ok(flatpakref_path.to_string_lossy().to_string())
-}
-
-#[tauri::command]
-async fn install_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), String> {
-    // Paso 1: Descargar el flatpakref
-    let flatpakref_path = download_flatpakref(app.clone(), app_id.clone()).await?;
-
-    // Paso 2: Instalar desde el archivo flatpakref
-    app.emit(
-        "install-output",
-        "Iniciando instalación desde archivo local...",
-    )
-    .map_err(|e| format!("Failed to emit: {}", e))?;
-
-    let shell = app.shell();
-
-    // Detectar si estamos en un flatpak
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
-    let (mut rx, _child) = if is_flatpak {
-        // Dentro de flatpak, usar flatpak-spawn para ejecutar en el host
-        shell
-            .command("flatpak-spawn")
-            .args([
-                "--host",
-                "flatpak",
-                "install",
-                "-y",
-                "--user",
-                &flatpakref_path,
-            ])
-            .spawn()
-            .map_err(|e| format!("Failed to spawn flatpak-spawn: {}", e))?
-    } else {
-        // Fuera de flatpak, usar flatpak directamente
-        shell
-            .command("flatpak")
-            .args(["install", "-y", "--user", &flatpakref_path])
-            .spawn()
-            .map_err(|e| format!("Failed to spawn flatpak: {}", e))?
-    };
-
-    // Leer la salida en tiempo real
-    while let Some(event) = rx.recv().await {
-        match event {
-            tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
-                let output = String::from_utf8_lossy(&line);
-                app.emit("install-output", output.to_string())
-                    .map_err(|e| format!("Failed to emit event: {}", e))?;
-            }
-            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
-                let output = String::from_utf8_lossy(&line);
-                app.emit("install-output", output.to_string())
-                    .map_err(|e| format!("Failed to emit event: {}", e))?;
-            }
-            tauri_plugin_shell::process::CommandEvent::Error(err) => {
-                app.emit("install-error", err)
-                    .map_err(|e| format!("Failed to emit error: {}", e))?;
-            }
-            tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
-                // Limpiar archivo temporal
-                let _ = fs::remove_file(&flatpakref_path);
-
-                app.emit("install-completed", payload.code.unwrap_or(-1))
-                    .map_err(|e| format!("Failed to emit completion: {}", e))?;
-                break;
-            }
-            _ => {}
-        }
-    }
-
-    Ok(())
 }
 
 #[tauri::command]
@@ -345,7 +218,11 @@ async fn download_and_cache_image(
         "svg"
     } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
         "webp"
-    } else if image_url.ends_with(".jpg") || image_url.ends_with(".jpeg") || image_url.contains(".jpg?") || image_url.contains(".jpeg?") {
+    } else if image_url.ends_with(".jpg")
+        || image_url.ends_with(".jpeg")
+        || image_url.contains(".jpg?")
+        || image_url.contains(".jpeg?")
+    {
         "jpg"
     } else {
         "png" // default
@@ -441,7 +318,11 @@ fn get_cached_image_filename(cache_key: String, image_url: String) -> String {
 }
 
 #[tauri::command]
-fn check_cached_image_exists(app: tauri::AppHandle, cache_key: String, image_url: String) -> Result<String, String> {
+fn check_cached_image_exists(
+    app: tauri::AppHandle,
+    cache_key: String,
+    image_url: String,
+) -> Result<String, String> {
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -465,7 +346,11 @@ fn check_cached_image_exists(app: tauri::AppHandle, cache_key: String, image_url
         "svg"
     } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
         "webp"
-    } else if image_url.ends_with(".jpg") || image_url.ends_with(".jpeg") || image_url.contains(".jpg?") || image_url.contains(".jpeg?") {
+    } else if image_url.ends_with(".jpg")
+        || image_url.ends_with(".jpeg")
+        || image_url.contains(".jpg?")
+        || image_url.contains(".jpeg?")
+    {
         "jpg"
     } else {
         "png" // default
@@ -662,7 +547,7 @@ async fn get_install_dependencies(
 
     // Second phase: If runtime is required, use controlled process with script
     let (stdout, stderr) = if needs_runtime {
-        let cmd_str = build_flatpak_install_cmd(is_flatpak, &app_id);
+        let cmd_str = build_flatpak_dependency_check_cmd(is_flatpak, &app_id);
         let (cmd, args) = ("sh", vec!["-c", &cmd_str]);
 
         let mut child = Command::new(cmd)
@@ -1435,7 +1320,10 @@ async fn start_flatpak_interactive(
     processes: State<'_, ProcessMap>,
     app_id: String,
 ) -> Result<(), String> {
-    eprintln!("[start_flatpak_interactive] Starting for app_id: {}", app_id);
+    eprintln!(
+        "[start_flatpak_interactive] Starting for app_id: {}",
+        app_id
+    );
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
     let cmd_str = build_flatpak_interactive_cmd(is_flatpak, &app_id);
     eprintln!("[start_flatpak_interactive] Command: {}", cmd_str);
@@ -1474,10 +1362,11 @@ async fn start_flatpak_interactive(
                 Ok(0) => break, // EOF
                 Ok(n) => {
                     let chunk = String::from_utf8_lossy(&buffer[..n]).to_string();
-                    // Split by both \n and \r to send individual lines
-                    for line in chunk.split(&['\n', '\r']) {
+                    // Split by \n but preserve \r to allow frontend to handle line overwrites
+                    for line in chunk.split('\n') {
                         if !line.is_empty() {
-                            let _ = app_clone.emit("pty-output", (app_id_clone.clone(), line.to_string()));
+                            let _ = app_clone
+                                .emit("pty-output", (app_id_clone.clone(), line.to_string()));
                         }
                     }
                 }
@@ -1514,7 +1403,10 @@ async fn start_flatpak_interactive(
             if let Some(pty_process) = map.get_mut(&app_id_clone3) {
                 match pty_process.child.try_wait() {
                     Ok(Some(status)) => {
-                        eprintln!("[start_flatpak_interactive] Process terminated with status: {:?}", status);
+                        eprintln!(
+                            "[start_flatpak_interactive] Process terminated with status: {:?}",
+                            status
+                        );
                         // Process has exited, emit event and remove from map
                         let _ = app_clone3.emit("pty-terminated", app_id_clone3.clone());
                         map.remove(&app_id_clone3);
@@ -1546,21 +1438,29 @@ async fn send_to_pty(
     app_id: String,
     input: String,
 ) -> Result<(), String> {
-    eprintln!("[send_to_pty] Attempting to send '{}' to app_id: {}", input, app_id);
+    eprintln!(
+        "[send_to_pty] Attempting to send '{}' to app_id: {}",
+        input, app_id
+    );
     let mut map = processes.lock().unwrap();
 
     if let Some(pty_process) = map.get_mut(&app_id) {
         eprintln!("[send_to_pty] Process found, writing to stdin");
-        pty_process.stdin
+        pty_process
+            .stdin
             .write_all(format!("{}\n", input).as_bytes())
             .map_err(|e| format!("Failed to write to stdin: {}", e))?;
-        pty_process.stdin
+        pty_process
+            .stdin
             .flush()
             .map_err(|e| format!("Failed to flush stdin: {}", e))?;
         eprintln!("[send_to_pty] Successfully sent input");
         Ok(())
     } else {
-        eprintln!("[send_to_pty] ERROR: No process found for app_id: {}", app_id);
+        eprintln!(
+            "[send_to_pty] ERROR: No process found for app_id: {}",
+            app_id
+        );
         Err(format!("No process found for app_id: {}", app_id))
     }
 }
@@ -1622,8 +1522,6 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             greet,
-            install_flatpak,
-            download_flatpakref,
             check_first_launch,
             initialize_app,
             get_app_data_path,

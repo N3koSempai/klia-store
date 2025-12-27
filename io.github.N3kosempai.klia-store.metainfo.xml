@@ -44,7 +44,7 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.5.2" date="2025-01-15">
+    <release version="2.5.3" date="2025-01-15">
       <description>
         <p>✨ What's New:</p>
         <ul>

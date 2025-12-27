@@ -2103,7 +2103,7 @@ dependencies = [
 
 [[package]]
 name = "klia-store"
-version = "2.5.2"
+version = "2.5.3"
 dependencies = [
  "serde",
  "serde_json",
