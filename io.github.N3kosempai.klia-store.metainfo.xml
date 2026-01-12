@@ -18,6 +18,9 @@
   <url type="homepage">https://github.com/N3koSempai/klia-store</url>
   <url type="bugtracker">https://github.com/N3koSempai/klia-store/issues</url>
   <url type="vcs-browser">https://github.com/N3koSempai/klia-store</url>
+  <url
+        type="donation"
+    >https://n3kosempai.github.io/KliaStore/bitcoin/donate?wallet=bc1qaq220dfa4dwc2eg0s76t4uzmrf28med2nr3fz0</url>
   <screenshots>
     <screenshot type="default">
       <caption>Main application window showing start page</caption>
@@ -44,23 +47,11 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.5.4" date="2025-01-15">
+    <release version="2.5.41" date="2025-01-15">
       <description>
-        <p>✨ What's New:</p>
+        <p>🔧 Technical Update:</p>
         <ul>
-        <li
-                    >🎨 Redesigned app details with beautiful metadata badges showing verification status, license, and popularity</li>
-        <li>🚀 Launch apps directly from Klia Store with a single tap</li>
-        <li>🗑️ Uninstall apps quickly with the new action button</li>
-        <li>🇯🇵 Added Japanese language support</li>
-        <li
-                    >⚡ Dramatically faster image loading with advanced caching technology</li>
-        </ul>
-        <p>💎 Refinements:</p>
-        <ul>
-        <li>Smoother app browsing with improved data handling</li>
-        <li>More reliable app information display</li>
-        <li>Enhanced visual feedback throughout the interface</li>
+        <li>Added donation metadata for upcoming feature development</li>
         </ul>
       </description>
     </release>
