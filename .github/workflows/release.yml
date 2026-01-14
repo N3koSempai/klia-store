@@ -35,53 +35,6 @@ jobs:
             echo "No [release] tag found in commit message"
           fi
 
-  build-deb:
-    needs: check-release
-    if: needs.check-release.outputs.should_release == 'true'
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build Tauri .deb
-        run: npm run tauri build -- --bundles deb
-
-      - name: Rename .deb file
-        run: |
-          VERSION="${{ needs.check-release.outputs.version }}"
-          DEB_FILE=$(find src-tauri/target/release/bundle/deb -name "*.deb" -type f)
-          mv "$DEB_FILE" "Klia-Store-${VERSION}.deb"
-
-      - name: Upload .deb artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: deb-package
-          path: Klia-Store-*.deb
-
   build-flatpak:
       needs: check-release
       if: needs.check-release.outputs.should_release == 'true'
@@ -155,18 +108,13 @@ jobs:
             path: Klia-Store-*.flatpak
 
   create-release:
-    needs: [check-release, build-deb, build-flatpak]
+    needs: [check-release, build-flatpak]
     if: needs.check-release.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download .deb artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: deb-package
 
       - name: Download Flatpak artifact
         uses: actions/download-artifact@v4
@@ -181,7 +129,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            Klia-Store-*.deb
             Klia-Store-*.flatpak
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
