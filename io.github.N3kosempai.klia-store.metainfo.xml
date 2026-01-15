@@ -47,6 +47,16 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.5.42" date="2026-01-15">
+      <description>
+        <p>🚨 Critical Hotfix:</p>
+        <ul>
+        <li>Fixed network connectivity issues caused by upstream dependency bug in tauri-plugin-http v2.5.5</li>
+        <li>Pinned plugin versions to stable releases to prevent automatic updates breaking functionality</li>
+        <li>Restored full functionality for fetching app metadata, images, and repository information</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.5.41" date="2025-01-15">
       <description>
         <p>🔧 Technical Update:</p>
