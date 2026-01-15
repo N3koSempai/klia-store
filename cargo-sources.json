@@ -5423,14 +5423,14 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
-        "url": "https://static.crates.io/crates/tauri-plugin-http/tauri-plugin-http-2.5.5.crate",
-        "sha256": "5d9f979c19bc247893adc813cb041381d2bb29cc9872500b872281c26e4b3cbc",
-        "dest": "cargo/vendor/tauri-plugin-http-2.5.5"
+        "url": "https://static.crates.io/crates/tauri-plugin-http/tauri-plugin-http-2.5.4.crate",
+        "sha256": "c00685aceab12643cf024f712ab0448ba8fcadf86f2391d49d2e5aa732aacc70",
+        "dest": "cargo/vendor/tauri-plugin-http-2.5.4"
     },
     {
         "type": "inline",
-        "contents": "{\"package\": \"5d9f979c19bc247893adc813cb041381d2bb29cc9872500b872281c26e4b3cbc\", \"files\": {}}",
-        "dest": "cargo/vendor/tauri-plugin-http-2.5.5",
+        "contents": "{\"package\": \"c00685aceab12643cf024f712ab0448ba8fcadf86f2391d49d2e5aa732aacc70\", \"files\": {}}",
+        "dest": "cargo/vendor/tauri-plugin-http-2.5.4",
         "dest-filename": ".cargo-checksum.json"
     },
     {
