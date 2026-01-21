@@ -1,6 +1,7 @@
+import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
-import { CircularProgress, InputAdornment, TextField } from "@mui/material";
-import { useState } from "react";
+import { CircularProgress, IconButton, InputAdornment, TextField } from "@mui/material";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedCallback } from "use-debounce";
 import { apiService } from "../services/api";
@@ -9,12 +10,18 @@ import type { CategoryApp } from "../types";
 interface AppSearchBarProps {
 	onSearch: (query: string, results: CategoryApp[]) => void;
 	onLoading: (isLoading: boolean) => void;
+	initialValue?: string;
 }
 
-export const AppSearchBar = ({ onSearch, onLoading }: AppSearchBarProps) => {
+export const AppSearchBar = ({ onSearch, onLoading, initialValue = "" }: AppSearchBarProps) => {
 	const { t } = useTranslation();
-	const [inputValue, setInputValue] = useState("");
+	const [inputValue, setInputValue] = useState(initialValue);
 	const [isSearching, setIsSearching] = useState(false);
+
+	// Update input value when initialValue changes (e.g., navigating back)
+	useEffect(() => {
+		setInputValue(initialValue);
+	}, [initialValue]);
 
 	const performSearch = useDebouncedCallback(async (query: string) => {
 		if (!query.trim()) {
@@ -47,6 +54,12 @@ export const AppSearchBar = ({ onSearch, onLoading }: AppSearchBarProps) => {
 		const value = event.target.value;
 		setInputValue(value);
 		performSearch(value);
+	};
+
+	const handleClear = () => {
+		setInputValue("");
+		onSearch("", []);
+		onLoading(false);
 	};
 
 	return (
@@ -84,11 +97,26 @@ export const AppSearchBar = ({ onSearch, onLoading }: AppSearchBarProps) => {
 						<SearchIcon sx={{ color: "text.secondary" }} />
 					</InputAdornment>
 				),
-				endAdornment: isSearching ? (
+				endAdornment: (
 					<InputAdornment position="end">
-						<CircularProgress size={20} sx={{ color: "primary.main" }} />
+						{isSearching ? (
+							<CircularProgress size={20} sx={{ color: "primary.main" }} />
+						) : inputValue ? (
+							<IconButton
+								onClick={handleClear}
+								sx={{
+									color: "text.secondary",
+									padding: "8px",
+									"&:hover": {
+										color: "primary.main",
+									},
+								}}
+							>
+								<CloseIcon />
+							</IconButton>
+						) : null}
 					</InputAdornment>
-				) : null,
+				),
 			}}
 		/>
 	);

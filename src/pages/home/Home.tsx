@@ -27,22 +27,26 @@ import { CategoriesSection } from "./components/CategoriesSection";
 import { FeaturedSection } from "./components/FeaturedSection";
 
 interface HomeProps {
-	onAppSelect: (app: CategoryApp) => void;
+	onAppSelect: (app: CategoryApp, searchQuery?: string, searchResults?: CategoryApp[]) => void;
 	onCategorySelect: (categoryId: string) => void;
 	onMyAppsClick: () => void;
+	initialSearchQuery?: string;
+	initialSearchResults?: CategoryApp[];
 }
 
 export const Home = ({
 	onAppSelect,
 	onCategorySelect,
 	onMyAppsClick,
+	initialSearchQuery = "",
+	initialSearchResults = [],
 }: HomeProps) => {
 	const { t } = useTranslation();
 	const { getUpdateCount } = useInstalledAppsStore();
 	const updateCount = getUpdateCount();
-	const [searchResults, setSearchResults] = useState<CategoryApp[]>([]);
+	const [searchResults, setSearchResults] = useState<CategoryApp[]>(initialSearchResults);
 	const [isSearching, setIsSearching] = useState(false);
-	const [searchQuery, setSearchQuery] = useState("");
+	const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
 	const [aboutModalOpen, setAboutModalOpen] = useState(false);
 
 	const {
@@ -59,7 +63,7 @@ export const Home = ({
 	};
 
 	const handleAppClick = (categoryApp: CategoryApp) => {
-		onAppSelect(categoryApp);
+		onAppSelect(categoryApp, searchQuery, searchResults);
 	};
 
 	const showSearchResults = searchQuery.trim().length > 0;
@@ -122,7 +126,11 @@ export const Home = ({
 					</Paper>
 
 					{/* Barra de Búsqueda con componente integrado */}
-					<AppSearchBar onSearch={handleSearch} onLoading={setIsSearching} />
+					<AppSearchBar
+						onSearch={handleSearch}
+						onLoading={setIsSearching}
+						initialValue={initialSearchQuery}
+					/>
 
 					<NotificationMenu
 						notifications={notifications}

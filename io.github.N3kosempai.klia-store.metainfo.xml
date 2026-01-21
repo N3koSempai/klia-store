@@ -52,6 +52,9 @@
         <p>✨ Improvements:</p>
         <ul>
         <li>My Apps section now prioritizes apps with available updates at the top of the list</li>
+        <li>Search results are now preserved when navigating to app details and back</li>
+        <li>Added clear button (X) to search bar for quick search reset</li>
+        <li>Improved navigation flow: returning from categories and My Apps now shows clean home screen</li>
         </ul>
       </description>
     </release>
