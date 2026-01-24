@@ -23,6 +23,8 @@ interface NavigationState {
 	developerName?: string;
 	developerAppId?: string;
 	scrollPosition?: number;
+	searchQuery?: string;
+	searchResults?: CategoryApp[];
 }
 
 function App() {
@@ -76,7 +78,19 @@ function App() {
 	const navigateBack = () => {
 		if (navigationStack.length > 1) {
 			setNavigationStack((prev) => {
+				const currentView = prev[prev.length - 1].view;
 				const newStack = prev.slice(0, -1);
+				const targetState = newStack[newStack.length - 1];
+
+				// Clear search state when going back to home from views other than appDetails
+				if (targetState.view === "home" && currentView !== "appDetails") {
+					newStack[newStack.length - 1] = {
+						...targetState,
+						searchQuery: undefined,
+						searchResults: undefined,
+					};
+				}
+
 				// Restore scroll position after state update
 				setTimeout(() => {
 					restoreScrollPosition(newStack[newStack.length - 1].scrollPosition);
@@ -86,7 +100,19 @@ function App() {
 		}
 	};
 
-	const handleAppSelect = (app: CategoryApp) => {
+	const handleAppSelect = (app: CategoryApp, searchQuery?: string, searchResults?: CategoryApp[]) => {
+		// Save search state in current navigation state before navigating
+		if (searchQuery && searchResults) {
+			setNavigationStack((prev) => {
+				const newStack = [...prev];
+				newStack[newStack.length - 1] = {
+					...newStack[newStack.length - 1],
+					searchQuery,
+					searchResults,
+				};
+				return newStack;
+			});
+		}
 		navigateTo({ view: "appDetails", app });
 	};
 
@@ -227,6 +253,8 @@ function App() {
 						onAppSelect={handleAppSelect}
 						onCategorySelect={handleCategorySelect}
 						onMyAppsClick={handleMyAppsClick}
+						initialSearchQuery={currentState.searchQuery}
+						initialSearchResults={currentState.searchResults}
 					/>
 				)}
 			</Box>
