@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
 import { useAppOfTheDay } from "../../../hooks/useAppOfTheDay";
 import type { AppStream, CategoryApp } from "../../../types";
+import hetairosLogo from "../../../assets/internalPromo/hentairos_logo.png";
 
 interface FeaturedSectionProps {
 	onAppSelect: (app: CategoryApp) => void;
@@ -51,7 +52,17 @@ interface PromotedAppCardData {
 }
 
 // Set to null to disable promoted app
-const PROMOTED_APP: PromotedAppCardData | null = null;
+const PROMOTED_APP: PromotedAppCardData | null = {
+	appId: "io.github.N3kosempai.hetairos-ai",
+	name: "Hetairos AI",
+	summary: "Your AI Companion. Loyal. Intelligent. Personal.",
+	icon: hetairosLogo,
+	appStream: {
+		id: "io.github.N3kosempai.hetairos-ai",
+		name: "Hetairos AI",
+		summary: "Your AI Companion. Loyal. Intelligent. Personal.",
+	} as AppStream,
+};
 
 export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const { t } = useTranslation();
@@ -66,8 +77,8 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	type Slide = BackendSlide | PromotedSlide;
 
 	const slides: Slide[] = [];
-	if (appOfTheDay) slides.push({ type: "backend", data: appOfTheDay });
 	if (PROMOTED_APP) slides.push({ type: "promoted", data: PROMOTED_APP });
+	if (appOfTheDay) slides.push({ type: "backend", data: appOfTheDay });
 
 	const totalSlides = slides.length;
 
@@ -211,30 +222,32 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 										overflow: "hidden",
 									}}
 								>
-									<CachedImage
-										appId={
-											currentSlide.type === "backend"
-												? currentSlide.data?.app_id || ""
-												: currentSlide.data.appId
-										}
-										imageUrl={
-											currentSlide.type === "backend"
-												? currentSlide.data?.icon || ""
-												: currentSlide.data.icon
-										}
-										alt={
-											currentSlide.type === "backend"
-												? currentSlide.data?.name ||
-													currentSlide.data?.app_id ||
-													""
-												: currentSlide.data.name
-										}
-										style={{
-											width: "100%",
-											height: "100%",
-											objectFit: "contain",
-										}}
-									/>
+									{currentSlide.type === "promoted" ? (
+										<img
+											src={currentSlide.data.icon}
+											alt={currentSlide.data.name}
+											style={{
+												width: "100%",
+												height: "100%",
+												objectFit: "contain",
+											}}
+										/>
+									) : (
+										<CachedImage
+											appId={currentSlide.data?.app_id || ""}
+											imageUrl={currentSlide.data?.icon || ""}
+											alt={
+												currentSlide.data?.name ||
+												currentSlide.data?.app_id ||
+												""
+											}
+											style={{
+												width: "100%",
+												height: "100%",
+												objectFit: "contain",
+											}}
+										/>
+									)}
 								</Box>
 							</Box>
 
