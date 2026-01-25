@@ -1,46 +1,17 @@
 import { alpha, Box, Card, Chip, Skeleton, Typography } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
 import { useAppOfTheDay } from "../../../hooks/useAppOfTheDay";
-import type { AppStream, CategoryApp } from "../../../types";
+import { apiService } from "../../../services/api";
+import type { CategoryApp } from "../../../types";
 import hetairosLogo from "../../../assets/internalPromo/hentairos_logo.png";
 
 interface FeaturedSectionProps {
 	onAppSelect: (app: CategoryApp) => void;
 }
 
-// Helper to convert AppStream to CategoryApp with defaults
-const appStreamToCategoryApp = (appStream: AppStream): CategoryApp => ({
-	app_id: appStream.id,
-	name: appStream.name,
-	summary: appStream.summary,
-	description: appStream.description || "",
-	icon: appStream.icon || appStream.icons?.[0]?.url || "",
-	id: appStream.id,
-	type: "desktop-application",
-	keywords: null,
-	translations: {},
-	project_license: "Unknown",
-	is_free_license: true,
-	main_categories: "",
-	sub_categories: [],
-	developer_name: "",
-	verification_verified: false,
-	verification_method: "",
-	verification_login_name: null,
-	verification_login_provider: null,
-	verification_login_is_organization: null,
-	verification_website: null,
-	verification_timestamp: null,
-	runtime: "",
-	updated_at: 0,
-	arches: [],
-	added_at: 0,
-	trending: 0,
-	installs_last_month: 0,
-	isMobileFriendly: false,
-});
 
 // Promoted app card component (disabled by default)
 interface PromotedAppCardData {
@@ -48,25 +19,37 @@ interface PromotedAppCardData {
 	name: string;
 	summary: string;
 	icon: string;
-	appStream: AppStream;
+	categoryApp?: CategoryApp;
 }
 
 // Set to null to disable promoted app
-const PROMOTED_APP: PromotedAppCardData | null = {
-	appId: "io.github.N3kosempai.hetairos-ai",
-	name: "Hetairos AI",
-	summary: "Your AI Companion. Loyal. Intelligent. Personal.",
-	icon: hetairosLogo,
-	appStream: {
-		id: "io.github.N3kosempai.hetairos-ai",
-		name: "Hetairos AI",
-		summary: "Your AI Companion. Loyal. Intelligent. Personal.",
-	} as AppStream,
-};
+const PROMOTED_APP_ID = "io.github.N3kosempai.hetairos-ai";
 
 export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const { t } = useTranslation();
 	const { data: appOfTheDay, isLoading, error } = useAppOfTheDay();
+
+	// Fetch promoted app with React Query (cached)
+	const { data: promotedApp } = useQuery({
+		queryKey: ["promotedApp", PROMOTED_APP_ID],
+		queryFn: async () => {
+			if (!PROMOTED_APP_ID) return null;
+
+			const categoryApp = await apiService.getCategoryApp(PROMOTED_APP_ID);
+			if (!categoryApp) return null;
+
+			return {
+				appId: PROMOTED_APP_ID,
+				name: categoryApp.name,
+				summary: categoryApp.summary,
+				icon: hetairosLogo,
+				categoryApp: categoryApp,
+			} as PromotedAppCardData;
+		},
+		enabled: !!PROMOTED_APP_ID,
+		staleTime: Infinity, // Never refetch, keep in cache
+		gcTime: Infinity, // Never garbage collect
+	});
 
 	// Carousel state - includes backend app and optional promoted app
 	const [activeSlide, setActiveSlide] = useState(0);
@@ -77,7 +60,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	type Slide = BackendSlide | PromotedSlide;
 
 	const slides: Slide[] = [];
-	if (PROMOTED_APP) slides.push({ type: "promoted", data: PROMOTED_APP });
+	if (promotedApp) slides.push({ type: "promoted", data: promotedApp });
 	if (appOfTheDay) slides.push({ type: "backend", data: appOfTheDay });
 
 	const totalSlides = slides.length;
@@ -171,32 +154,10 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 						},
 					}}
 					onClick={() => {
-						if (currentSlide.type === "backend") {
-							// Use categoryApp if available, otherwise convert appStream
-							const categoryApp = currentSlide.data?.categoryApp;
-							console.log(
-								"[FeaturedSection] Click - has categoryApp:",
-								!!categoryApp,
-							);
-							console.log(
-								"[FeaturedSection] categoryApp license:",
-								categoryApp?.project_license,
-							);
-							if (categoryApp) {
-								onAppSelect(categoryApp);
-							} else if (currentSlide.data?.appStream) {
-								console.log("[FeaturedSection] Using appStream fallback");
-								onAppSelect(
-									appStreamToCategoryApp(currentSlide.data.appStream),
-								);
-							}
-						} else {
-							// Promoted app
-							if (currentSlide.data.appStream) {
-								onAppSelect(
-									appStreamToCategoryApp(currentSlide.data.appStream),
-								);
-							}
+						if (currentSlide.type === "backend" && currentSlide.data?.categoryApp) {
+							onAppSelect(currentSlide.data.categoryApp);
+						} else if (currentSlide.type === "promoted" && currentSlide.data.categoryApp) {
+							onAppSelect(currentSlide.data.categoryApp);
 						}
 					}}
 				>
