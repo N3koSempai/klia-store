@@ -47,7 +47,7 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.5.51" date="2026-01-27">
+    <release version="2.5.52" date="2026-01-27">
       <description>
         <p>🔧 Hotfix:</p>
         <ul>
