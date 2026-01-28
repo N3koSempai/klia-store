@@ -47,11 +47,12 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.5.51" date="2026-01-27" type="hotfix">
+    <release version="2.5.51" date="2026-01-27">
       <description>
         <p>🔧 Hotfix:</p>
         <ul>
-        <li>Fixed critical issue from previous release that prevented proper application functionality</li>
+        <li
+                    >Fixed critical issue from previous release that prevented proper application functionality</li>
         </ul>
       </description>
     </release>
