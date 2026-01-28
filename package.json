@@ -1,7 +1,7 @@
 {
   "name": "klia-store",
   "private": true,
-  "version": "2.5.5",
+  "version": "2.5.51",
   "type": "module",
   "scripts": {
     "dev": "vite",

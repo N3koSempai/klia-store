@@ -47,14 +47,11 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.5.5" date="2026-01-21">
+    <release version="2.5.51" date="2026-01-27" type="hotfix">
       <description>
-        <p>✨ Improvements:</p>
+        <p>🔧 Hotfix:</p>
         <ul>
-        <li>My Apps section now prioritizes apps with available updates at the top of the list</li>
-        <li>Search results are now preserved when navigating to app details and back</li>
-        <li>Added clear button (X) to search bar for quick search reset</li>
-        <li>Improved navigation flow: returning from categories and My Apps now shows clean home screen</li>
+        <li>Fixed critical issue from previous release that prevented proper application functionality</li>
         </ul>
       </description>
     </release>
