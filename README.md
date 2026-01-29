@@ -1,5 +1,7 @@
 # KliaStore
 
+![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/N3koSempai/kliaStore/refs/heads/master/.github/test-results.json)
+
 A modern desktop application for browsing and managing Flatpak applications from Flathub
 ## Features
 
@@ -26,22 +28,33 @@ A modern desktop application for browsing and managing Flatpak applications from
 
 - Node.js 20+
 - Rust
-- pnpm (`corepack enable pnpm`)
+- npm
 
 ### Setup
 
 ```bash
 # Install dependencies
-pnpm install
+npm install
 
-# Run development server (IMPORTANT: use tauri dev, not just dev)
-pnpm tauri dev
+# Run development server
+npm run tauri dev
 
 # Build for production
-pnpm tauri build
+npm run tauri build
 ```
 
-> **Important**: Always use `pnpm tauri dev` instead of `pnpm dev`. The Tauri context is required for the app to function properly.
+### Testing
+
+```bash
+# Frontend tests (Playwright)
+npm test
+
+# Tauri app tests (WebDriver)
+npm run test:tauri          # Uses existing binary (fast)
+npm run test:tauri:rebuild  # Force rebuild
+```
+
+> **Note**: When committing with `[release]` in the message, tests run automatically and results are added to the commit.
 
 ## Building and Distribution
 
