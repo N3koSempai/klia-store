@@ -46,12 +46,9 @@ npm run tauri build
 ### Testing
 
 ```bash
-# Frontend tests (Playwright)
-npm test
-
-# Tauri app tests (WebDriver)
-npm run test:tauri          # Uses existing binary (fast)
-npm run test:tauri:rebuild  # Force rebuild
+# Run tests (WebDriver)
+npm test              # Uses existing binary (fast)
+npm run test:rebuild  # Force rebuild
 ```
 
 > **Note**: When committing with `[release]` in the message, tests run automatically and results are added to the commit.

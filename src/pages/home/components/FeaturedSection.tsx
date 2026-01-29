@@ -137,6 +137,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 			{/* Hero Card */}
 			{currentSlide && (
 				<Card
+					id={currentSlide.type === "promoted" ? "featured-promoted-card" : "featured-card"}
 					sx={{
 						position: "relative",
 						overflow: "hidden",

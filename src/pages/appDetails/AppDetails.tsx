@@ -375,7 +375,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
   return (
     <Box sx={{ p: 3, minHeight: "100vh" }}>
       {/* Botón de regreso */}
-      <IconButton onClick={onBack} sx={{ mb: 2 }}>
+      <IconButton id="app-detail-back-button" onClick={onBack} sx={{ mb: 2 }}>
         <ArrowBack />
       </IconButton>
 

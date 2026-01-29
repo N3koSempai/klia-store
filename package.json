@@ -8,11 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:report": "playwright show-report",
-    "test:tauri": "./scripts/test-tauri.sh",
-    "test:tauri:rebuild": "rm -f src-tauri/target/release/klia-store && ./scripts/test-tauri.sh"
+    "test": "./scripts/test-tauri.sh",
+    "test:rebuild": "rm -f src-tauri/target/release/klia-store && ./scripts/test-tauri.sh"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -39,7 +36,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.6",
-    "@playwright/test": "^1.58.0",
     "@tanstack/eslint-plugin-query": "^5.91.0",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
