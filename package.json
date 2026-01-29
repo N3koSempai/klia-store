@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report",
+    "test:tauri": "./scripts/test-tauri.sh",
+    "test:tauri:rebuild": "rm -f src-tauri/target/release/klia-store && ./scripts/test-tauri.sh"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -34,12 +39,18 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.6",
+    "@playwright/test": "^1.58.0",
     "@tanstack/eslint-plugin-query": "^5.91.0",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "@wdio/cli": "^9.23.2",
+    "@wdio/local-runner": "^9.23.2",
+    "@wdio/mocha-framework": "^9.23.2",
+    "@wdio/spec-reporter": "^9.23.2",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "webdriverio": "^9.23.2"
   }
 }
