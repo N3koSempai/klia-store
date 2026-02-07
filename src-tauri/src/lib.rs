@@ -8,6 +8,9 @@ use tauri::{Emitter, Manager, State};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::ShellExt;
 
+#[cfg(target_os = "linux")]
+use std::fs::File;
+
 #[derive(Serialize)]
 struct InstalledApp {
     app_id: String,
@@ -96,6 +99,172 @@ struct Dependency {
     name: String,
     download_size: String,
     installed_size: String,
+}
+
+// System Analytics Struct
+#[derive(Serialize)]
+struct SystemAnalytics {
+    disk_usage: DiskUsage,
+    flatpak_stats: FlatpakStats,
+    system_info: SystemInfo,
+}
+
+#[derive(Serialize)]
+struct DiskUsage {
+    total_gb: f64,
+    used_gb: f64,
+    available_gb: f64,
+    usage_percent: f64,
+}
+
+#[derive(Serialize)]
+struct FlatpakStats {
+    total_apps: usize,
+    total_runtimes: usize,
+    total_extensions: usize,
+    apps_with_updates: usize,
+}
+
+#[derive(Serialize)]
+struct SystemInfo {
+    os_name: String,
+    kernel_version: String,
+    hostname: String,
+}
+
+// Get system analytics data
+#[tauri::command]
+async fn get_system_analytics(app: tauri::AppHandle) -> Result<SystemAnalytics, String> {
+    // Get disk usage
+    let disk_usage = get_disk_usage().await?;
+
+    // Get flatpak statistics
+    let flatpak_stats = get_flatpak_stats(app.clone()).await?;
+
+    // Get system info
+    let system_info = get_system_info().await?;
+
+    Ok(SystemAnalytics {
+        disk_usage,
+        flatpak_stats,
+        system_info,
+    })
+}
+
+#[cfg(target_os = "linux")]
+async fn get_disk_usage() -> Result<DiskUsage, String> {
+    use std::io::BufRead;
+
+    // Read /proc/mounts to find home partition
+    let mounts_file = File::open("/proc/mounts")
+        .map_err(|e| format!("Failed to open /proc/mounts: {}", e))?;
+    let reader = BufReader::new(mounts_file);
+
+    let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/home".to_string());
+    let mut home_device = String::new();
+
+    for line in reader.lines() {
+        if let Ok(line) = line {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                let mount_point = parts[1];
+                if home_dir.starts_with(mount_point) && mount_point.len() > home_device.len() {
+                    home_device = parts[0].to_string();
+                }
+            }
+        }
+    }
+
+    // Use statvfs to get filesystem stats
+    let output = Command::new("df")
+        .args(["-B1", &home_dir])
+        .output()
+        .map_err(|e| format!("Failed to execute df: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+
+    if lines.len() >= 2 {
+        let parts: Vec<&str> = lines[1].split_whitespace().collect();
+        if parts.len() >= 5 {
+            let total = parts[1].parse::<f64>().unwrap_or(0.0) / 1_073_741_824.0; // Convert to GB
+            let used = parts[2].parse::<f64>().unwrap_or(0.0) / 1_073_741_824.0;
+            let available = parts[3].parse::<f64>().unwrap_or(0.0) / 1_073_741_824.0;
+            let usage_percent = if total > 0.0 { (used / total) * 100.0 } else { 0.0 };
+
+            return Ok(DiskUsage {
+                total_gb: total,
+                used_gb: used,
+                available_gb: available,
+                usage_percent,
+            });
+        }
+    }
+
+    Err("Failed to parse disk usage".to_string())
+}
+
+#[cfg(not(target_os = "linux"))]
+async fn get_disk_usage() -> Result<DiskUsage, String> {
+    Ok(DiskUsage {
+        total_gb: 0.0,
+        used_gb: 0.0,
+        available_gb: 0.0,
+        usage_percent: 0.0,
+    })
+}
+
+async fn get_flatpak_stats(app: tauri::AppHandle) -> Result<FlatpakStats, String> {
+    let installed = get_installed_flatpaks(app.clone()).await?;
+    let updates = get_available_updates(app).await?;
+
+    Ok(FlatpakStats {
+        total_apps: installed.apps.len(),
+        total_runtimes: installed.runtimes.len(),
+        total_extensions: installed.extensions.len(),
+        apps_with_updates: updates.len(),
+    })
+}
+
+async fn get_system_info() -> Result<SystemInfo, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let os_name = std::fs::read_to_string("/etc/os-release")
+            .ok()
+            .and_then(|content| {
+                content.lines()
+                    .find(|line| line.starts_with("PRETTY_NAME="))
+                    .map(|line| line.trim_start_matches("PRETTY_NAME=").trim_matches('"').to_string())
+            })
+            .unwrap_or_else(|| "Linux".to_string());
+
+        let kernel_version = std::fs::read_to_string("/proc/version")
+            .ok()
+            .and_then(|content| {
+                content.split_whitespace().nth(2).map(|s| s.to_string())
+            })
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        let hostname = std::fs::read_to_string("/etc/hostname")
+            .unwrap_or_else(|_| "localhost".to_string())
+            .trim()
+            .to_string();
+
+        Ok(SystemInfo {
+            os_name,
+            kernel_version,
+            hostname,
+        })
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        Ok(SystemInfo {
+            os_name: "Unknown".to_string(),
+            kernel_version: "Unknown".to_string(),
+            hostname: "localhost".to_string(),
+        })
+    }
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -1546,7 +1715,8 @@ pub fn run() {
             start_flatpak_interactive,
             send_to_pty,
             kill_pty_process,
-            check_pty_process
+            check_pty_process,
+            get_system_analytics
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
