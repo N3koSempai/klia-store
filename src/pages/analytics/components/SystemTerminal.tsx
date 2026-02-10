@@ -6,12 +6,18 @@ interface SystemTerminalProps {
 	selectedApp: InstalledAppInfo | null;
 	totalApps: number;
 	loading: boolean;
+	permissionFilter: string | null;
+	installedApps: InstalledAppInfo[];
+	onAppSelect: (app: InstalledAppInfo | null) => void;
 }
 
 export const SystemTerminal = ({
 	selectedApp,
 	totalApps,
 	loading,
+	permissionFilter,
+	installedApps,
+	onAppSelect,
 }: SystemTerminalProps) => {
 	const terminalRef = useRef<HTMLDivElement>(null);
 
@@ -28,6 +34,133 @@ export const SystemTerminal = ({
 					<CircularProgress size={16} sx={{ color: "#58a6ff" }} />
 					<Typography sx={{ color: "#8b949e", fontFamily: "monospace", fontSize: "0.875rem" }}>
 						Initializing system...
+					</Typography>
+				</Box>
+			);
+		}
+
+		// Si hay filtro activo y no hay app seleccionada, mostrar listado de apps con ese permiso
+		if (!selectedApp && permissionFilter) {
+			const appsWithPermission = installedApps.filter(app =>
+				app.permissions?.includes(permissionFilter)
+			);
+
+			const permissionLabels: Record<string, string> = {
+				storage: "STORAGE",
+				camera: "CAMERA",
+				files: "FILES",
+			};
+
+			return (
+				<Box sx={{ p: 2 }}>
+					<Typography
+						sx={{
+							color: "#58a6ff",
+							fontFamily: "monospace",
+							fontSize: "0.875rem",
+							fontWeight: 700,
+							mb: 2,
+						}}
+					>
+						╔════════════════════════════════════════╗
+						<br />
+						║ PERMISSION FILTER: {permissionLabels[permissionFilter] || permissionFilter.toUpperCase()}
+						<br />
+						╚════════════════════════════════════════╝
+					</Typography>
+
+					<Typography
+						sx={{
+							color: "#ffa657",
+							fontFamily: "monospace",
+							fontSize: "0.75rem",
+							fontWeight: 700,
+							mb: 1,
+						}}
+					>
+						[APPS WITH {permissionLabels[permissionFilter]} PERMISSION]
+					</Typography>
+
+					<Typography
+						sx={{
+							color: "#8b949e",
+							fontFamily: "monospace",
+							fontSize: "0.75rem",
+							mb: 2,
+						}}
+					>
+						Total: {appsWithPermission.length} / {totalApps} apps
+					</Typography>
+
+					{appsWithPermission.length === 0 ? (
+						<Typography
+							sx={{
+								color: "#8b949e",
+								fontFamily: "monospace",
+								fontSize: "0.75rem",
+								fontStyle: "italic",
+							}}
+						>
+							No apps found with this permission.
+						</Typography>
+					) : (
+						<Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+							{appsWithPermission.map((app, index) => (
+								<Box
+									key={app.appId}
+									onClick={() => onAppSelect(app)}
+									sx={{
+										color: "#c9d1d9",
+										fontFamily: "monospace",
+										fontSize: "0.75rem",
+										lineHeight: 1.8,
+										pl: 1,
+										borderLeft: "2px solid #ffd700",
+										cursor: "pointer",
+										transition: "all 0.2s",
+										"&:hover": {
+											bgcolor: "rgba(255, 215, 0, 0.1)",
+											borderLeftColor: "#ffed4e",
+											transform: "translateX(4px)",
+										},
+									}}
+								>
+									<Typography
+										component="span"
+										sx={{
+											fontFamily: "monospace",
+											fontSize: "0.75rem",
+											lineHeight: 1.8,
+										}}
+									>
+										<span style={{ color: "#ffd700" }}>{(index + 1).toString().padStart(2, "0")}.</span>{" "}
+										<span style={{ color: "#56d364" }}>{app.name}</span>
+										<br />
+										<span style={{ color: "#8b949e", paddingLeft: "24px" }}>
+											{app.appId}
+										</span>
+									</Typography>
+								</Box>
+							))}
+						</Box>
+					)}
+
+					<Typography
+						sx={{
+							color: "#8b949e",
+							fontFamily: "monospace",
+							fontSize: "0.75rem",
+							mt: 3,
+							pt: 2,
+							borderTop: "1px solid #30363d",
+						}}
+					>
+						[INFO] Click on an app in the 3D view for details
+						<br />
+						[INFO] Click the filter badge again to clear
+						<br />
+						<br />
+						<span style={{ color: "#58a6ff" }}>▊</span>
 					</Typography>
 				</Box>
 			);

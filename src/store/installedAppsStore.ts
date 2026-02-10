@@ -6,6 +6,7 @@ export interface InstalledAppInfo {
 	version: string;
 	summary?: string;
 	developer?: string; // Developer name extracted from app_id (e.g., "N3kosempai", "mozilla")
+	permissions?: string[]; // Flatpak permissions (e.g., "camera", "files", "storage")
 }
 
 export interface InstalledExtensionInfo {

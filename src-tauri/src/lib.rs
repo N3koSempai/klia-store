@@ -18,6 +18,7 @@ struct InstalledApp {
     version: String,
     summary: Option<String>,
     developer: Option<String>,
+    permissions: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
@@ -87,6 +88,97 @@ fn extract_developer(app_id: &str) -> Option<String> {
     }
 }
 
+// Helper function to get app permissions from flatpak
+fn get_app_permissions(app_id: &str, is_flatpak: bool) -> Option<Vec<String>> {
+    let output = if is_flatpak {
+        Command::new("flatpak-spawn")
+            .args(&["--host", "flatpak", "info", "--show-permissions", app_id])
+            .output()
+            .ok()?
+    } else {
+        Command::new("flatpak")
+            .args(&["info", "--show-permissions", app_id])
+            .output()
+            .ok()?
+    };
+
+    if !output.status.success() {
+        println!("[DEBUG] Failed to get permissions for {}: command failed", app_id);
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut permissions = Vec::new();
+    let mut has_camera = false;
+    let mut has_files = false;
+    let mut has_storage = false;
+
+    println!("[DEBUG] Parsing permissions for {}:", app_id);
+
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('[') {
+            continue;
+        }
+
+        println!("[DEBUG]   Line: {}", line);
+
+        // Look for specific permissions we care about
+        // Camera: devices=all (full device access) or specific video devices
+        if !has_camera && line.contains("devices=") {
+            let devices_part = line.split("devices=").nth(1).unwrap_or("");
+            let devices_value = devices_part.split(';').next().unwrap_or("").trim();
+            println!("[DEBUG]     Found devices: '{}'", devices_value);
+            // Only consider "all" as camera permission (dri is just GPU acceleration)
+            if devices_value == "all" {
+                permissions.push("camera".to_string());
+                has_camera = true;
+                println!("[DEBUG]     Added camera permission");
+            }
+        }
+
+        // Files: filesystems= with any value
+        if !has_files && line.contains("filesystems=") {
+            let filesystems_part = line.split("filesystems=").nth(1).unwrap_or("");
+            let filesystems_value = filesystems_part.split(';').next().unwrap_or("").trim();
+            println!("[DEBUG]     Found filesystems: '{}'", filesystems_value);
+            if !filesystems_value.is_empty() {
+                permissions.push("files".to_string());
+                has_files = true;
+                println!("[DEBUG]     Added files permission");
+            }
+        }
+
+        // Storage: persist= or filesystems containing home/host
+        if !has_storage {
+            if line.contains("persist=") {
+                let persist_part = line.split("persist=").nth(1).unwrap_or("");
+                let persist_value = persist_part.split(';').next().unwrap_or("").trim();
+                println!("[DEBUG]     Found persist: '{}'", persist_value);
+                if !persist_value.is_empty() {
+                    permissions.push("storage".to_string());
+                    has_storage = true;
+                    println!("[DEBUG]     Added storage permission (persist)");
+                }
+            } else if line.contains("filesystems=") {
+                if line.contains("home") || line.contains("host") || line.contains("xdg-download") {
+                    permissions.push("storage".to_string());
+                    has_storage = true;
+                    println!("[DEBUG]     Added storage permission (filesystems with home/host/xdg-download)");
+                }
+            }
+        }
+    }
+
+    println!("[DEBUG] Final permissions for {}: {:?}", app_id, permissions);
+
+    if permissions.is_empty() {
+        None
+    } else {
+        Some(permissions)
+    }
+}
+
 #[derive(Serialize)]
 struct UpdateAvailable {
     app_id: String,
@@ -133,6 +225,25 @@ struct SystemInfo {
 }
 
 // Get system analytics data
+#[tauri::command]
+async fn get_app_permissions_batch(
+    app: tauri::AppHandle,
+    app_ids: Vec<String>,
+) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
+    use std::collections::HashMap;
+
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+    let mut result = HashMap::new();
+
+    for app_id in app_ids {
+        if let Some(perms) = get_app_permissions(&app_id, is_flatpak) {
+            result.insert(app_id, perms);
+        }
+    }
+
+    Ok(result)
+}
+
 #[tauri::command]
 async fn get_system_analytics(app: tauri::AppHandle) -> Result<SystemAnalytics, String> {
     // Get disk usage
@@ -635,6 +746,7 @@ async fn get_installed_flatpaks(
                         None
                     },
                     developer: extract_developer(app_id),
+                    permissions: None, // Don't get permissions here, too slow
                 });
             }
         }
@@ -1716,7 +1828,8 @@ pub fn run() {
             send_to_pty,
             kill_pty_process,
             check_pty_process,
-            get_system_analytics
+            get_system_analytics,
+            get_app_permissions_batch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

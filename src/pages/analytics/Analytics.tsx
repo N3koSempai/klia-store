@@ -31,20 +31,48 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 	const [analytics, setAnalytics] = useState<SystemAnalytics | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [selectedApp, setSelectedApp] = useState<InstalledAppInfo | null>(null);
+	const [permissionFilter, setPermissionFilter] = useState<string | null>(null);
 
 	// Get installed apps from store
 	const allApps = useInstalledAppsStore((state) => state.installedAppsInfo);
 
-	// Remove duplicates using useMemo to avoid infinite loops
-	const installedAppsInfo = useMemo(() => {
-		return allApps.filter((app, index, self) =>
+	// Remove duplicates and add permissions using useMemo to avoid infinite loops
+	const [installedAppsInfo, setInstalledAppsInfo] = useState<InstalledAppInfo[]>([]);
+
+	useEffect(() => {
+		const uniqueApps = allApps.filter((app, index, self) =>
 			index === self.findIndex((a) => a.appId === app.appId)
 		);
+		setInstalledAppsInfo(uniqueApps);
+
+		// Load permissions for all apps
+		if (uniqueApps.length > 0) {
+			loadPermissions(uniqueApps);
+		}
 	}, [allApps]);
 
 	useEffect(() => {
 		loadAnalytics();
 	}, []);
+
+	const loadPermissions = async (apps: InstalledAppInfo[]) => {
+		try {
+			const appIds = apps.map(app => app.appId);
+			const permissions = await invoke<Record<string, string[]>>("get_app_permissions_batch", { appIds });
+
+			console.log("[DEBUG] Permissions loaded:", permissions);
+
+			// Update apps with permissions
+			setInstalledAppsInfo(prevApps =>
+				prevApps.map(app => ({
+					...app,
+					permissions: permissions[app.appId] || []
+				}))
+			);
+		} catch (error) {
+			console.error("Error loading permissions:", error);
+		}
+	};
 
 	const loadAnalytics = async () => {
 		try {
@@ -187,6 +215,8 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 						installedApps={installedAppsInfo}
 						loading={loading}
 						onAppSelect={setSelectedApp}
+						onPermissionFilterChange={setPermissionFilter}
+						selectedApp={selectedApp}
 					/>
 				</Box>
 
@@ -196,6 +226,9 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 						selectedApp={selectedApp}
 						totalApps={installedAppsInfo.length}
 						loading={loading}
+						permissionFilter={permissionFilter}
+						installedApps={installedAppsInfo}
+						onAppSelect={setSelectedApp}
 					/>
 				</Box>
 			</Box>
