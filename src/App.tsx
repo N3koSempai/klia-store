@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import TitleBar from "./components/TitleBar";
 import { useAppInitialization } from "./hooks/useAppInitialization";
 import { useInstalledApps } from "./hooks/useInstalledApps";
+import { Analytics } from "./pages/analytics/Analytics";
 import { AppDetails } from "./pages/appDetails/AppDetails";
 import { CategoryApps } from "./pages/categoryApps/CategoryApps";
 import { DeveloperProfile } from "./pages/developerProfile/DeveloperProfile";
@@ -13,7 +14,7 @@ import { Welcome } from "./pages/welcome/Welcome";
 import type { CategoryApp } from "./types";
 import "./App.css";
 
-type ViewType = "home" | "appDetails" | "category" | "myApps" | "developer";
+type ViewType = "home" | "appDetails" | "category" | "myApps" | "developer" | "analytics";
 
 interface NavigationState {
 	view: ViewType;
@@ -124,6 +125,10 @@ function App() {
 		navigateTo({ view: "myApps" });
 	};
 
+	const handleAnalyticsClick = () => {
+		navigateTo({ view: "analytics" });
+	};
+
 	const handleDeveloperSelect = (
 		developerId: string,
 		developerName: string,
@@ -212,7 +217,7 @@ function App() {
 				sx={{
 					marginTop: "40px",
 					height: "calc(100vh - 40px)",
-					overflow: "auto",
+					overflow: currentState.view === "analytics" ? "hidden" : "auto",
 					border: "1px solid rgba(255,255,255,0.05)",
 					borderTop: "none",
 				}}
@@ -248,11 +253,16 @@ function App() {
 					/>
 				)}
 
+				{currentState.view === "analytics" && (
+					<Analytics onBack={navigateBack} />
+				)}
+
 				{currentState.view === "home" && (
 					<Home
 						onAppSelect={handleAppSelect}
 						onCategorySelect={handleCategorySelect}
 						onMyAppsClick={handleMyAppsClick}
+						onAnalyticsClick={handleAnalyticsClick}
 						initialSearchQuery={currentState.searchQuery}
 						initialSearchResults={currentState.searchResults}
 					/>

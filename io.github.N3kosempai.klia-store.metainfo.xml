@@ -47,12 +47,15 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.5.52" date="2026-01-27">
+    <release version="2.6.0" date="2026-02-11">
       <description>
-        <p>🔧 Hotfix:</p>
+        <p>📊 New Feature: 3D System Analytics</p>
         <ul>
-        <li
-                    >Fixed critical issue from previous release that prevented proper application functionality</li>
+          <li
+                    >Discover your system's heart through our new immersive 3D Analytics component.</li>
+          <li>Visualize your installed applications in a dynamic data cube.</li>
+          <li
+                    >Easily explore app permissions, storage usage, and technical metadata in a sleek, modern interface.</li>
         </ul>
       </description>
     </release>

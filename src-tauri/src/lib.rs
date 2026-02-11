@@ -8,6 +8,9 @@ use tauri::{Emitter, Manager, State};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::ShellExt;
 
+#[cfg(target_os = "linux")]
+use std::fs::File;
+
 #[derive(Serialize)]
 struct InstalledApp {
     app_id: String,
@@ -15,6 +18,8 @@ struct InstalledApp {
     version: String,
     summary: Option<String>,
     developer: Option<String>,
+    permissions: Option<Vec<String>>,
+    installed_size: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -69,6 +74,30 @@ fn build_flatpak_dependency_check_cmd(is_flatpak: bool, app_id: &str) -> String 
     }
 }
 
+// Helper function to parse size string from flatpak list output
+// Format examples: "715,3 MB", "1,2 GB", "16,9 MB", "2,5 kB"
+fn parse_size_string(size_str: &str) -> Option<u64> {
+    let parts: Vec<&str> = size_str.trim().split_whitespace().collect();
+    if parts.len() != 2 {
+        return None;
+    }
+
+    // Replace comma with dot for parsing (locale-specific decimal separator)
+    let size_value = parts[0].replace(',', ".").parse::<f64>().ok()?;
+    let unit = parts[1];
+
+    let bytes = match unit {
+        "B" | "bytes" => size_value as u64,
+        "kB" | "KB" => (size_value * 1_000.0) as u64,
+        "MB" => (size_value * 1_000_000.0) as u64,
+        "GB" => (size_value * 1_000_000_000.0) as u64,
+        "TB" => (size_value * 1_000_000_000_000.0) as u64,
+        _ => return None,
+    };
+
+    Some(bytes)
+}
+
 // Helper function to extract developer name from app_id
 // Takes the second-to-last segment (penultimate)
 // Example: io.github.N3kosempai.klia-store -> N3kosempai
@@ -84,6 +113,97 @@ fn extract_developer(app_id: &str) -> Option<String> {
     }
 }
 
+// Helper function to get app permissions from flatpak
+fn get_app_permissions(app_id: &str, is_flatpak: bool) -> Option<Vec<String>> {
+    let output = if is_flatpak {
+        Command::new("flatpak-spawn")
+            .args(&["--host", "flatpak", "info", "--show-permissions", app_id])
+            .output()
+            .ok()?
+    } else {
+        Command::new("flatpak")
+            .args(&["info", "--show-permissions", app_id])
+            .output()
+            .ok()?
+    };
+
+    if !output.status.success() {
+        println!("[DEBUG] Failed to get permissions for {}: command failed", app_id);
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut permissions = Vec::new();
+    let mut has_camera = false;
+    let mut has_files = false;
+    let mut has_storage = false;
+
+    println!("[DEBUG] Parsing permissions for {}:", app_id);
+
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('[') {
+            continue;
+        }
+
+        println!("[DEBUG]   Line: {}", line);
+
+        // Look for specific permissions we care about
+        // Camera: devices=all (full device access) or specific video devices
+        if !has_camera && line.contains("devices=") {
+            let devices_part = line.split("devices=").nth(1).unwrap_or("");
+            let devices_value = devices_part.split(';').next().unwrap_or("").trim();
+            println!("[DEBUG]     Found devices: '{}'", devices_value);
+            // Only consider "all" as camera permission (dri is just GPU acceleration)
+            if devices_value == "all" {
+                permissions.push("camera".to_string());
+                has_camera = true;
+                println!("[DEBUG]     Added camera permission");
+            }
+        }
+
+        // Files: filesystems= with any value
+        if !has_files && line.contains("filesystems=") {
+            let filesystems_part = line.split("filesystems=").nth(1).unwrap_or("");
+            let filesystems_value = filesystems_part.split(';').next().unwrap_or("").trim();
+            println!("[DEBUG]     Found filesystems: '{}'", filesystems_value);
+            if !filesystems_value.is_empty() {
+                permissions.push("files".to_string());
+                has_files = true;
+                println!("[DEBUG]     Added files permission");
+            }
+        }
+
+        // Storage: persist= or filesystems containing home/host
+        if !has_storage {
+            if line.contains("persist=") {
+                let persist_part = line.split("persist=").nth(1).unwrap_or("");
+                let persist_value = persist_part.split(';').next().unwrap_or("").trim();
+                println!("[DEBUG]     Found persist: '{}'", persist_value);
+                if !persist_value.is_empty() {
+                    permissions.push("storage".to_string());
+                    has_storage = true;
+                    println!("[DEBUG]     Added storage permission (persist)");
+                }
+            } else if line.contains("filesystems=") {
+                if line.contains("home") || line.contains("host") || line.contains("xdg-download") {
+                    permissions.push("storage".to_string());
+                    has_storage = true;
+                    println!("[DEBUG]     Added storage permission (filesystems with home/host/xdg-download)");
+                }
+            }
+        }
+    }
+
+    println!("[DEBUG] Final permissions for {}: {:?}", app_id, permissions);
+
+    if permissions.is_empty() {
+        None
+    } else {
+        Some(permissions)
+    }
+}
+
 #[derive(Serialize)]
 struct UpdateAvailable {
     app_id: String,
@@ -96,6 +216,208 @@ struct Dependency {
     name: String,
     download_size: String,
     installed_size: String,
+}
+
+// System Analytics Struct
+#[derive(Serialize)]
+struct SystemAnalytics {
+    disk_usage: DiskUsage,
+    flatpak_stats: FlatpakStats,
+    system_info: SystemInfo,
+}
+
+#[derive(Serialize)]
+struct DiskUsage {
+    total_gb: f64,
+    used_gb: f64,
+    available_gb: f64,
+    usage_percent: f64,
+}
+
+#[derive(Serialize)]
+struct FlatpakStats {
+    total_apps: usize,
+    total_runtimes: usize,
+    total_extensions: usize,
+    apps_with_updates: usize,
+}
+
+#[derive(Serialize)]
+struct SystemInfo {
+    os_name: String,
+    kernel_version: String,
+    hostname: String,
+}
+
+// Get system analytics data
+#[tauri::command]
+async fn get_app_permissions_batch(
+    app: tauri::AppHandle,
+    app_ids: Vec<String>,
+) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
+    use std::collections::HashMap;
+
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+    let mut result = HashMap::new();
+
+    for app_id in app_ids {
+        if let Some(perms) = get_app_permissions(&app_id, is_flatpak) {
+            result.insert(app_id, perms);
+        }
+    }
+
+    Ok(result)
+}
+
+#[tauri::command]
+async fn get_system_analytics(
+    app: tauri::AppHandle,
+    total_apps: Option<usize>,
+    total_runtimes: Option<usize>,
+    total_extensions: Option<usize>,
+    apps_with_updates: Option<usize>,
+) -> Result<SystemAnalytics, String> {
+    // Get disk usage
+    let disk_usage = get_disk_usage().await?;
+
+    // Use provided flatpak stats or fetch them if not provided
+    let flatpak_stats = if let (Some(apps), Some(runtimes), Some(extensions), Some(updates)) =
+        (total_apps, total_runtimes, total_extensions, apps_with_updates)
+    {
+        FlatpakStats {
+            total_apps: apps,
+            total_runtimes: runtimes,
+            total_extensions: extensions,
+            apps_with_updates: updates,
+        }
+    } else {
+        get_flatpak_stats(app.clone()).await?
+    };
+
+    // Get system info
+    let system_info = get_system_info().await?;
+
+    Ok(SystemAnalytics {
+        disk_usage,
+        flatpak_stats,
+        system_info,
+    })
+}
+
+#[cfg(target_os = "linux")]
+async fn get_disk_usage() -> Result<DiskUsage, String> {
+    use std::io::BufRead;
+
+    // Read /proc/mounts to find home partition
+    let mounts_file = File::open("/proc/mounts")
+        .map_err(|e| format!("Failed to open /proc/mounts: {}", e))?;
+    let reader = BufReader::new(mounts_file);
+
+    let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/home".to_string());
+    let mut home_device = String::new();
+
+    for line in reader.lines() {
+        if let Ok(line) = line {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                let mount_point = parts[1];
+                if home_dir.starts_with(mount_point) && mount_point.len() > home_device.len() {
+                    home_device = parts[0].to_string();
+                }
+            }
+        }
+    }
+
+    // Use statvfs to get filesystem stats
+    let output = Command::new("df")
+        .args(["-B1", &home_dir])
+        .output()
+        .map_err(|e| format!("Failed to execute df: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+
+    if lines.len() >= 2 {
+        let parts: Vec<&str> = lines[1].split_whitespace().collect();
+        if parts.len() >= 5 {
+            let total = parts[1].parse::<f64>().unwrap_or(0.0) / 1_073_741_824.0; // Convert to GB
+            let used = parts[2].parse::<f64>().unwrap_or(0.0) / 1_073_741_824.0;
+            let available = parts[3].parse::<f64>().unwrap_or(0.0) / 1_073_741_824.0;
+            let usage_percent = if total > 0.0 { (used / total) * 100.0 } else { 0.0 };
+
+            return Ok(DiskUsage {
+                total_gb: total,
+                used_gb: used,
+                available_gb: available,
+                usage_percent,
+            });
+        }
+    }
+
+    Err("Failed to parse disk usage".to_string())
+}
+
+#[cfg(not(target_os = "linux"))]
+async fn get_disk_usage() -> Result<DiskUsage, String> {
+    Ok(DiskUsage {
+        total_gb: 0.0,
+        used_gb: 0.0,
+        available_gb: 0.0,
+        usage_percent: 0.0,
+    })
+}
+
+async fn get_flatpak_stats(app: tauri::AppHandle) -> Result<FlatpakStats, String> {
+    let installed = get_installed_flatpaks(app.clone()).await?;
+    let updates = get_available_updates(app).await?;
+
+    Ok(FlatpakStats {
+        total_apps: installed.apps.len(),
+        total_runtimes: installed.runtimes.len(),
+        total_extensions: installed.extensions.len(),
+        apps_with_updates: updates.len(),
+    })
+}
+
+async fn get_system_info() -> Result<SystemInfo, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let os_name = std::fs::read_to_string("/etc/os-release")
+            .ok()
+            .and_then(|content| {
+                content.lines()
+                    .find(|line| line.starts_with("PRETTY_NAME="))
+                    .map(|line| line.trim_start_matches("PRETTY_NAME=").trim_matches('"').to_string())
+            })
+            .unwrap_or_else(|| "Linux".to_string());
+
+        let kernel_version = std::fs::read_to_string("/proc/version")
+            .ok()
+            .and_then(|content| {
+                content.split_whitespace().nth(2).map(|s| s.to_string())
+            })
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        let hostname = std::fs::read_to_string("/etc/hostname")
+            .unwrap_or_else(|_| "localhost".to_string())
+            .trim()
+            .to_string();
+
+        Ok(SystemInfo {
+            os_name,
+            kernel_version,
+            hostname,
+        })
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        Ok(SystemInfo {
+            os_name: "Unknown".to_string(),
+            kernel_version: "Unknown".to_string(),
+            hostname: "localhost".to_string(),
+        })
+    }
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -378,6 +700,7 @@ async fn get_installed_flatpaks(
     // Get everything (apps + runtimes) with options column to distinguish
     // Note: flatpak list without --system or --user gets both
     // The 'options' column contains 'runtime' for runtimes/extensions and 'current' for apps
+    // The 'size' column contains the installed size in bytes
     let output = if is_flatpak {
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
@@ -386,7 +709,7 @@ async fn get_installed_flatpaks(
                 "--host",
                 "flatpak",
                 "list",
-                "--columns=application,name,version,description,options,ref",
+                "--columns=application,name,version,description,options,ref,size",
             ])
             .output()
             .await
@@ -397,7 +720,7 @@ async fn get_installed_flatpaks(
             .command("flatpak")
             .args([
                 "list",
-                "--columns=application,name,version,description,options,ref",
+                "--columns=application,name,version,description,options,ref,size",
             ])
             .output()
             .await
@@ -421,10 +744,11 @@ async fn get_installed_flatpaks(
         }
 
         let parts: Vec<&str> = line.split('\t').collect();
-        if parts.len() >= 6 {
+        if parts.len() >= 7 {
             let app_id = parts[0].trim();
             let options = parts[4].trim();
             let ref_full = parts[5].trim();
+            let size_str = parts[6].trim();
 
             // Distinguish apps from runtimes using the official 'options' column
             // Apps have 'current' in options (e.g., "user,current" or "system,current")
@@ -456,6 +780,9 @@ async fn get_installed_flatpaks(
                 }
             } else {
                 // It's an application
+                // Parse size from the size column (format: "715,3 MB" or "1,2 GB")
+                let installed_size = parse_size_string(size_str);
+
                 apps.push(InstalledApp {
                     app_id: app_id.to_string(),
                     name: parts[1].trim().to_string(),
@@ -466,6 +793,8 @@ async fn get_installed_flatpaks(
                         None
                     },
                     developer: extract_developer(app_id),
+                    permissions: None, // Don't get permissions here, too slow
+                    installed_size,
                 });
             }
         }
@@ -1546,7 +1875,9 @@ pub fn run() {
             start_flatpak_interactive,
             send_to_pty,
             kill_pty_process,
-            check_pty_process
+            check_pty_process,
+            get_system_analytics,
+            get_app_permissions_batch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

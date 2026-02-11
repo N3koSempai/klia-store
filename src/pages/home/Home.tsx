@@ -1,3 +1,4 @@
+import BarChartIcon from "@mui/icons-material/BarChart";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import {
 	alpha,
@@ -30,6 +31,7 @@ interface HomeProps {
 	onAppSelect: (app: CategoryApp, searchQuery?: string, searchResults?: CategoryApp[]) => void;
 	onCategorySelect: (categoryId: string) => void;
 	onMyAppsClick: () => void;
+	onAnalyticsClick: () => void;
 	initialSearchQuery?: string;
 	initialSearchResults?: CategoryApp[];
 }
@@ -38,6 +40,7 @@ export const Home = ({
 	onAppSelect,
 	onCategorySelect,
 	onMyAppsClick,
+	onAnalyticsClick,
 	initialSearchQuery = "",
 	initialSearchResults = [],
 }: HomeProps) => {
@@ -139,6 +142,19 @@ export const Home = ({
 						onMarkAsViewed={markAsViewed}
 						onMarkAllAsViewed={markAllAsViewed}
 					/>
+
+					<IconButton
+						onClick={onAnalyticsClick}
+						sx={{
+							color: "text.secondary",
+							"&:hover": {
+								color: "primary.main",
+								bgcolor: alpha("#4A86CF", 0.1),
+							},
+						}}
+					>
+						<BarChartIcon />
+					</IconButton>
 
 					<IconButton
 						onClick={() => setAboutModalOpen(true)}
