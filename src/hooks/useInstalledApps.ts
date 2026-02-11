@@ -10,6 +10,7 @@ interface InstalledAppRust {
 	version: string;
 	summary?: string;
 	developer?: string;
+	installed_size?: number;
 }
 
 interface InstalledExtensionRust {
@@ -48,6 +49,7 @@ export const useInstalledApps = () => {
 						version: app.version,
 						summary: app.summary,
 						developer: app.developer,
+						installedSize: app.installed_size,
 					}),
 				);
 

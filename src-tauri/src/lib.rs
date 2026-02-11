@@ -19,6 +19,7 @@ struct InstalledApp {
     summary: Option<String>,
     developer: Option<String>,
     permissions: Option<Vec<String>>,
+    installed_size: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -71,6 +72,30 @@ fn build_flatpak_dependency_check_cmd(is_flatpak: bool, app_id: &str) -> String 
             base_cmd
         )
     }
+}
+
+// Helper function to parse size string from flatpak list output
+// Format examples: "715,3 MB", "1,2 GB", "16,9 MB", "2,5 kB"
+fn parse_size_string(size_str: &str) -> Option<u64> {
+    let parts: Vec<&str> = size_str.trim().split_whitespace().collect();
+    if parts.len() != 2 {
+        return None;
+    }
+
+    // Replace comma with dot for parsing (locale-specific decimal separator)
+    let size_value = parts[0].replace(',', ".").parse::<f64>().ok()?;
+    let unit = parts[1];
+
+    let bytes = match unit {
+        "B" | "bytes" => size_value as u64,
+        "kB" | "KB" => (size_value * 1_000.0) as u64,
+        "MB" => (size_value * 1_000_000.0) as u64,
+        "GB" => (size_value * 1_000_000_000.0) as u64,
+        "TB" => (size_value * 1_000_000_000_000.0) as u64,
+        _ => return None,
+    };
+
+    Some(bytes)
 }
 
 // Helper function to extract developer name from app_id
@@ -658,6 +683,7 @@ async fn get_installed_flatpaks(
     // Get everything (apps + runtimes) with options column to distinguish
     // Note: flatpak list without --system or --user gets both
     // The 'options' column contains 'runtime' for runtimes/extensions and 'current' for apps
+    // The 'size' column contains the installed size in bytes
     let output = if is_flatpak {
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
@@ -666,7 +692,7 @@ async fn get_installed_flatpaks(
                 "--host",
                 "flatpak",
                 "list",
-                "--columns=application,name,version,description,options,ref",
+                "--columns=application,name,version,description,options,ref,size",
             ])
             .output()
             .await
@@ -677,7 +703,7 @@ async fn get_installed_flatpaks(
             .command("flatpak")
             .args([
                 "list",
-                "--columns=application,name,version,description,options,ref",
+                "--columns=application,name,version,description,options,ref,size",
             ])
             .output()
             .await
@@ -701,10 +727,11 @@ async fn get_installed_flatpaks(
         }
 
         let parts: Vec<&str> = line.split('\t').collect();
-        if parts.len() >= 6 {
+        if parts.len() >= 7 {
             let app_id = parts[0].trim();
             let options = parts[4].trim();
             let ref_full = parts[5].trim();
+            let size_str = parts[6].trim();
 
             // Distinguish apps from runtimes using the official 'options' column
             // Apps have 'current' in options (e.g., "user,current" or "system,current")
@@ -736,6 +763,9 @@ async fn get_installed_flatpaks(
                 }
             } else {
                 // It's an application
+                // Parse size from the size column (format: "715,3 MB" or "1,2 GB")
+                let installed_size = parse_size_string(size_str);
+
                 apps.push(InstalledApp {
                     app_id: app_id.to_string(),
                     name: parts[1].trim().to_string(),
@@ -747,6 +777,7 @@ async fn get_installed_flatpaks(
                     },
                     developer: extract_developer(app_id),
                     permissions: None, // Don't get permissions here, too slow
+                    installed_size,
                 });
             }
         }

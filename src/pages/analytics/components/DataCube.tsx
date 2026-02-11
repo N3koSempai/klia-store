@@ -78,7 +78,13 @@ const AppBlock = ({
 
 	// Determine color based on permission filter
 	const getBlockColor = () => {
-		if (permissionFilter) {
+		if (permissionFilter === "storage") {
+			// Color según tamaño: rojo (>1GB), amarillo (200MB-1GB), verde (<200MB)
+			const size = app.installedSize || 0;
+			if (size > 1_000_000_000) return "#f85149"; // Rojo para apps > 1GB
+			if (size > 200_000_000) return "#ffa657"; // Amarillo para apps 200MB-1GB
+			return "#3fb950"; // Verde para apps < 200MB
+		} else if (permissionFilter) {
 			// Amarillo/dorado para apps con permiso, azul celeste para apps sin permiso
 			return hasPermission ? "#ffd700" : "#87ceeb";
 		}
@@ -244,46 +250,78 @@ const CubeScene = ({
 	let sortedApps = installedApps;
 
 	if (permissionFilter && isGridView) {
-		// Separar apps por permisos y crear un nuevo array ordenado
-		const appsWithPermission = installedApps.filter((app) =>
-			hasPermission(app, permissionFilter),
-		);
-		const appsWithoutPermission = installedApps.filter(
-			(app) => !hasPermission(app, permissionFilter),
-		);
+		if (permissionFilter === "storage") {
+			// Para el filtro storage, ordenar por tamaño instalado (de mayor a menor)
+			sortedApps = [...installedApps].sort((a, b) => {
+				const sizeA = a.installedSize || 0;
+				const sizeB = b.installedSize || 0;
+				return sizeB - sizeA; // Descendente: mayor a menor
+			});
+		} else {
+			// Separar apps por permisos y crear un nuevo array ordenado
+			const appsWithPermission = installedApps.filter((app) =>
+				hasPermission(app, permissionFilter),
+			);
+			const appsWithoutPermission = installedApps.filter(
+				(app) => !hasPermission(app, permissionFilter),
+			);
 
-		// Reordenar: primero las que tienen permiso, luego las que no
-		sortedApps = [...appsWithPermission, ...appsWithoutPermission];
-
-		const withPermCols = Math.ceil(Math.sqrt(appsWithPermission.length));
-		const withoutPermCols = Math.ceil(Math.sqrt(appsWithoutPermission.length));
-		const maxCols = Math.max(withPermCols, withoutPermCols, 5); // Mínimo 5 columnas
-
-		// Calcular filas necesarias para cada grupo
-		const withPermRows = Math.ceil(appsWithPermission.length / maxCols);
-		const _withoutPermRows = Math.ceil(appsWithoutPermission.length / maxCols);
-
-		// Espacio vertical entre grupos (fila vacía)
-		const groupSeparation = 2.0;
-
-		// Posicionar apps CON permisos (grupo superior, en amarillo)
-		for (let i = 0; i < appsWithPermission.length; i++) {
-			const col = i % maxCols;
-			const row = Math.floor(i / maxCols);
-			const posX = col - (maxCols - 1) / 2;
-			const posY = withPermRows - row + groupSeparation / 2; // Grupo superior
-			const posZ = 0;
-			gridPositions.push([posX, posY, posZ]);
+			// Reordenar: primero las que tienen permiso, luego las que no
+			sortedApps = [...appsWithPermission, ...appsWithoutPermission];
 		}
 
-		// Posicionar apps SIN permisos (grupo inferior, en azul celeste)
-		for (let i = 0; i < appsWithoutPermission.length; i++) {
-			const col = i % maxCols;
-			const row = Math.floor(i / maxCols);
-			const posX = col - (maxCols - 1) / 2;
-			const posY = -(row + groupSeparation / 2); // Grupo inferior
-			const posZ = 0;
-			gridPositions.push([posX, posY, posZ]);
+		if (permissionFilter === "storage") {
+			// Para storage, posicionar en una sola grilla continua de arriba hacia abajo
+			const gridCols = Math.ceil(Math.sqrt(sortedApps.length));
+			const gridRows = Math.ceil(sortedApps.length / gridCols);
+
+			for (let i = 0; i < sortedApps.length; i++) {
+				const col = i % gridCols;
+				const row = Math.floor(i / gridCols);
+				const posX = col - (gridCols - 1) / 2;
+				const posY = (gridRows - 1) / 2 - row; // De arriba hacia abajo
+				const posZ = 0;
+				gridPositions.push([posX, posY, posZ]);
+			}
+		} else {
+			// Para otros filtros (camera, files), separar en dos grupos
+			const appsWithPermission = installedApps.filter((app) =>
+				hasPermission(app, permissionFilter),
+			);
+			const appsWithoutPermission = installedApps.filter(
+				(app) => !hasPermission(app, permissionFilter),
+			);
+
+			const withPermCols = Math.ceil(Math.sqrt(appsWithPermission.length));
+			const withoutPermCols = Math.ceil(Math.sqrt(appsWithoutPermission.length));
+			const maxCols = Math.max(withPermCols, withoutPermCols, 5); // Mínimo 5 columnas
+
+			// Calcular filas necesarias para cada grupo
+			const withPermRows = Math.ceil(appsWithPermission.length / maxCols);
+			const _withoutPermRows = Math.ceil(appsWithoutPermission.length / maxCols);
+
+			// Espacio vertical entre grupos (fila vacía)
+			const groupSeparation = 2.0;
+
+			// Posicionar apps CON permisos (grupo superior, en amarillo)
+			for (let i = 0; i < appsWithPermission.length; i++) {
+				const col = i % maxCols;
+				const row = Math.floor(i / maxCols);
+				const posX = col - (maxCols - 1) / 2;
+				const posY = withPermRows - row + groupSeparation / 2; // Grupo superior
+				const posZ = 0;
+				gridPositions.push([posX, posY, posZ]);
+			}
+
+			// Posicionar apps SIN permisos (grupo inferior, en azul celeste)
+			for (let i = 0; i < appsWithoutPermission.length; i++) {
+				const col = i % maxCols;
+				const row = Math.floor(i / maxCols);
+				const posX = col - (maxCols - 1) / 2;
+				const posY = -(row + groupSeparation / 2); // Grupo inferior
+				const posZ = 0;
+				gridPositions.push([posX, posY, posZ]);
+			}
 		}
 	} else {
 		// Vista normal sin filtro

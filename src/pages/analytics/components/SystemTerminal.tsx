@@ -41,14 +41,44 @@ export const SystemTerminal = ({
 
 		// Si hay filtro activo y no hay app seleccionada, mostrar listado de apps con ese permiso
 		if (!selectedApp && permissionFilter) {
-			const appsWithPermission = installedApps.filter(app =>
-				app.permissions?.includes(permissionFilter)
-			);
+			let appsToDisplay: typeof installedApps = [];
+
+			if (permissionFilter === "storage") {
+				// Para storage, ordenar por tamaño (de mayor a menor)
+				appsToDisplay = [...installedApps].sort((a, b) => {
+					const sizeA = a.installedSize || 0;
+					const sizeB = b.installedSize || 0;
+					return sizeB - sizeA;
+				});
+			} else {
+				// Para otros filtros, mostrar solo apps con ese permiso
+				appsToDisplay = installedApps.filter(app =>
+					app.permissions?.includes(permissionFilter)
+				);
+			}
 
 			const permissionLabels: Record<string, string> = {
-				storage: "STORAGE",
+				storage: "STORAGE SIZE",
 				camera: "CAMERA",
 				files: "FILES",
+			};
+
+			// Función para obtener el color según el tamaño (solo para storage)
+			const getSizeColor = (size: number | undefined): string => {
+				if (permissionFilter !== "storage") return "#ffd700";
+				const bytes = size || 0;
+				if (bytes > 1_000_000_000) return "#f85149"; // Rojo para > 1GB
+				if (bytes > 200_000_000) return "#ffa657"; // Amarillo para 200MB-1GB
+				return "#3fb950"; // Verde para < 200MB
+			};
+
+			// Función para formatear tamaño en bytes a string legible
+			const formatSize = (bytes: number | undefined): string => {
+				if (!bytes) return "Unknown";
+				if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(2)} GB`;
+				if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(2)} MB`;
+				if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(2)} kB`;
+				return `${bytes} B`;
 			};
 
 			return (
@@ -89,10 +119,10 @@ export const SystemTerminal = ({
 							mb: 2,
 						}}
 					>
-						Total: {appsWithPermission.length} / {totalApps} apps
+						Total: {appsToDisplay.length} / {totalApps} apps
 					</Typography>
 
-					{appsWithPermission.length === 0 ? (
+					{appsToDisplay.length === 0 ? (
 						<Typography
 							sx={{
 								color: "#8b949e",
@@ -101,47 +131,58 @@ export const SystemTerminal = ({
 								fontStyle: "italic",
 							}}
 						>
-							No apps found with this permission.
+							No apps found.
 						</Typography>
 					) : (
 						<Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-							{appsWithPermission.map((app, index) => (
-								<Box
-									key={app.appId}
-									onClick={() => onAppSelect(app)}
-									sx={{
-										color: "#c9d1d9",
-										fontFamily: "monospace",
-										fontSize: "0.75rem",
-										lineHeight: 1.8,
-										pl: 1,
-										borderLeft: "2px solid #ffd700",
-										cursor: "pointer",
-										transition: "all 0.2s",
-										"&:hover": {
-											bgcolor: "rgba(255, 215, 0, 0.1)",
-											borderLeftColor: "#ffed4e",
-											transform: "translateX(4px)",
-										},
-									}}
-								>
-									<Typography
-										component="span"
+							{appsToDisplay.map((app, index) => {
+								const sizeColor = getSizeColor(app.installedSize);
+								return (
+									<Box
+										key={app.appId}
+										onClick={() => onAppSelect(app)}
 										sx={{
+											color: "#c9d1d9",
 											fontFamily: "monospace",
 											fontSize: "0.75rem",
 											lineHeight: 1.8,
+											pl: 1,
+											borderLeft: `2px solid ${sizeColor}`,
+											cursor: "pointer",
+											transition: "all 0.2s",
+											"&:hover": {
+												bgcolor: `${sizeColor}20`,
+												borderLeftColor: sizeColor,
+												transform: "translateX(4px)",
+											},
 										}}
 									>
-										<span style={{ color: "#ffd700" }}>{(index + 1).toString().padStart(2, "0")}.</span>{" "}
-										<span style={{ color: "#56d364" }}>{app.name}</span>
-										<br />
-										<span style={{ color: "#8b949e", paddingLeft: "24px" }}>
-											{app.appId}
-										</span>
-									</Typography>
-								</Box>
-							))}
+										<Typography
+											component="span"
+											sx={{
+												fontFamily: "monospace",
+												fontSize: "0.75rem",
+												lineHeight: 1.8,
+											}}
+										>
+											<span style={{ color: sizeColor }}>{(index + 1).toString().padStart(2, "0")}.</span>{" "}
+											<span style={{ color: "#56d364" }}>{app.name}</span>
+											{permissionFilter === "storage" && (
+												<>
+													<br />
+													<span style={{ color: sizeColor, paddingLeft: "24px", fontWeight: "bold" }}>
+														{formatSize(app.installedSize)}
+													</span>
+												</>
+											)}
+											<br />
+											<span style={{ color: "#8b949e", paddingLeft: "24px" }}>
+												{app.appId}
+											</span>
+										</Typography>
+									</Box>
+								);
+							})}
 						</Box>
 					)}
 
