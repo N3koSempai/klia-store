@@ -1,9 +1,16 @@
 [
-	{
-		"id": "telegram-group-2025",
-		"title": "Join our Telegram community!",
-		"content": "We now have a Telegram group! Join us to get updates, share feedback, and connect with other Klia Store users. <a href='https://t.me/+oVu_y_LANmVjMGNh'>Join the group</a>",
-		"date": "2025-11-24",
-		"priority": "high"
-	}
+  {
+    "id": "3d-analytics-feature",
+    "title": "New 3D System Analytics!",
+    "content": "Discover your system's heart with our new immersive 3D Analytics. Visualize your apps in a dynamic data cube and explore permissions like never before. Access it via the bar chart icon (📊) on the home screen!",
+    "date": "2026-02-11",
+    "priority": "high"
+  },
+  {
+    "id": "telegram-group-2025",
+    "title": "Join our Telegram community!",
+    "content": "We now have a Telegram group! Join us to get updates, share feedback, and connect with other Klia Store users. <a href='https://t.me/+oVu_y_LANmVjMGNh'>Join the group</a>",
+    "date": "2025-11-24",
+    "priority": "high"
+  }
 ]

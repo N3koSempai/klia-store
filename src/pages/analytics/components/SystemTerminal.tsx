@@ -1,5 +1,6 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
 
 interface SystemTerminalProps {
@@ -19,6 +20,7 @@ export const SystemTerminal = ({
   installedApps,
   onAppSelect,
 }: SystemTerminalProps) => {
+  const { t } = useTranslation();
   const terminalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export const SystemTerminal = ({
               fontSize: "0.875rem",
             }}
           >
-            Initializing system...
+            {t("analytics.terminal.initializing")}
           </Typography>
         </Box>
       );
@@ -64,9 +66,9 @@ export const SystemTerminal = ({
       }
 
       const permissionLabels: Record<string, string> = {
-        storage: "STORAGE SIZE",
-        camera: "CAMERA",
-        files: "FILES",
+        storage: t("analytics.terminal.storage"),
+        camera: t("analytics.terminal.camera"),
+        files: t("analytics.terminal.files"),
       };
 
       // Función para obtener el color según el tamaño (solo para storage)
@@ -80,7 +82,7 @@ export const SystemTerminal = ({
 
       // Función para formatear tamaño en bytes a string legible
       const formatSize = (bytes: number | undefined): string => {
-        if (!bytes) return "Unknown";
+        if (!bytes) return t("common.unknown");
         if (bytes >= 1_000_000_000)
           return `${(bytes / 1_000_000_000).toFixed(2)} GB`;
         if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(2)} MB`;
@@ -100,7 +102,7 @@ export const SystemTerminal = ({
             }}
           >
             ╔════════════════════════════════════════╗
-            <br />║ PERMISSION FILTER:{" "}
+            <br />║ {t("analytics.terminal.permissionFilter")}:{" "}
             {permissionLabels[permissionFilter] ||
               permissionFilter.toUpperCase()}
             <br />
@@ -116,7 +118,9 @@ export const SystemTerminal = ({
               mb: 1,
             }}
           >
-            [APPS WITH {permissionLabels[permissionFilter]} PERMISSION]
+            {t("analytics.terminal.appsWithPermission", {
+              permission: permissionLabels[permissionFilter],
+            })}
           </Typography>
 
           <Typography
@@ -127,7 +131,10 @@ export const SystemTerminal = ({
               mb: 2,
             }}
           >
-            Total: {appsToDisplay.length} / {totalApps} apps
+            {t("analytics.terminal.totalApps", {
+              filtered: appsToDisplay.length,
+              total: totalApps,
+            })}
           </Typography>
 
           {appsToDisplay.length === 0 ? (
@@ -139,7 +146,7 @@ export const SystemTerminal = ({
                 fontStyle: "italic",
               }}
             >
-              No apps found.
+              {t("analytics.terminal.noAppsFound")}
             </Typography>
           ) : (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -212,9 +219,9 @@ export const SystemTerminal = ({
               borderTop: "1px solid #30363d",
             }}
           >
-            [INFO] Click on an app in the 3D view for details
+            {t("analytics.terminal.clickForDetails")}
             <br />
-            [INFO] Click the filter badge again to clear
+            {t("analytics.terminal.clickToClear")}
             <br />
             <br />
             <span style={{ color: "#58a6ff" }}>▊</span>
@@ -235,14 +242,14 @@ export const SystemTerminal = ({
           >
             $ klia-analytics-terminal v2.0.0
             <br />
-            $ system ready
+            {t("analytics.terminal.systemReady")}
             <br />
             <br />
-            [INFO] Total applications installed: {totalApps}
+            {t("analytics.terminal.totalInstalled", { count: totalApps })}
             <br />
-            [INFO] Data cube visualization active
+            {t("analytics.terminal.visualizationActive")}
             <br />
-            [INFO] Awaiting app selection...
+            {t("analytics.terminal.awaitingSelection")}
             <br />
             <br />
             <span style={{ color: "#58a6ff" }}>▊</span>
@@ -262,13 +269,13 @@ export const SystemTerminal = ({
     const namespace = appIdParts.length >= 3 ? appIdParts[2] : "unknown";
 
     // Determine app type based on domain
-    let appType = "Application";
+    let appType = t("analytics.terminal.application");
     if (selectedApp.appId.includes(".BaseApp")) {
-      appType = "Base Application";
+      appType = t("analytics.terminal.baseApplication");
     } else if (selectedApp.appId.includes(".Sdk")) {
-      appType = "SDK";
+      appType = t("analytics.terminal.sdk");
     } else if (selectedApp.appId.includes(".Platform")) {
-      appType = "Platform";
+      appType = t("analytics.terminal.platform");
     }
 
     return (
@@ -283,8 +290,7 @@ export const SystemTerminal = ({
           }}
         >
           ╔════════════════════════════════════════╗
-          <br />
-          ║ APPLICATION TECHNICAL DETAILS ║
+          <br />║ {t("analytics.terminal.technicalDetails")} ║
           <br />
           ╚════════════════════════════════════════╝
         </Typography>
@@ -312,7 +318,10 @@ export const SystemTerminal = ({
             mb: 2,
           }}
         >
-          <span style={{ color: "#8b949e" }}>ID:</span> {selectedApp.appId}
+          <span style={{ color: "#8b949e" }}>
+            {t("analytics.terminal.id")}:
+          </span>{" "}
+          {selectedApp.appId}
         </Typography>
 
         {/* Metadata Section */}
@@ -325,7 +334,7 @@ export const SystemTerminal = ({
             mb: 1,
           }}
         >
-          [METADATA]
+          {t("analytics.terminal.metadata")}
         </Typography>
 
         <Typography
@@ -337,15 +346,17 @@ export const SystemTerminal = ({
             mb: 2,
           }}
         >
-          Version: {selectedApp.version || "unknown"}
+          {t("analytics.terminal.version")}:{" "}
+          {selectedApp.version || t("analytics.terminal.unknown")}
           <br />
-          Developer: {selectedApp.developer || "unknown"}
+          {t("analytics.terminal.developer")}:{" "}
+          {selectedApp.developer || t("analytics.terminal.unknown")}
           <br />
-          Type: {appType}
+          {t("analytics.terminal.type")}: {appType}
           <br />
-          Domain: {domain}
+          {t("analytics.terminal.domain")}: {domain}
           <br />
-          Namespace: {namespace}
+          {t("analytics.terminal.namespace")}: {namespace}
         </Typography>
 
         {/* Summary Section */}
@@ -360,7 +371,7 @@ export const SystemTerminal = ({
                 mb: 1,
               }}
             >
-              [DESCRIPTION]
+              {t("analytics.terminal.description")}
             </Typography>
             <Typography
               sx={{
@@ -386,7 +397,7 @@ export const SystemTerminal = ({
             mb: 1,
           }}
         >
-          [PACKAGE INFO]
+          {t("analytics.terminal.packageInfo")}
         </Typography>
 
         <Typography
@@ -398,13 +409,17 @@ export const SystemTerminal = ({
             mb: 2,
           }}
         >
-          Format: Flatpak
+          {t("analytics.terminal.format")}: {t("analytics.terminal.flatpak")}
           <br />
-          Repository: Flathub
+          {t("analytics.terminal.repository")}:{" "}
+          {t("analytics.terminal.flathub")}
           <br />
-          Branch: stable
+          {t("analytics.terminal.branch")}: {t("analytics.terminal.stable")}
           <br />
-          Status: <span style={{ color: "#56d364" }}>✓ INSTALLED</span>
+          {t("analytics.terminal.status")}:{" "}
+          <span style={{ color: "#56d364" }}>
+            {t("analytics.terminal.installed")}
+          </span>
         </Typography>
 
         {/* System Integration */}
@@ -417,7 +432,7 @@ export const SystemTerminal = ({
             mb: 1,
           }}
         >
-          [SYSTEM INTEGRATION]
+          {t("analytics.terminal.systemIntegration")}
         </Typography>
 
         <Typography
@@ -429,13 +444,16 @@ export const SystemTerminal = ({
             mb: 2,
           }}
         >
-          Sandboxed: Yes (Flatpak)
+          {t("analytics.terminal.sandboxed")}: {t("analytics.terminal.yes")} (
+          {t("analytics.terminal.flatpak")})
           <br />
-          Desktop: Integrated
+          {t("analytics.terminal.desktop")}:{" "}
+          {t("analytics.terminal.integrated")}
           <br />
-          Files: ~/.local/share/flatpak/app/{selectedApp.appId}
+          {t("analytics.terminal.files")}: ~/.local/share/flatpak/app/
+          {selectedApp.appId}
           <br />
-          Data: ~/.var/app/{selectedApp.appId}
+          {t("analytics.terminal.data")}: ~/.var/app/{selectedApp.appId}
         </Typography>
 
         {/* Commands */}
@@ -448,7 +466,7 @@ export const SystemTerminal = ({
             mb: 1,
           }}
         >
-          [AVAILABLE COMMANDS]
+          {t("analytics.terminal.availableCommands")}
         </Typography>
 
         <Typography
@@ -477,11 +495,11 @@ export const SystemTerminal = ({
             borderTop: "1px solid #30363d",
           }}
         >
-          [TIMESTAMP] {new Date().toISOString()}
+          {t("analytics.terminal.timestamp")} {new Date().toISOString()}
           <br />
-          [STATUS] Data retrieved successfully
+          {t("analytics.terminal.statusRetrieved")}
           <br />
-          [SOURCE] Flatpak system database
+          {t("analytics.terminal.source")}
           <br />
           <br />
           <span style={{ color: "#58a6ff" }}>▊</span>

@@ -14,6 +14,7 @@ import {
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import * as THREE from "three";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
 
@@ -414,6 +415,7 @@ export const DataCube = ({
   onPermissionFilterChange,
   selectedApp,
 }: DataCubeProps) => {
+  const { t } = useTranslation();
   const [isGridView, setIsGridView] = useState(false);
   const [permissionFilter, setPermissionFilter] =
     useState<PermissionFilter>(null);
@@ -443,7 +445,7 @@ export const DataCube = ({
       >
         <CircularProgress sx={{ color: "#58a6ff" }} />
         <Typography sx={{ color: "#8b949e", fontFamily: "monospace" }}>
-          {loading ? "Loading installed apps..." : "No apps installed"}
+          {loading ? t("analytics.loading") : t("analytics.noApps")}
         </Typography>
       </Box>
     );
@@ -512,10 +514,10 @@ export const DataCube = ({
         <Tooltip
           title={
             permissionFilter
-              ? "Disable filter to switch view"
+              ? t("analytics.disableFilterToSwitch")
               : isGridView
-                ? "Switch to Cube View"
-                : "Switch to Grid View"
+                ? t("analytics.viewCube")
+                : t("analytics.viewGrid")
           }
           placement="right"
         >
@@ -566,11 +568,11 @@ export const DataCube = ({
               mb: 0.5,
             }}
           >
-            Permissions
+            {t("analytics.permissions")}
           </Typography>
           <Chip
             icon={<StorageIcon />}
-            label="Storage"
+            label={t("analytics.storage")}
             onClick={() =>
               handlePermissionFilterChange(
                 permissionFilter === "storage" ? null : "storage",
@@ -601,7 +603,7 @@ export const DataCube = ({
           />
           <Chip
             icon={<CameraAltIcon />}
-            label="Camera"
+            label={t("analytics.camera")}
             onClick={() =>
               handlePermissionFilterChange(
                 permissionFilter === "camera" ? null : "camera",
@@ -632,7 +634,7 @@ export const DataCube = ({
           />
           <Chip
             icon={<FolderIcon />}
-            label="Files"
+            label={t("analytics.files")}
             onClick={() =>
               handlePermissionFilterChange(
                 permissionFilter === "files" ? null : "files",
@@ -688,7 +690,7 @@ export const DataCube = ({
             fontWeight: 700,
           }}
         >
-          Data Cube Visualization
+          {t("analytics.dataCube")}
         </Typography>
         <Typography
           variant="body2"
@@ -698,14 +700,17 @@ export const DataCube = ({
             fontSize: "0.75rem",
           }}
         >
-          • Total Apps: {installedApps.length}
-          <br />• Cube Size: {cubeSize}×{cubeSize}×{cubeSize}
+          •{" "}
+          {t("analytics.terminal.totalInstalled", {
+            count: installedApps.length,
+          })}
+          <br />• {t("analytics.cubeSize")}: {cubeSize}×{cubeSize}×{cubeSize}
           <br />
           <br />
-          <span style={{ color: "#8b949e" }}>Controls:</span>
-          <br />• Click: Select/Deselect app
-          <br />• Drag: Rotate view
-          <br />• Scroll: Zoom in/out
+          <span style={{ color: "#8b949e" }}>{t("analytics.controls")}:</span>
+          <br />• {t("analytics.clickToSelect")}
+          <br />• {t("analytics.dragToRotate")}
+          <br />• {t("analytics.scrollToZoom")}
         </Typography>
       </Box>
     </Box>

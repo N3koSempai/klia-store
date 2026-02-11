@@ -109,7 +109,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
               color: "#58a6ff",
             }}
           >
-            SYSTEM ANALYTICS
+            {t("analytics.title")}
           </Typography>
         </Box>
 
@@ -121,7 +121,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
                   variant="caption"
                   sx={{ color: "#8b949e", textTransform: "uppercase" }}
                 >
-                  Total Apps
+                  {t("analytics.totalApps")}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -135,7 +135,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
                   variant="caption"
                   sx={{ color: "#8b949e", textTransform: "uppercase" }}
                 >
-                  Hostname
+                  {t("analytics.hostname")}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -149,7 +149,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
                   variant="caption"
                   sx={{ color: "#8b949e", textTransform: "uppercase" }}
                 >
-                  Kernel
+                  {t("analytics.kernel")}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -163,7 +163,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
                   variant="caption"
                   sx={{ color: "#8b949e", textTransform: "uppercase" }}
                 >
-                  Disk Usage
+                  {t("analytics.diskUsage")}
                 </Typography>
                 <Typography
                   variant="body2"
