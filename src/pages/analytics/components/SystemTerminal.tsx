@@ -23,9 +23,9 @@ export const SystemTerminal = ({
 
   useEffect(() => {
     if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+      terminalRef.current.scrollTop = 0;
     }
-  }, [selectedApp]);
+  }, [selectedApp, permissionFilter]);
 
   const renderTerminalContent = () => {
     if (loading) {
