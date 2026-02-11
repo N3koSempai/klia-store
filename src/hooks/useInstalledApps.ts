@@ -3,82 +3,103 @@ import { useEffect } from "react";
 import type { InstalledAppInfo } from "../store/installedAppsStore";
 import { useInstalledAppsStore } from "../store/installedAppsStore";
 import { checkAvailableUpdates } from "../utils/updateChecker";
+import { v4 as uuidv4 } from "uuid";
 
 interface InstalledAppRust {
-	app_id: string;
-	name: string;
-	version: string;
-	summary?: string;
-	developer?: string;
-	installed_size?: number;
+  app_id: string;
+  name: string;
+  version: string;
+  summary?: string;
+  developer?: string;
+  installed_size?: number;
 }
 
 interface InstalledExtensionRust {
-	extension_id: string;
-	name: string;
-	version: string;
-	parent_app_id: string;
+  extension_id: string;
+  name: string;
+  version: string;
+  parent_app_id: string;
 }
 
 interface InstalledPackagesResponse {
-	apps: InstalledAppRust[];
-	runtimes: string[];
-	extensions: InstalledExtensionRust[];
+  apps: InstalledAppRust[];
+  runtimes: string[];
+  extensions: InstalledExtensionRust[];
 }
 
 export const useInstalledApps = () => {
-	const {
-		setInstalledAppsInfo,
-		setInstalledExtensions,
-		setAvailableUpdates,
-		setInstalledRuntimes,
-	} = useInstalledAppsStore();
+  const {
+    setInstalledAppsInfo,
+    setInstalledExtensions,
+    setAvailableUpdates,
+    setInstalledRuntimes,
+  } = useInstalledAppsStore();
 
-	useEffect(() => {
-		const loadInstalledPackages = async () => {
-			try {
-				const response = await invoke<InstalledPackagesResponse>(
-					"get_installed_flatpaks",
-				);
+  useEffect(() => {
+    const loadInstalledPackages = async () => {
+      try {
+        const response = await invoke<InstalledPackagesResponse>(
+          "get_installed_flatpaks",
+        );
 
-				// Convert apps from Rust format to TypeScript format
-				const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
-					(app) => ({
-						appId: app.app_id,
-						name: app.name,
-						version: app.version,
-						summary: app.summary,
-						developer: app.developer,
-						installedSize: app.installed_size,
-					}),
-				);
+        // Preload permissions for all apps in batch to avoid separate calls later
+        let permissionsMap: Record<string, string[]> = {};
+        if (response.apps.length > 0) {
+          const appIds = response.apps.map((app) => app.app_id);
+          try {
+            permissionsMap = await invoke<Record<string, string[]>>(
+              "get_app_permissions_batch",
+              { appIds },
+            );
+          } catch (permError) {
+            console.error(
+              "[useInstalledApps] Error loading permissions:",
+              permError,
+            );
+          }
+        }
 
-				const installedExtensionsInfo = response.extensions.map((ext) => ({
-					extensionId: ext.extension_id,
-					name: ext.name,
-					version: ext.version,
-					parentAppId: ext.parent_app_id,
-				}));
+        // Convert apps from Rust format to TypeScript format with permissions
+        // Generate unique instanceId for each app to handle duplicates
+        const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
+          (app) => ({
+            instanceId: uuidv4(),
+            appId: app.app_id,
+            name: app.name,
+            version: app.version,
+            summary: app.summary,
+            developer: app.developer,
+            installedSize: app.installed_size,
+            permissions: permissionsMap[app.app_id] || [],
+          }),
+        );
 
-				setInstalledAppsInfo(installedAppsInfo);
-				setInstalledExtensions(installedExtensionsInfo);
-				setInstalledRuntimes(response.runtimes);
+        const installedExtensionsInfo = response.extensions.map((ext) => ({
+          extensionId: ext.extension_id,
+          name: ext.name,
+          version: ext.version,
+          parentAppId: ext.parent_app_id,
+        }));
 
-				// After loading installed apps, check for available updates
-				const updates = await checkAvailableUpdates();
-				setAvailableUpdates(updates);
-			} catch (error) {
-				// If loading fails, don't block the app
-				console.error("Error loading installed packages:", error);
-			}
-		};
+        setInstalledAppsInfo(installedAppsInfo);
+        setInstalledExtensions(installedExtensionsInfo);
+        setInstalledRuntimes(response.runtimes);
 
-		// Execute asynchronously without blocking
-		loadInstalledPackages();
-	}, [
-		setInstalledAppsInfo,
-		setInstalledExtensions,
-		setAvailableUpdates,
-		setInstalledRuntimes,
-	]);
+        // After loading installed apps, check for available updates
+        const updates = await checkAvailableUpdates();
+        setAvailableUpdates(updates);
+      } catch (error) {
+        // If loading fails, don't block the app
+        console.error("Error loading installed packages:", error);
+      }
+    };
+
+    // Execute asynchronously without blocking
+    loadInstalledPackages();
+  }, [
+    setInstalledAppsInfo,
+    setInstalledExtensions,
+    setAvailableUpdates,
+    setInstalledRuntimes,
+  ]);
 };

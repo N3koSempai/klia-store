@@ -270,12 +270,29 @@ async fn get_app_permissions_batch(
 }
 
 #[tauri::command]
-async fn get_system_analytics(app: tauri::AppHandle) -> Result<SystemAnalytics, String> {
+async fn get_system_analytics(
+    app: tauri::AppHandle,
+    total_apps: Option<usize>,
+    total_runtimes: Option<usize>,
+    total_extensions: Option<usize>,
+    apps_with_updates: Option<usize>,
+) -> Result<SystemAnalytics, String> {
     // Get disk usage
     let disk_usage = get_disk_usage().await?;
 
-    // Get flatpak statistics
-    let flatpak_stats = get_flatpak_stats(app.clone()).await?;
+    // Use provided flatpak stats or fetch them if not provided
+    let flatpak_stats = if let (Some(apps), Some(runtimes), Some(extensions), Some(updates)) =
+        (total_apps, total_runtimes, total_extensions, apps_with_updates)
+    {
+        FlatpakStats {
+            total_apps: apps,
+            total_runtimes: runtimes,
+            total_extensions: extensions,
+            apps_with_updates: updates,
+        }
+    } else {
+        get_flatpak_stats(app.clone()).await?
+    };
 
     // Get system info
     let system_info = get_system_info().await?;
