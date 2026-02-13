@@ -186,6 +186,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
       // Convert from Rust format to TypeScript format
       const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
         (app) => ({
+          instanceId: `${app.app_id}-${app.version}`,
           appId: app.app_id,
           name: app.name,
           version: app.version,

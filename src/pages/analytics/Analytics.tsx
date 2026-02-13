@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
+import { dbCacheManager } from "../../utils/dbCache";
 import { DataCube } from "./components/DataCube";
 import { SystemTerminal } from "./components/SystemTerminal";
 
@@ -33,9 +34,12 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
   const [selectedApp, setSelectedApp] = useState<InstalledAppInfo | null>(null);
   const [permissionFilter, setPermissionFilter] = useState<string | null>(null);
 
-  // Get installed apps from store (permissions are preloaded by useInstalledApps)
+  // Get installed apps from store
   const installedAppsInfo = useInstalledAppsStore(
     (state) => state.installedAppsInfo,
+  );
+  const setInstalledAppsInfo = useInstalledAppsStore(
+    (state) => state.setInstalledAppsInfo,
   );
   const installedRuntimes = useInstalledAppsStore(
     (state) => state.installedRuntimes,
@@ -54,10 +58,10 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
       const updateCount = Object.keys(availableUpdates).length;
 
       const data = await invoke<SystemAnalytics>("get_system_analytics", {
-        totalApps: installedAppsInfo.length || undefined,
-        totalRuntimes: installedRuntimes.size || undefined,
-        totalExtensions: extensionCount || undefined,
-        appsWithUpdates: updateCount || undefined,
+        totalApps: installedAppsInfo.length,
+        totalRuntimes: installedRuntimes.size,
+        totalExtensions: extensionCount,
+        appsWithUpdates: updateCount,
       });
       setAnalytics(data);
     } catch (error) {
@@ -67,9 +71,89 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
     }
   }, [installedAppsInfo.length, installedRuntimes.size, availableUpdates]);
 
+  // Load permissions on-demand when Analytics page opens
+  const loadPermissions = useCallback(async () => {
+    // Check if permissions are already loaded in store
+    const hasPermissions = installedAppsInfo.some(
+      (app) => app.permissions && app.permissions.length > 0,
+    );
+
+    if (hasPermissions || installedAppsInfo.length === 0) {
+      return; // Already loaded or no apps
+    }
+
+    try {
+      // Step 1: Try to get cached permissions from SQLite
+      const cachedPermissions = await dbCacheManager.getCachedPermissionsBatch(
+        installedAppsInfo.map((app) => ({
+          appId: app.appId,
+          version: app.version,
+        })),
+      );
+
+      // Step 2: Find apps that need permissions fetched
+      const appsNeedingPermissions = installedAppsInfo.filter(
+        (app) => !cachedPermissions[app.appId],
+      );
+
+      let freshPermissions: Record<string, string[]> = {};
+
+      // Step 3: Fetch missing permissions from flatpak
+      if (appsNeedingPermissions.length > 0) {
+        const appIds = appsNeedingPermissions.map((app) => app.appId);
+        freshPermissions = await invoke<Record<string, string[]>>(
+          "get_app_permissions_batch",
+          { appIds },
+        );
+
+        // Step 4: Cache the newly fetched permissions
+        const permissionsToCache: Record<
+          string,
+          { version: string; permissions: string[] }
+        > = {};
+        for (const app of appsNeedingPermissions) {
+          if (freshPermissions[app.appId]) {
+            permissionsToCache[app.appId] = {
+              version: app.version,
+              permissions: freshPermissions[app.appId],
+            };
+          }
+        }
+        await dbCacheManager.cachePermissionsBatch(permissionsToCache);
+      }
+
+      // Step 5: Merge cached and fresh permissions
+      const allPermissions = { ...cachedPermissions, ...freshPermissions };
+
+      // Step 6: Update apps with permissions
+      const updatedApps = installedAppsInfo.map((app) => ({
+        ...app,
+        permissions: allPermissions[app.appId] || [],
+      }));
+      setInstalledAppsInfo(updatedApps);
+
+      // Step 7: Clean old versions from cache (keep only current versions)
+      // This prevents database from growing indefinitely
+      try {
+        await dbCacheManager.cleanOldPermissionsBatch(
+          installedAppsInfo.map((app) => ({
+            appId: app.appId,
+            version: app.version,
+          })),
+        );
+      } catch (error) {
+        console.error("Error cleaning old permissions:", error);
+      }
+    } catch (error) {
+      console.error("Error loading permissions:", error);
+    }
+  }, [installedAppsInfo, setInstalledAppsInfo]);
+
   useEffect(() => {
     loadAnalytics();
-  }, [loadAnalytics]);
+    loadPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar una vez al montar el componente
 
   return (
     <Box

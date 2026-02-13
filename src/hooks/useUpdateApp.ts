@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { dbCacheManager } from "../utils/dbCache";
 import { updateFlatpakApp } from "../utils/flatpakOperations";
 
 interface UseUpdateAppReturn {
@@ -43,6 +44,13 @@ export function useUpdateApp(): UseUpdateAppReturn {
 					"✓ Actualización completada exitosamente",
 				]);
 				setUpdateProgress(100);
+
+				// Mark permissions as outdated since the app was updated
+				try {
+					await dbCacheManager.markPermissionsAsOutdated(appId);
+				} catch (error) {
+					console.error("Error marking permissions as outdated:", error);
+				}
 			} else {
 				setUpdateOutput((prev) => [
 					...prev,

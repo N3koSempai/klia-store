@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import type { InstalledAppInfo } from "../store/installedAppsStore";
+import { dbCacheManager } from "../utils/dbCache";
 import {
 	updateFlatpakApp,
 	updateSystemFlatpaks,
@@ -58,6 +59,7 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 			});
 
 			let errorCount = 0;
+			const successfullyUpdatedAppIds: string[] = [];
 
 			// ===== PHASE 1: Update user apps =====
 			for (let i = 0; i < appsToUpdate.length; i++) {
@@ -95,6 +97,7 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 							"",
 							`✓ ${app.name} actualizado exitosamente`,
 						]);
+						successfullyUpdatedAppIds.push(app.appId);
 					} else {
 						errorCount++;
 						setUpdateAllOutput((prev) => [
@@ -198,6 +201,20 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 						currentAppIndex: prev.totalApps + 1,
 					}));
 					setIsUpdatingSystem(false);
+				}
+			}
+
+			// Mark permissions as outdated for successfully updated apps
+			if (successfullyUpdatedAppIds.length > 0) {
+				try {
+					await dbCacheManager.markPermissionsAsOutdatedBatch(
+						successfullyUpdatedAppIds,
+					);
+				} catch (error) {
+					console.error(
+						"Error marking permissions as outdated after batch update:",
+						error,
+					);
 				}
 			}
 

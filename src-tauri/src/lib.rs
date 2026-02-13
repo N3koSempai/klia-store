@@ -128,7 +128,6 @@ fn get_app_permissions(app_id: &str, is_flatpak: bool) -> Option<Vec<String>> {
     };
 
     if !output.status.success() {
-        println!("[DEBUG] Failed to get permissions for {}: command failed", app_id);
         return None;
     }
 
@@ -138,27 +137,20 @@ fn get_app_permissions(app_id: &str, is_flatpak: bool) -> Option<Vec<String>> {
     let mut has_files = false;
     let mut has_storage = false;
 
-    println!("[DEBUG] Parsing permissions for {}:", app_id);
-
     for line in stdout.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('[') {
             continue;
         }
 
-        println!("[DEBUG]   Line: {}", line);
-
         // Look for specific permissions we care about
         // Camera: devices=all (full device access) or specific video devices
         if !has_camera && line.contains("devices=") {
             let devices_part = line.split("devices=").nth(1).unwrap_or("");
-            let devices_value = devices_part.split(';').next().unwrap_or("").trim();
-            println!("[DEBUG]     Found devices: '{}'", devices_value);
-            // Only consider "all" as camera permission (dri is just GPU acceleration)
-            if devices_value == "all" {
+            // Check if "all" is in the devices list (e.g., "dri;all;" or "all;")
+            if devices_part.split(';').any(|d| d.trim() == "all") {
                 permissions.push("camera".to_string());
                 has_camera = true;
-                println!("[DEBUG]     Added camera permission");
             }
         }
 
@@ -166,11 +158,9 @@ fn get_app_permissions(app_id: &str, is_flatpak: bool) -> Option<Vec<String>> {
         if !has_files && line.contains("filesystems=") {
             let filesystems_part = line.split("filesystems=").nth(1).unwrap_or("");
             let filesystems_value = filesystems_part.split(';').next().unwrap_or("").trim();
-            println!("[DEBUG]     Found filesystems: '{}'", filesystems_value);
             if !filesystems_value.is_empty() {
                 permissions.push("files".to_string());
                 has_files = true;
-                println!("[DEBUG]     Added files permission");
             }
         }
 
@@ -179,23 +169,18 @@ fn get_app_permissions(app_id: &str, is_flatpak: bool) -> Option<Vec<String>> {
             if line.contains("persist=") {
                 let persist_part = line.split("persist=").nth(1).unwrap_or("");
                 let persist_value = persist_part.split(';').next().unwrap_or("").trim();
-                println!("[DEBUG]     Found persist: '{}'", persist_value);
                 if !persist_value.is_empty() {
                     permissions.push("storage".to_string());
                     has_storage = true;
-                    println!("[DEBUG]     Added storage permission (persist)");
                 }
             } else if line.contains("filesystems=") {
                 if line.contains("home") || line.contains("host") || line.contains("xdg-download") {
                     permissions.push("storage".to_string());
                     has_storage = true;
-                    println!("[DEBUG]     Added storage permission (filesystems with home/host/xdg-download)");
                 }
             }
         }
     }
-
-    println!("[DEBUG] Final permissions for {}: {:?}", app_id, permissions);
 
     if permissions.is_empty() {
         None
@@ -252,21 +237,47 @@ struct SystemInfo {
 // Get system analytics data
 #[tauri::command]
 async fn get_app_permissions_batch(
-    app: tauri::AppHandle,
+    _app: tauri::AppHandle,
     app_ids: Vec<String>,
 ) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
     use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
+    use std::thread;
 
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-    let mut result = HashMap::new();
+    let result = Arc::new(Mutex::new(HashMap::new()));
 
-    for app_id in app_ids {
-        if let Some(perms) = get_app_permissions(&app_id, is_flatpak) {
-            result.insert(app_id, perms);
+    // Parallelize permission fetching using native threads
+    // Limit concurrent threads to avoid overwhelming the system
+    let chunk_size = 10; // Process 10 apps at a time
+    let mut app_id_chunks: Vec<Vec<String>> = Vec::new();
+
+    for chunk in app_ids.chunks(chunk_size) {
+        app_id_chunks.push(chunk.to_vec());
+    }
+
+    for chunk in app_id_chunks.iter() {
+        let mut handles = Vec::new();
+
+        for app_id in chunk {
+            let result_clone = Arc::clone(&result);
+            let app_id_clone = app_id.clone();
+            let handle = thread::spawn(move || {
+                if let Some(perms) = get_app_permissions(&app_id_clone, is_flatpak) {
+                    result_clone.lock().unwrap().insert(app_id_clone, perms);
+                }
+            });
+            handles.push(handle);
+        }
+
+        // Wait for this chunk to complete
+        for handle in handles {
+            let _ = handle.join();
         }
     }
 
-    Ok(result)
+    let final_result = result.lock().unwrap().clone();
+    Ok(final_result)
 }
 
 #[tauri::command]
@@ -296,7 +307,6 @@ async fn get_system_analytics(
 
     // Get system info
     let system_info = get_system_info().await?;
-
     Ok(SystemAnalytics {
         disk_usage,
         flatpak_stats,

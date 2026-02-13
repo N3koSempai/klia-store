@@ -84,6 +84,28 @@ export class DBCacheManager {
 				)
 			`);
 
+			// Create app_permissions table if not exists
+			await this.db.execute(`
+				CREATE TABLE IF NOT EXISTS app_permissions (
+					app_id TEXT NOT NULL,
+					version TEXT NOT NULL,
+					permissions TEXT NOT NULL,
+					outdated INTEGER DEFAULT 0,
+					cached_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+					PRIMARY KEY (app_id, version)
+				)
+			`);
+
+			// Migration: Add outdated column if it doesn't exist (for existing databases)
+			try {
+				await this.db.execute(`
+					ALTER TABLE app_permissions ADD COLUMN outdated INTEGER DEFAULT 0
+				`);
+				console.log("Added outdated column to app_permissions table");
+			} catch (error) {
+				// Column already exists, ignore error
+			}
+
 			console.log("All cache tables verified/created");
 		} catch (error) {
 			console.error("Error ensuring tables exist:", error);
@@ -330,6 +352,189 @@ export class DBCacheManager {
 			);
 		} catch (error) {
 			console.error("Error marking notification as viewed:", error);
+		}
+	}
+
+	// App Permissions
+	async getCachedPermissions(
+		appId: string,
+		version: string,
+	): Promise<string[] | null> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			const result = await this.db.select<
+				Array<{
+					permissions: string;
+					outdated: number;
+				}>
+			>(
+				"SELECT permissions, outdated FROM app_permissions WHERE app_id = $1 AND version = $2",
+				[appId, version],
+			);
+
+			if (result.length === 0) return null;
+
+			// If marked as outdated, return null to force refresh
+			if (result[0].outdated === 1) return null;
+
+			return JSON.parse(result[0].permissions);
+		} catch (error) {
+			console.error("Error reading cached permissions:", error);
+			return null;
+		}
+	}
+
+	async cachePermissions(
+		appId: string,
+		version: string,
+		permissions: string[],
+	): Promise<void> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			const permissionsStr = JSON.stringify(permissions);
+			await this.db.execute(
+				`INSERT OR REPLACE INTO app_permissions (app_id, version, permissions, outdated, cached_at)
+         VALUES ($1, $2, $3, 0, CURRENT_TIMESTAMP)`,
+				[appId, version, permissionsStr],
+			);
+		} catch (error) {
+			console.error("Error caching permissions:", error);
+		}
+	}
+
+	async getCachedPermissionsBatch(
+		apps: Array<{ appId: string; version: string }>,
+	): Promise<Record<string, string[]>> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		const result: Record<string, string[]> = {};
+
+		try {
+			for (const app of apps) {
+				const permissions = await this.getCachedPermissions(
+					app.appId,
+					app.version,
+				);
+				if (permissions) {
+					result[app.appId] = permissions;
+				}
+			}
+		} catch (error) {
+			console.error("Error reading cached permissions batch:", error);
+		}
+
+		return result;
+	}
+
+	async cachePermissionsBatch(
+		permissionsMap: Record<string, { version: string; permissions: string[] }>,
+	): Promise<void> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			const entries = Object.entries(permissionsMap);
+			if (entries.length === 0) return;
+
+			// Use explicit transaction for batch inserts (10-100x faster)
+			await this.db.execute("BEGIN TRANSACTION");
+
+			try {
+				for (const [appId, data] of entries) {
+					const permissionsStr = JSON.stringify(data.permissions);
+					await this.db.execute(
+						`INSERT OR REPLACE INTO app_permissions (app_id, version, permissions, outdated, cached_at)
+             VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+						[appId, data.version, permissionsStr],
+					);
+				}
+
+				await this.db.execute("COMMIT");
+			} catch (error) {
+				await this.db.execute("ROLLBACK");
+				throw error;
+			}
+		} catch (error) {
+			console.error("Error caching permissions batch:", error);
+		}
+	}
+
+	// Mark permissions as outdated for a specific app (all versions)
+	async markPermissionsAsOutdated(appId: string): Promise<void> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			await this.db.execute(
+				"UPDATE app_permissions SET outdated = 1 WHERE app_id = $1",
+				[appId],
+			);
+		} catch (error) {
+			console.error("Error marking permissions as outdated:", error);
+		}
+	}
+
+	// Mark permissions as outdated for multiple apps
+	async markPermissionsAsOutdatedBatch(appIds: string[]): Promise<void> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			for (const appId of appIds) {
+				await this.markPermissionsAsOutdated(appId);
+			}
+		} catch (error) {
+			console.error("Error marking permissions as outdated batch:", error);
+		}
+	}
+
+	// Clean old cached versions for a specific app (keep only the current version)
+	async cleanOldPermissions(appId: string, currentVersion: string): Promise<void> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			// Delete all versions except the current one
+			await this.db.execute(
+				"DELETE FROM app_permissions WHERE app_id = $1 AND version != $2",
+				[appId, currentVersion],
+			);
+		} catch (error) {
+			console.error("Error cleaning old permissions:", error);
+		}
+	}
+
+	// Clean old cached versions for all apps based on currently installed versions
+	async cleanOldPermissionsBatch(
+		currentApps: Array<{ appId: string; version: string }>,
+	): Promise<void> {
+		await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			if (currentApps.length === 0) return;
+
+			// Build a more efficient query to delete in one statement
+			// Keep only entries that match (app_id, version) pairs in currentApps
+			const placeholders = currentApps
+				.map(() => "(?, ?)")
+				.join(", ");
+
+			const values = currentApps.flatMap((app) => [app.appId, app.version]);
+
+			// Delete all entries that are NOT in the current apps list
+			await this.db.execute(
+				`DELETE FROM app_permissions
+         WHERE (app_id, version) NOT IN (VALUES ${placeholders})`,
+				values,
+			);
+		} catch (error) {
+			console.error("Error cleaning old permissions batch:", error);
 		}
 	}
 }

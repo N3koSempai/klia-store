@@ -204,7 +204,7 @@ const CubeScene = ({
   isGridView,
   permissionFilter,
   selectedApp,
-}: Omit<DataCubeProps, "loading"> & {
+}: Omit<DataCubeProps, "loading" | "onPermissionFilterChange"> & {
   isGridView: boolean;
   permissionFilter: PermissionFilter;
   selectedApp: InstalledAppInfo | null;
@@ -306,9 +306,6 @@ const CubeScene = ({
 
       // Calcular filas necesarias para cada grupo
       const withPermRows = Math.ceil(appsWithPermission.length / maxCols);
-      const _withoutPermRows = Math.ceil(
-        appsWithoutPermission.length / maxCols,
-      );
 
       // Espacio vertical entre grupos (fila vacía)
       const groupSeparation = 2.0;

@@ -42,25 +42,9 @@ export const useInstalledApps = () => {
           "get_installed_flatpaks",
         );
 
-        // Preload permissions for all apps in batch to avoid separate calls later
-        let permissionsMap: Record<string, string[]> = {};
-        if (response.apps.length > 0) {
-          const appIds = response.apps.map((app) => app.app_id);
-          try {
-            permissionsMap = await invoke<Record<string, string[]>>(
-              "get_app_permissions_batch",
-              { appIds },
-            );
-          } catch (permError) {
-            console.error(
-              "[useInstalledApps] Error loading permissions:",
-              permError,
-            );
-          }
-        }
-
-        // Convert apps from Rust format to TypeScript format with permissions
+        // Convert apps from Rust format to TypeScript format
         // Generate unique instanceId for each app to handle duplicates
+        // Permissions will be loaded on-demand when needed (e.g., in Analytics page)
         const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
           (app) => ({
             instanceId: uuidv4(),
@@ -70,7 +54,7 @@ export const useInstalledApps = () => {
             summary: app.summary,
             developer: app.developer,
             installedSize: app.installed_size,
-            permissions: permissionsMap[app.app_id] || [],
+            permissions: [], // Loaded on-demand
           }),
         );
 
