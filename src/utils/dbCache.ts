@@ -415,14 +415,29 @@ export class DBCacheManager {
 		const result: Record<string, string[]> = {};
 
 		try {
-			for (const app of apps) {
-				const permissions = await this.getCachedPermissions(
-					app.appId,
-					app.version,
-				);
-				if (permissions) {
-					result[app.appId] = permissions;
-				}
+			if (apps.length === 0) return result;
+
+			// Build a single query with placeholders for all (app_id, version) pairs
+			const placeholders = apps
+				.map(() => "(?, ?)")
+				.join(", ");
+
+			const values = apps.flatMap((app) => [app.appId, app.version]);
+
+			const rows = await this.db.select<
+				Array<{
+					app_id: string;
+					permissions: string;
+					outdated: number;
+				}>
+			>(
+				`SELECT app_id, permissions, outdated FROM app_permissions
+				WHERE (app_id, version) IN (VALUES ${placeholders}) AND outdated = 0`,
+				values,
+			);
+
+			for (const row of rows) {
+				result[row.app_id] = JSON.parse(row.permissions);
 			}
 		} catch (error) {
 			console.error("Error reading cached permissions batch:", error);
@@ -437,27 +452,18 @@ export class DBCacheManager {
 		await this.initialize();
 		if (!this.db) throw new Error("Database not initialized");
 
+		const entries = Object.entries(permissionsMap);
+		if (entries.length === 0) return;
+
 		try {
-			const entries = Object.entries(permissionsMap);
-			if (entries.length === 0) return;
-
-			// Use explicit transaction for batch inserts (10-100x faster)
-			await this.db.execute("BEGIN TRANSACTION");
-
-			try {
-				for (const [appId, data] of entries) {
-					const permissionsStr = JSON.stringify(data.permissions);
-					await this.db.execute(
-						`INSERT OR REPLACE INTO app_permissions (app_id, version, permissions, outdated, cached_at)
-             VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)`,
-						[appId, data.version, permissionsStr],
-					);
-				}
-
-				await this.db.execute("COMMIT");
-			} catch (error) {
-				await this.db.execute("ROLLBACK");
-				throw error;
+			// Insert each permission sequentially (no transaction to avoid locks)
+			for (const [appId, data] of entries) {
+				const permissionsStr = JSON.stringify(data.permissions);
+				await this.db.execute(
+					`INSERT OR REPLACE INTO app_permissions (app_id, version, permissions, outdated, cached_at)
+           VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+					[appId, data.version, permissionsStr],
+				);
 			}
 		} catch (error) {
 			console.error("Error caching permissions batch:", error);

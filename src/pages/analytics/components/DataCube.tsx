@@ -441,9 +441,23 @@ export const DataCube = ({
         }}
       >
         <CircularProgress sx={{ color: "#58a6ff" }} />
-        <Typography sx={{ color: "#8b949e", fontFamily: "monospace" }}>
-          {loading ? t("analytics.loading") : t("analytics.noApps")}
-        </Typography>
+        <Box sx={{ textAlign: "center" }}>
+          <Typography sx={{ color: "#8b949e", fontFamily: "monospace" }}>
+            {loading ? t("analytics.loading") : t("analytics.noApps")}
+          </Typography>
+          {loading && (
+            <Typography
+              sx={{
+                color: "#6e7681",
+                fontFamily: "monospace",
+                fontSize: "0.75rem",
+                mt: 0.5,
+              }}
+            >
+              {t("analytics.loadingCacheNote")}
+            </Typography>
+          )}
+        </Box>
       </Box>
     );
   }

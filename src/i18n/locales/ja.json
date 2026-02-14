@@ -204,6 +204,7 @@
     "kernel": "カーネル",
     "diskUsage": "ディスク使用量",
     "loading": "インストール済みアプリを読み込み中...",
+    "loadingCacheNote": "高速アクセスのためにデータをキャッシュしています",
     "noApps": "インストールされたアプリはありません",
     "permissions": "権限",
     "storage": "ストレージ",

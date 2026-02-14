@@ -204,6 +204,7 @@
     "kernel": "Kernel",
     "diskUsage": "Disk Usage",
     "loading": "Loading installed apps...",
+    "loadingCacheNote": "Caching data for faster future access",
     "noApps": "No apps installed",
     "permissions": "Permissions",
     "storage": "Storage",

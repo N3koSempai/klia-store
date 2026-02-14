@@ -205,6 +205,7 @@
     "kernel": "Kernel",
     "diskUsage": "Uso do Disco",
     "loading": "Carregando apps instalados...",
+    "loadingCacheNote": "Armazenando dados em cache para acesso mais rápido",
     "noApps": "Nenhum app instalado",
     "permissions": "Permissões",
     "storage": "Armazenamento",

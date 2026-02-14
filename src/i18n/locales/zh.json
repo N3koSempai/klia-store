@@ -205,6 +205,7 @@
     "kernel": "内核",
     "diskUsage": "磁盘使用情况",
     "loading": "正在加载已安装的应用...",
+    "loadingCacheNote": "缓存数据以实现更快的访问",
     "noApps": "未安装应用",
     "permissions": "权限",
     "storage": "存储",
