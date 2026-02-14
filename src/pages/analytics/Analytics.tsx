@@ -31,6 +31,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
   const { t } = useTranslation();
   const [analytics, setAnalytics] = useState<SystemAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
   const [selectedApp, setSelectedApp] = useState<InstalledAppInfo | null>(null);
   const [permissionFilter, setPermissionFilter] = useState<string | null>(null);
 
@@ -79,10 +80,12 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
     );
 
     if (hasPermissions || installedAppsInfo.length === 0) {
+      setLoadingPermissions(false);
       return; // Already loaded or no apps
     }
 
     try {
+      setLoadingPermissions(true);
       // Step 1: Try to get cached permissions from SQLite
       const cachedPermissions = await dbCacheManager.getCachedPermissionsBatch(
         installedAppsInfo.map((app) => ({
@@ -146,6 +149,8 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
       }
     } catch (error) {
       console.error("Error loading permissions:", error);
+    } finally {
+      setLoadingPermissions(false);
     }
   }, [installedAppsInfo, setInstalledAppsInfo]);
 
@@ -282,7 +287,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
         >
           <DataCube
             installedApps={installedAppsInfo}
-            loading={loading}
+            loading={loading || loadingPermissions}
             onAppSelect={setSelectedApp}
             onPermissionFilterChange={setPermissionFilter}
             selectedApp={selectedApp}
@@ -294,7 +299,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
           <SystemTerminal
             selectedApp={selectedApp}
             totalApps={installedAppsInfo.length}
-            loading={loading}
+            loading={loading || loadingPermissions}
             permissionFilter={permissionFilter}
             installedApps={installedAppsInfo}
             onAppSelect={setSelectedApp}
