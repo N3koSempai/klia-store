@@ -73,9 +73,32 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
   const [isInstalling, setIsInstalling] = useState(false);
   const [installOutput, setInstallOutput] = useState<string[]>([]);
   const [installStatus, setInstallStatus] = useState<
-    "idle" | "installing" | "success" | "error"
+    | "idle"
+    | "verifying"
+    | "verificationSuccess"
+    | "verificationFailed"
+    | "verificationUnsupported"
+    | "installing"
+    | "success"
+    | "error"
   >("idle");
   const [isUninstalling, setIsUninstalling] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<{
+    verified: boolean;
+    sources: Array<{
+      url: string;
+      commit: string;
+      verified: boolean;
+      remote_commit?: string;
+      error?: string;
+      platform?: string;
+    }>;
+    error?: string;
+    isHashMismatch: boolean;
+    isUnsupportedPlatform: boolean;
+  } | null>(null);
+  const [countdown, setCountdown] = useState(5);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use ref to track isInstalling state in event listeners
   const isInstallingRef = useRef(false);
@@ -94,7 +117,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
   // Check if app is already installed
   const isInstalled = isAppInstalled(app.app_id);
 
-  // Cleanup: kill PTY process when leaving the page
+  // Cleanup: kill PTY process and countdown when leaving the page
   useEffect(() => {
     return () => {
       if (installSessionId.current) {
@@ -102,6 +125,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
         invoke("kill_pty_process", { appId: app.app_id }).catch(console.error);
         installSessionId.current = null;
       }
+      clearCountdown();
     };
   }, [app.app_id]);
 
@@ -204,7 +228,9 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
               setInstallStatus("success");
               setInstallOutput((p) => {
                 if (
-                  p.some((l) => l === t("appDetails.installationCompletedSuccess"))
+                  p.some(
+                    (l) => l === t("appDetails.installationCompletedSuccess"),
+                  )
                 )
                   return p;
                 return [...p, "", t("appDetails.installationCompletedSuccess")];
@@ -275,14 +301,22 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
     );
   };
 
-  const handleInstall = async () => {
-    // Set installing state and ref IMMEDIATELY
+  const clearCountdown = () => {
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  };
+
+  const startInstallation = async () => {
+    clearCountdown();
+    setVerificationResult(null);
     isInstallingRef.current = true;
     setIsInstalling(true);
     setInstallStatus("installing");
     setInstallOutput([t("appDetails.preparingInstallation"), ""]);
 
-    console.log("[AppDetails] handleInstall - starting fresh PTY process");
+    console.log("[AppDetails] Starting installation");
 
     try {
       // Kill any existing PTY process first (cleanup)
@@ -308,6 +342,146 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
         t("appDetails.errorInvokingCommand", { error }),
       ]);
       installSessionId.current = null;
+    }
+  };
+
+  const handleInstall = async () => {
+    // Start hash verification first
+    setInstallStatus("verifying");
+    setVerificationResult(null);
+    setCountdown(5);
+
+    console.log("[AppDetails] handleInstall - starting hash verification");
+
+    try {
+      // Verify app hash before installation
+      const result = await invoke<{
+        verified: boolean;
+        app_id: string;
+        sources: Array<{
+          url: string;
+          commit: string;
+          verified: boolean;
+          remote_commit?: string;
+          error?: string;
+          platform?: string;
+        }>;
+        error?: string;
+      }>("verify_app_hash", { appId: app.app_id });
+
+      console.log("[AppDetails] Hash verification result:", result);
+      console.log("[AppDetails] Sources:", result.sources);
+      console.log("[AppDetails] Error:", result.error);
+
+      if (!result.verified) {
+        // Determine the type of failure
+        const source = result.sources[0];
+        const errorMsg = source?.error || result.error || "";
+        const platform = source?.platform || "unknown";
+
+        // Check if platform is unsupported
+        const isUnsupportedPlatform = platform === "unsupported";
+
+        // Check if it's specifically a hash mismatch
+        const isHashMismatch =
+          errorMsg.toLowerCase().includes("hash mismatch") ||
+          errorMsg.toLowerCase().includes("mismatch");
+
+        // Check if it's a source/tag not found issue
+        const isSourceUnavailable =
+          errorMsg.toLowerCase().includes("tag") ||
+          errorMsg.toLowerCase().includes("could not verify") ||
+          errorMsg.toLowerCase().includes("not found") ||
+          errorMsg.toLowerCase().includes("failed to fetch");
+
+        console.log("[AppDetails] Verification failed:", {
+          isHashMismatch,
+          isSourceUnavailable,
+          isUnsupportedPlatform,
+          platform,
+          error: errorMsg,
+        });
+
+        setVerificationResult({
+          verified: false,
+          sources: result.sources,
+          error: result.error,
+          isHashMismatch: isHashMismatch && !isSourceUnavailable,
+          isUnsupportedPlatform,
+        });
+
+        if (isUnsupportedPlatform) {
+          setInstallStatus("verificationUnsupported");
+        } else {
+          setInstallStatus("verificationFailed");
+        }
+        return;
+      }
+
+      // Verification successful, show success state with countdown
+      setVerificationResult({
+        verified: true,
+        sources: result.sources,
+        isHashMismatch: false,
+        isUnsupportedPlatform: false,
+      });
+      setInstallStatus("verificationSuccess");
+
+      // Start countdown
+      let count = 5;
+      countdownIntervalRef.current = setInterval(() => {
+        count -= 1;
+        setCountdown(count);
+        if (count <= 0) {
+          clearCountdown();
+          startInstallation();
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("[AppDetails] Verification error:", error);
+      setVerificationResult({
+        verified: false,
+        sources: [],
+        error: String(error),
+        isHashMismatch: false,
+        isUnsupportedPlatform: false,
+      });
+      setInstallStatus("verificationFailed");
+    }
+  };
+
+  const handleForceContinue = () => {
+    clearCountdown();
+    startInstallation();
+  };
+
+  const handleCancelVerification = () => {
+    clearCountdown();
+    setInstallStatus("idle");
+    setVerificationResult(null);
+  };
+
+  const handleShowVerificationDetails = () => {
+    // Show details in terminal-like format
+    if (verificationResult) {
+      const details = [
+        "Security Verification Details:",
+        "==============================",
+        "",
+        `Overall Status: ${verificationResult.verified ? "✓ VERIFIED" : "✗ FAILED"}`,
+        "",
+        "Sources Checked:",
+        ...verificationResult.sources.map(
+          (s) => `  [${s.verified ? "✓" : "✗"}] ${s.url}`,
+        ),
+        "",
+        ...(verificationResult.error
+          ? [`Error: ${verificationResult.error}`]
+          : []),
+      ];
+      setInstallOutput(details);
+      setInstallStatus("installing");
+      setTimeout(() => setInstallStatus("verificationFailed"), 100);
     }
   };
 
@@ -365,9 +539,17 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
   };
 
   // Determine button status
-  const getButtonStatus = (): "installed" | "missing" | "busy" => {
+  const getButtonStatus = ():
+    | "installed"
+    | "missing"
+    | "busy"
+    | "verifying" => {
     if (isUninstalling) return "busy";
     if (installStatus === "installing") return "busy";
+    if (installStatus === "verifying") return "verifying";
+    if (installStatus === "verificationSuccess") return "busy";
+    if (installStatus === "verificationFailed") return "busy";
+    if (installStatus === "verificationUnsupported") return "busy";
     if (isInstalled) return "installed";
     return "missing";
   };
@@ -528,7 +710,321 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
       {/* Sección de Screenshots - Carrusel, Terminal o Resultado */}
       <Box sx={{ mb: 4 }}>
-        {installStatus === "installing" ? (
+        {installStatus === "verifying" ? (
+          // Security Verification UI
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 3,
+              p: 4,
+              minHeight: 500,
+              bgcolor: "#161B22",
+              borderRadius: 2,
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+          >
+            <Typography
+              variant="h5"
+              textAlign="center"
+              sx={{
+                color: "#C9D1D9",
+                fontWeight: 500,
+              }}
+            >
+              {t("appDetails.securityVerifyingSignatures")}
+            </Typography>
+
+            {/* Spinner */}
+            <Box
+              sx={{
+                width: 60,
+                height: 60,
+                border: "3px solid rgba(74, 134, 207, 0.3)",
+                borderTop: "3px solid #4A86CF",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+                "@keyframes spin": {
+                  "0%": { transform: "rotate(0deg)" },
+                  "100%": { transform: "rotate(360deg)" },
+                },
+              }}
+            />
+
+            <Typography
+              variant="body2"
+              sx={{
+                color: "#8B949E",
+                fontFamily: "'Fira Code', 'Courier New', monospace",
+              }}
+            >
+              {t("appDetails.securityCheckingSignatures")}
+            </Typography>
+          </Box>
+        ) : installStatus === "verificationSuccess" ? (
+          // Verification Success with Countdown
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 3,
+              p: 4,
+              minHeight: 500,
+              bgcolor: "#161B22",
+              borderRadius: 2,
+              border: "1px solid rgba(39, 201, 63, 0.3)",
+            }}
+          >
+            {/* Success Icon */}
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                bgcolor: "rgba(39, 201, 63, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px solid #27c93f",
+              }}
+            >
+              <Typography sx={{ color: "#27c93f", fontSize: "2rem" }}>
+                ✓
+              </Typography>
+            </Box>
+
+            <Typography
+              variant="h5"
+              textAlign="center"
+              sx={{
+                color: "#27c93f",
+                fontWeight: 500,
+              }}
+            >
+              {t("appDetails.securityVerificationSuccess")}
+            </Typography>
+
+            <Typography
+              variant="body2"
+              textAlign="center"
+              sx={{
+                color: "#8B949E",
+                maxWidth: 500,
+                px: 2,
+              }}
+            >
+              {t("appDetails.securityHashVerifiedExplanation")}
+            </Typography>
+
+            <Typography
+              variant="body1"
+              textAlign="center"
+              sx={{
+                color: "#C9D1D9",
+              }}
+            >
+              {t("appDetails.securityStartingInSeconds", { countdown })}
+            </Typography>
+          </Box>
+        ) : installStatus === "verificationFailed" ||
+          installStatus === "verificationUnsupported" ? (
+          // Verification Failed UI
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 3,
+              p: 4,
+              minHeight: 500,
+              bgcolor: "#161B22",
+              borderRadius: 2,
+              border: `1px solid ${
+                verificationResult?.isUnsupportedPlatform
+                  ? "rgba(246, 211, 45, 0.5)"
+                  : verificationResult?.isHashMismatch
+                    ? "rgba(255, 107, 107, 0.5)"
+                    : "rgba(246, 211, 45, 0.5)"
+              }`,
+            }}
+          >
+            {/* Warning/Error Icon */}
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                bgcolor: verificationResult?.isUnsupportedPlatform
+                  ? "rgba(246, 211, 45, 0.1)"
+                  : verificationResult?.isHashMismatch
+                    ? "rgba(255, 107, 107, 0.1)"
+                    : "rgba(246, 211, 45, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: `2px solid ${
+                  verificationResult?.isUnsupportedPlatform
+                    ? "#F6D32D"
+                    : verificationResult?.isHashMismatch
+                      ? "#FF6B6B"
+                      : "#F6D32D"
+                }`,
+              }}
+            >
+              <Typography
+                sx={{
+                  color: verificationResult?.isUnsupportedPlatform
+                    ? "#F6D32D"
+                    : verificationResult?.isHashMismatch
+                      ? "#FF6B6B"
+                      : "#F6D32D",
+                  fontSize: "2rem",
+                }}
+              >
+                ⚠
+              </Typography>
+            </Box>
+
+            <Typography
+              variant="h5"
+              textAlign="center"
+              sx={{
+                color: verificationResult?.isUnsupportedPlatform
+                  ? "#F6D32D"
+                  : verificationResult?.isHashMismatch
+                    ? "#FF6B6B"
+                    : "#F6D32D",
+                fontWeight: 500,
+              }}
+            >
+              {verificationResult?.isUnsupportedPlatform
+                ? t("appDetails.securityUnsupportedPlatform")
+                : t("appDetails.securityVerificationFailed")}
+            </Typography>
+
+            <Typography
+              variant="body2"
+              textAlign="center"
+              sx={{
+                color: "#8B949E",
+                maxWidth: 500,
+                px: 2,
+                mb: 2,
+              }}
+            >
+              {t("appDetails.securityHashVerificationExplanation")}
+            </Typography>
+
+            <Typography
+              variant="body1"
+              textAlign="center"
+              sx={{
+                color: "#C9D1D9",
+                maxWidth: 600,
+              }}
+            >
+              {verificationResult?.isUnsupportedPlatform
+                ? t("appDetails.securityUnsupportedPlatformMessage")
+                : verificationResult?.isHashMismatch
+                  ? t("appDetails.securityHashMismatch")
+                  : t("appDetails.securitySourceUnavailable")}
+            </Typography>
+
+            {/* Debug info */}
+            {verificationResult?.sources[0]?.error && (
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  bgcolor: "rgba(0,0,0,0.3)",
+                  borderRadius: 1,
+                  fontFamily: "'Fira Code', 'Courier New', monospace",
+                  fontSize: "0.8rem",
+                  color: "#8B949E",
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{ color: "#6B7280", display: "block", mb: 1 }}
+                >
+                  Debug Info:
+                </Typography>
+                <div>URL: {verificationResult.sources[0].url}</div>
+                <div>
+                  Commit in manifest: {verificationResult.sources[0].commit}
+                </div>
+                <div>
+                  Remote commit:{" "}
+                  {verificationResult.sources[0].remote_commit || "N/A"}
+                </div>
+                <div style={{ color: "#FF6B6B", marginTop: 8 }}>
+                  Error: {verificationResult.sources[0].error}
+                </div>
+              </Box>
+            )}
+
+            {/* Action Buttons */}
+            <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={handleShowVerificationDetails}
+                sx={{
+                  px: 3,
+                  borderColor: "rgba(255, 255, 255, 0.3)",
+                  color: "#C9D1D9",
+                  "&:hover": {
+                    borderColor: "rgba(255, 255, 255, 0.5)",
+                    bgcolor: "rgba(255, 255, 255, 0.05)",
+                  },
+                }}
+              >
+                {t("appDetails.securityMoreDetails")}
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleForceContinue}
+                sx={{
+                  px: 3,
+                  bgcolor: verificationResult?.isUnsupportedPlatform
+                    ? "#F6D32D"
+                    : verificationResult?.isHashMismatch
+                      ? "#FF6B6B"
+                      : "#F6D32D",
+                  color: "#0D1117",
+                  fontWeight: 600,
+                  "&:hover": {
+                    bgcolor: verificationResult?.isUnsupportedPlatform
+                      ? "#f8db4e"
+                      : verificationResult?.isHashMismatch
+                        ? "#ff8585"
+                        : "#f8db4e",
+                  },
+                }}
+              >
+                {verificationResult?.isHashMismatch
+                  ? t("appDetails.securityContinueAnywayRisk")
+                  : t("appDetails.securityContinueAnyway")}
+              </Button>
+            </Box>
+
+            <Button
+              onClick={handleCancelVerification}
+              sx={{
+                color: "#8B949E",
+                "&:hover": {
+                  color: "#C9D1D9",
+                },
+              }}
+            >
+              {t("appDetails.securityCancelInstallation")}
+            </Button>
+          </Box>
+        ) : installStatus === "installing" ? (
           <>
             <Typography variant="h6" gutterBottom textAlign="center">
               {t("appDetails.installationInProgress")}
