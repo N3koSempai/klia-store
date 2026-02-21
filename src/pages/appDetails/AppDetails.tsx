@@ -100,8 +100,8 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
   } | null>(null);
   const [countdown, setCountdown] = useState(5);
   const [riskCountdown, setRiskCountdown] = useState<number | null>(null);
-  const riskCountdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const riskCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Use ref to track isInstalling state in event listeners
   const isInstallingRef = useRef(false);
