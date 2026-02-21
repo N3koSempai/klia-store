@@ -17,10 +17,14 @@ static GITHUB_SSH_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
     regex::Regex::new(r"git@github\.com:([^/]+)/([^/]+?)(?:\.git)?$").unwrap()
 });
 static GITLAB_HTTPS_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
-    regex::Regex::new(r"https?://gitlab\.com/([^/]+)/([^/]+?)(?:\.git)?$").unwrap()
+    // Support any GitLab instance (gitlab.com, gitlab.gnome.org, gitlab.freedesktop.org, etc.)
+    // Captures: (1) domain, (2) full path
+    regex::Regex::new(r"https?://(gitlab\.[^/]+)/(.+?)(?:\.git)?$").unwrap()
 });
 static GITLAB_SSH_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
-    regex::Regex::new(r"git@gitlab\.com:([^/]+)/([^/]+?)(?:\.git)?$").unwrap()
+    // Support any GitLab instance via SSH
+    // Captures: (1) domain, (2) full path
+    regex::Regex::new(r"git@(gitlab\.[^:]+):(.+?)(?:\.git)?$").unwrap()
 });
 
 #[derive(Debug, Clone)]
@@ -1872,14 +1876,48 @@ async fn check_pty_process(
 
 // ============ HASH VERIFICATION SYSTEM ============
 
+// Helper function to deserialize tag field (can be string or number)
+fn deserialize_tag<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrNumber {
+        String(String),
+        Number(f64),
+        Integer(i64),
+    }
+
+    match Option::<StringOrNumber>::deserialize(deserializer)? {
+        Some(StringOrNumber::String(s)) => Ok(Some(s)),
+        Some(StringOrNumber::Number(n)) => {
+            // Preserve decimal format for floats like 49.0
+            if n.fract() == 0.0 && n.abs() < 1e10 {
+                // Integer written as float in YAML (e.g., 49.0)
+                // Format with one decimal to preserve original format
+                Ok(Some(format!("{:.1}", n)))
+            } else {
+                Ok(Some(n.to_string()))
+            }
+        }
+        Some(StringOrNumber::Integer(i)) => Ok(Some(i.to_string())),
+        None => Ok(None),
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct FlatpakSource {
     #[serde(rename = "type")]
     source_type: String,
     url: Option<String>,
     commit: Option<String>,
+    #[serde(deserialize_with = "deserialize_tag", default)]
     tag: Option<String>,
     branch: Option<String>,
+    sha256: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -1887,6 +1925,7 @@ struct FlatpakModule {
     name: String,
     #[serde(default)]
     sources: Vec<FlatpakSource>,
+    // Note: nested modules are automatically ignored if not present
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -1931,18 +1970,23 @@ fn extract_git_repo(url: &str) -> Option<(String, String, GitPlatform)> {
         return Some((owner, repo, GitPlatform::GitHub));
     }
 
-    // GitLab HTTPS
+    // GitLab HTTPS - captures full path (supports nested groups and self-hosted instances)
     if let Some(caps) = GITLAB_HTTPS_REGEX.captures(url) {
-        let owner = caps.get(1)?.as_str().to_string();
-        let repo = caps.get(2)?.as_str().to_string();
-        return Some((owner, repo, GitPlatform::GitLab));
+        let domain = caps.get(1)?.as_str().to_string();
+        let full_path = caps.get(2)?.as_str().to_string();
+        // For GitLab, we store "domain/path" in 'owner' and leave 'repo' empty
+        // This supports: gitlab.com/project, gitlab.gnome.org/World/gedit, etc.
+        let combined = format!("{}/{}", domain, full_path);
+        return Some((combined, String::new(), GitPlatform::GitLab));
     }
 
-    // GitLab SSH
+    // GitLab SSH - captures full path (supports nested groups and self-hosted instances)
     if let Some(caps) = GITLAB_SSH_REGEX.captures(url) {
-        let owner = caps.get(1)?.as_str().to_string();
-        let repo = caps.get(2)?.as_str().to_string();
-        return Some((owner, repo, GitPlatform::GitLab));
+        let domain = caps.get(1)?.as_str().to_string();
+        let full_path = caps.get(2)?.as_str().to_string();
+        // For GitLab, we store "domain/path" in 'owner' and leave 'repo' empty
+        let combined = format!("{}/{}", domain, full_path);
+        return Some((combined, String::new(), GitPlatform::GitLab));
     }
 
     None
@@ -2200,9 +2244,31 @@ async fn get_gitlab_tag_commit_inner(
     tag: &str,
 ) -> Result<String, String> {
     // GitLab API v4 para obtener un tag específico
+    // For GitLab, 'owner' contains "domain/path" (e.g., "gitlab.gnome.org/World/gedit/gedit")
+    // repo is empty and not used
+
+    let (gitlab_domain, project_path) = if repo.is_empty() {
+        // New format: "domain/path" in owner
+        // Split at first '/' to separate domain from path
+        if let Some(first_slash) = owner.find('/') {
+            let domain = &owner[..first_slash];
+            let path = &owner[first_slash + 1..];
+            (domain, path.to_string())
+        } else {
+            // Fallback: assume gitlab.com if no domain found
+            ("gitlab.com", owner.to_string())
+        }
+    } else {
+        // Legacy format: owner/repo (for backward compatibility)
+        ("gitlab.com", format!("{}/{}", owner, repo))
+    };
+
+    // URL-encode the path (/ becomes %2F)
+    let encoded_path = project_path.replace('/', "%2F");
+
     let tag_url = format!(
-        "https://gitlab.com/api/v4/projects/{}%2F{}/repository/tags/{}",
-        owner, repo, tag
+        "https://{}/api/v4/projects/{}/repository/tags/{}",
+        gitlab_domain, encoded_path, tag
     );
 
     let response = client
@@ -2319,6 +2385,119 @@ async fn get_github_tag_commit(owner: &str, repo: &str, tag: &str) -> Result<Str
     get_tag_commit_with_fallback(&client, &GitPlatform::GitHub, owner, repo, tag).await
 }
 
+/// Extracts owner, repo, release tag, and filename from a GitHub/GitLab release URL
+/// Example: https://github.com/owner/repo/releases/download/v1.2.2/file.tar.gz
+/// Returns: Some((owner, repo, tag, filename))
+fn extract_release_info(url: &str) -> Option<(String, String, String, String)> {
+    // GitHub pattern: https://github.com/owner/repo/releases/download/tag/file
+    if let Some(caps) = regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$")
+        .ok()?
+        .captures(url)
+    {
+        let owner = caps.get(1)?.as_str().to_string();
+        let repo = caps.get(2)?.as_str().to_string();
+        let tag = caps.get(3)?.as_str().to_string();
+        let filename = caps.get(4)?.as_str().to_string();
+        return Some((owner, repo, tag, filename));
+    }
+
+    // GitLab pattern: https://gitlab.com/owner/repo/-/releases/tag/downloads/file
+    // or https://gitlab.DOMAIN/owner/repo/-/archive/tag/file
+    if let Some(caps) = regex::Regex::new(r"https://gitlab\.[^/]+/([^/]+)/([^/]+)/-/(?:releases|archive)/([^/]+)/(.+)$")
+        .ok()?
+        .captures(url)
+    {
+        let owner = caps.get(1)?.as_str().to_string();
+        let repo = caps.get(2)?.as_str().to_string();
+        let tag = caps.get(3)?.as_str().to_string();
+        let filename = caps.get(4)?.as_str().to_string();
+        return Some((owner, repo, tag, filename));
+    }
+
+    None
+}
+
+/// Verifies that a GitHub release exists and optionally verifies SHA256
+async fn verify_github_release(
+    client: &reqwest::Client,
+    owner: &str,
+    repo: &str,
+    tag: &str,
+    filename: Option<&str>,
+    expected_sha256: Option<&str>,
+) -> Result<(), String> {
+    let release_url = format!(
+        "https://api.github.com/repos/{}/{}/releases/tags/{}",
+        owner, repo, tag
+    );
+
+    println!("[verify_github_release] Checking release: {}", release_url);
+
+    let response = client
+        .get(&release_url)
+        .header("User-Agent", "klia-store-hash-verification")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch release: {}", e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        return Err(format!("Release {} not found or not public (status: {})", tag, status));
+    }
+
+    // If we need to verify SHA256, get the release data
+    if let (Some(file), Some(expected)) = (filename, expected_sha256) {
+        println!("[verify_github_release] Verifying SHA256 for file: {}", file);
+
+        let release_text = response
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read release data: {}", e))?;
+
+        let release_data: serde_json::Value = serde_json::from_str(&release_text)
+            .map_err(|e| format!("Failed to parse release data: {}", e))?;
+
+        // Find the asset with matching filename
+        if let Some(assets) = release_data.get("assets").and_then(|a| a.as_array()) {
+            for asset in assets {
+                if let Some(name) = asset.get("name").and_then(|n| n.as_str()) {
+                    if name == file {
+                        // GitHub provides digest in format "sha256:HASH"
+                        if let Some(digest) = asset.get("digest").and_then(|d| d.as_str()) {
+                            let remote_sha256 = digest.strip_prefix("sha256:").unwrap_or(digest);
+
+                            println!("[verify_github_release] Remote SHA256: {}", remote_sha256);
+                            println!("[verify_github_release] Expected SHA256: {}", expected);
+
+                            if remote_sha256.to_lowercase() == expected.to_lowercase() {
+                                println!("[verify_github_release] ✓ SHA256 matches!");
+                                return Ok(());
+                            } else {
+                                // CRITICAL ERROR: SHA256 mismatch (file was modified!)
+                                return Err(format!(
+                                    "Hash mismatch: manifest SHA256 {} does not match release SHA256 {}",
+                                    expected, remote_sha256
+                                ));
+                            }
+                        } else {
+                            // WARNING: No digest available (not critical, Flatpak will verify)
+                            println!("[verify_github_release] ⚠ No digest field in asset");
+                            return Err("Could not verify: GitHub release has no SHA256 digest available".to_string());
+                        }
+                    }
+                }
+            }
+            return Err(format!("Could not verify: File {} not found in release assets", file));
+        } else {
+            return Err("Could not verify: No assets found in release".to_string());
+        }
+    }
+
+    // No SHA256 verification requested, just confirm release exists
+    println!("[verify_github_release] Release {} exists and is public", tag);
+    Ok(())
+}
+
 #[tauri::command]
 async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
     println!("[verify_app_hash] Starting hash verification for: {}", app_id);
@@ -2367,21 +2546,39 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
     let main_source = match main_module {
         Some(module) => {
             println!("[verify_app_hash] Found main module: {}", module.name);
-            // Find the first git source in the main module
-            module.sources.into_iter().find(|s| s.source_type == "git")
+            println!("[verify_app_hash] Module has {} sources", module.sources.len());
+            for (idx, src) in module.sources.iter().enumerate() {
+                println!("[verify_app_hash]   Source {}: type={}, url={:?}",
+                    idx, src.source_type, src.url);
+            }
+            // Find the first git source, or archive from GitHub/GitLab release
+            module.sources.into_iter().find(|s| {
+                s.source_type == "git" ||
+                (s.source_type == "archive" && s.url.as_ref().map_or(false, |url|
+                    url.contains("github.com") || url.contains("gitlab.com") || url.contains("gitlab.")
+                ))
+            })
         }
         None => {
-            println!("[verify_app_hash] No main module found, looking for any git source");
-            // Fallback: find first git source in any module
+            println!("[verify_app_hash] No main module found, looking for any git or archive source");
+            // Fallback: find first git or archive source in any module
             manifest.modules.iter().find_map(|module_value| {
                 if let Ok(module) = serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
-                    module.sources.into_iter().find(|s| s.source_type == "git")
+                    module.sources.into_iter().find(|s| {
+                        s.source_type == "git" ||
+                        (s.source_type == "archive" && s.url.as_ref().map_or(false, |url|
+                            url.contains("github.com") || url.contains("gitlab.com") || url.contains("gitlab.")
+                        ))
+                    })
                 } else if let Some(module_map) = module_value.as_mapping() {
                     if let Some(sources_val) = module_map.get(&serde_yaml::Value::String("sources".to_string())) {
                         if let Some(sources_array) = sources_val.as_sequence() {
                             return sources_array.iter().find_map(|source_val| {
                                 if let Ok(source) = serde_yaml::from_value::<FlatpakSource>(source_val.clone()) {
-                                    if source.source_type == "git" {
+                                    if source.source_type == "git" ||
+                                       (source.source_type == "archive" && source.url.as_ref().map_or(false, |url|
+                                           url.contains("github.com") || url.contains("gitlab.com") || url.contains("gitlab.")
+                                       )) {
                                         return Some(source);
                                     }
                                 }
@@ -2401,17 +2598,75 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
         Some(s) => s,
         None => {
             return Ok(VerificationResult {
-                verified: true, // No git source to verify, consider it passed
+                verified: false, // No verifiable source found
                 app_id,
                 sources: vec![],
-                error: Some("No git source found in main module".to_string()),
+                error: Some("Could not verify: No git source or GitHub/GitLab release found in manifest".to_string()),
             });
         }
     };
 
     let url = source.url.clone().unwrap_or_default();
+    let source_type = source.source_type.clone();
     let manifest_commit = source.commit.clone().unwrap_or_default();
     let tag = source.tag.clone();
+
+    // Handle archive sources (GitHub/GitLab releases) differently
+    if source_type == "archive" {
+        println!("[verify_app_hash] Source is an archive from release");
+
+        // Extract release info from URL (e.g., https://github.com/owner/repo/releases/download/v1.2.2/file.tar.gz)
+        if let Some((owner, repo, release_tag, filename)) = extract_release_info(&url) {
+            println!("[verify_app_hash] Detected release: {}/{} @ {}", owner, repo, release_tag);
+            println!("[verify_app_hash] File: {}", filename);
+
+            // Get SHA256 from manifest
+            let manifest_sha256 = source.sha256.as_deref();
+            if let Some(sha) = manifest_sha256 {
+                println!("[verify_app_hash] Manifest SHA256: {}", sha);
+            } else {
+                println!("[verify_app_hash] ⚠ No SHA256 in manifest");
+            }
+
+            // Verify the release exists and SHA256 matches
+            let release_verified = verify_github_release(
+                &client,
+                &owner,
+                &repo,
+                &release_tag,
+                Some(&filename),
+                manifest_sha256,
+            ).await;
+
+            return Ok(VerificationResult {
+                verified: release_verified.is_ok(),
+                app_id,
+                sources: vec![SourceVerification {
+                    url: url.clone(),
+                    commit: release_tag.clone(),
+                    verified: release_verified.is_ok(),
+                    remote_commit: Some(release_tag.clone()),
+                    error: release_verified.err(),
+                    platform: "github".to_string(),
+                }],
+                error: None,
+            });
+        } else {
+            return Ok(VerificationResult {
+                verified: false,
+                app_id,
+                sources: vec![SourceVerification {
+                    url: url.clone(),
+                    commit: String::new(),
+                    verified: false,
+                    remote_commit: None,
+                    error: Some("Could not extract release information from URL".to_string()),
+                    platform: "unknown".to_string(),
+                }],
+                error: Some("Invalid release URL format".to_string()),
+            });
+        }
+    }
 
     if url.is_empty() || manifest_commit.is_empty() {
         return Ok(VerificationResult {
@@ -2456,9 +2711,18 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
         GitPlatform::Unsupported => "unsupported",
     };
 
+    // Format the project path based on platform
+    let project_display = if repo.is_empty() {
+        // GitLab with full path
+        owner.to_string()
+    } else {
+        // GitHub or legacy format
+        format!("{}/{}", owner, repo)
+    };
+
     println!(
-        "[verify_app_hash] Verifying main source: {}/{} @ {} (platform: {})",
-        owner, repo, manifest_commit, platform_name
+        "[verify_app_hash] Verifying main source: {} @ {} (platform: {})",
+        project_display, manifest_commit, platform_name
     );
 
     // Si hay un tag, verificamos que el commit del manifest coincida con el del tag
@@ -2541,20 +2805,31 @@ fn find_main_module(modules: &[serde_yaml::Value], app_id: &str) -> Option<Flatp
     println!("[find_main_module] Total modules: {}", modules.len());
 
     // First pass: look for exact match (case-insensitive)
-    for module_value in modules {
-        if let Ok(module) = serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
-            let module_name_lower = module.name.to_lowercase();
-            if module_name_lower == app_name || module_name_lower == app_id.to_lowercase() {
-                println!("[find_main_module] Found exact match: {}", module.name);
-                return Some(module);
+    for (idx, module_value) in modules.iter().enumerate() {
+        match serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
+            Ok(module) => {
+                println!("[find_main_module] Module {}: name='{}', sources={}",
+                    idx, module.name, module.sources.len());
+                let module_name_lower = module.name.to_lowercase();
+                if module_name_lower == app_name || module_name_lower == app_id.to_lowercase() {
+                    println!("[find_main_module] Found exact match: {}", module.name);
+                    return Some(module);
+                }
+            }
+            Err(e) => {
+                println!("[find_main_module] Module {}: Failed to parse: {}", idx, e);
+                println!("[find_main_module] Module {} raw value: {:?}", idx, module_value);
             }
         }
     }
 
     // Second pass: look for partial match
-    for module_value in modules {
+    println!("[find_main_module] No exact match, trying partial match...");
+    for (_idx, module_value) in modules.iter().enumerate() {
         if let Ok(module) = serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
             let module_name_lower = module.name.to_lowercase();
+            println!("[find_main_module] Checking partial match for '{}' against '{}'",
+                module_name_lower, app_name);
             if module_name_lower.contains(&app_name) || app_name.contains(&module_name_lower) {
                 println!("[find_main_module] Found partial match: {}", module.name);
                 return Some(module);
