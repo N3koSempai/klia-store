@@ -2,60 +2,51 @@
 <component type="desktop-application">
   <id>io.github.N3kosempai.klia-store</id>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license
-    >LicenseRef-proprietary=https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md</project_license>
+  <project_license>LicenseRef-proprietary=https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md</project_license>
   <name>Klia Store</name>
   <summary>Flatpak application store</summary>
   <description>
     <p>A modern application store for managing Flatpak applications.</p>
   </description>
-  <launchable
-        type="desktop-id"
-    >io.github.N3kosempai.klia-store.desktop</launchable>
+  <launchable type="desktop-id">io.github.N3kosempai.klia-store.desktop</launchable>
   <developer id="io.github.N3kosempai">
     <name>N3koSempai</name>
   </developer>
   <url type="homepage">https://github.com/N3koSempai/klia-store</url>
   <url type="bugtracker">https://github.com/N3koSempai/klia-store/issues</url>
   <url type="vcs-browser">https://github.com/N3koSempai/klia-store</url>
-  <url
-        type="donation"
-    >https://n3kosempai.github.io/KliaStore/bitcoin/donate?wallet=bc1qaq220dfa4dwc2eg0s76t4uzmrf28med2nr3fz0</url>
+  <url type="donation">https://n3kosempai.github.io/KliaStore/bitcoin/donate?wallet=bc1qaq220dfa4dwc2eg0s76t4uzmrf28med2nr3fz0</url>
   <screenshots>
     <screenshot type="default">
       <caption>Main application window showing start page</caption>
-      <image
-            >https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot1.webp</image>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot1.webp</image>
     </screenshot>
     <screenshot>
       <caption>Application home screen</caption>
-      <image
-            >https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot2.webp</image>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot2.webp</image>
     </screenshot>
     <screenshot>
       <caption>search functionality in the home view</caption>
-      <image
-            >https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot3.webp</image>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot3.webp</image>
     </screenshot>
     <screenshot>
       <caption>Modal for install an specific application</caption>
-      <image
-            >https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot4.webp</image>
+      <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot4.webp</image>
     </screenshot>
   </screenshots>
   <provides>
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.6.0" date="2026-02-11">
+    <release version="2.7.0" date="2026-02-21">
       <description>
-        <p>📊 New Feature: 3D System Analytics</p>
+        <p> New Feature: Enhanced Source Security Verification (only available for app install for now)</p>
         <ul>
-          <li
-                    >Discover your system's heart through our new immersive 3D Analytics component.</li>
-          <li>Visualize your installed applications in a dynamic data cube.</li>
-          <li
-                    >Easily explore app permissions, storage usage, and technical metadata in a sleek, modern interface.</li>
+          <li>Now Klia Store verifies the integrity of your Flatpak sources using SHA-256 cryptographic checksums.</li>
+          <li>Protects against tampering and ensures the authenticity of your application sources.</li>
+          <li>Automatic validation when adding new repositories keeps your system safe from potential threats.</li>
+          <li>Visual indicators show the verification status of each source at a glance.</li>
+
         </ul>
       </description>
     </release>
