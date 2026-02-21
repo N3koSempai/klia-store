@@ -24,6 +24,7 @@ static GITLAB_SSH_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
 });
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum GitPlatform {
     GitHub,
     GitLab,

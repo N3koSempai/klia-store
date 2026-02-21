@@ -78,6 +78,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
     | "verificationSuccess"
     | "verificationFailed"
     | "verificationUnsupported"
+    | "verificationDetails"
     | "installing"
     | "success"
     | "error"
@@ -98,6 +99,8 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
     isUnsupportedPlatform: boolean;
   } | null>(null);
   const [countdown, setCountdown] = useState(5);
+  const [riskCountdown, setRiskCountdown] = useState<number | null>(null);
+  const riskCountdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use ref to track isInstalling state in event listeners
@@ -116,6 +119,16 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
   // Check if app is already installed
   const isInstalled = isAppInstalled(app.app_id);
+
+  // Auto-start risk countdown when hash mismatch is detected
+  useEffect(() => {
+    if (
+      verificationResult?.isHashMismatch &&
+      installStatus === "verificationFailed"
+    ) {
+      startRiskCountdown();
+    }
+  }, [verificationResult?.isHashMismatch, installStatus]);
 
   // Cleanup: kill PTY process and countdown when leaving the page
   useEffect(() => {
@@ -306,6 +319,31 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
+    if (riskCountdownIntervalRef.current) {
+      clearInterval(riskCountdownIntervalRef.current);
+      riskCountdownIntervalRef.current = null;
+    }
+    setCountdown(5);
+    setRiskCountdown(null);
+  };
+
+  const startRiskCountdown = () => {
+    if (riskCountdownIntervalRef.current) {
+      clearInterval(riskCountdownIntervalRef.current);
+    }
+    setRiskCountdown(5);
+    riskCountdownIntervalRef.current = setInterval(() => {
+      setRiskCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          if (riskCountdownIntervalRef.current) {
+            clearInterval(riskCountdownIntervalRef.current);
+            riskCountdownIntervalRef.current = null;
+          }
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   const startInstallation = async () => {
@@ -382,17 +420,18 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
         // Check if platform is unsupported
         const isUnsupportedPlatform = platform === "unsupported";
 
-        // Check if it's specifically a hash mismatch
+        // Check if it's specifically a hash mismatch (prioridad más alta - es un error crítico)
         const isHashMismatch =
           errorMsg.toLowerCase().includes("hash mismatch") ||
           errorMsg.toLowerCase().includes("mismatch");
 
-        // Check if it's a source/tag not found issue
+        // Check if it's a source/tag not found issue (warning - no es crítico)
         const isSourceUnavailable =
-          errorMsg.toLowerCase().includes("tag") ||
-          errorMsg.toLowerCase().includes("could not verify") ||
-          errorMsg.toLowerCase().includes("not found") ||
-          errorMsg.toLowerCase().includes("failed to fetch");
+          !isHashMismatch &&
+          (errorMsg.toLowerCase().includes("tag") ||
+            errorMsg.toLowerCase().includes("could not verify") ||
+            errorMsg.toLowerCase().includes("not found") ||
+            errorMsg.toLowerCase().includes("failed to fetch"));
 
         console.log("[AppDetails] Verification failed:", {
           isHashMismatch,
@@ -406,7 +445,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
           verified: false,
           sources: result.sources,
           error: result.error,
-          isHashMismatch: isHashMismatch && !isSourceUnavailable,
+          isHashMismatch,
           isUnsupportedPlatform,
         });
 
@@ -464,24 +503,28 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
   const handleShowVerificationDetails = () => {
     // Show details in terminal-like format
     if (verificationResult) {
+      const verifiedLabel = verificationResult.verified
+        ? t("appDetails.securityVerificationVerified")
+        : t("appDetails.securityVerificationFailed");
       const details = [
-        "Security Verification Details:",
+        t("appDetails.securityVerificationDetailsTitle"),
         "==============================",
         "",
-        `Overall Status: ${verificationResult.verified ? "✓ VERIFIED" : "✗ FAILED"}`,
+        `${t("appDetails.securityVerificationOverallStatus")}: ${verificationResult.verified ? "✓" : "✗"} ${verifiedLabel}`,
         "",
-        "Sources Checked:",
+        `${t("appDetails.securityVerificationSourcesChecked")}:`,
         ...verificationResult.sources.map(
           (s) => `  [${s.verified ? "✓" : "✗"}] ${s.url}`,
         ),
         "",
         ...(verificationResult.error
-          ? [`Error: ${verificationResult.error}`]
+          ? [
+              `${t("appDetails.securityVerificationError")}: ${verificationResult.error}`,
+            ]
           : []),
       ];
       setInstallOutput(details);
-      setInstallStatus("installing");
-      setTimeout(() => setInstallStatus("verificationFailed"), 100);
+      setInstallStatus("verificationDetails");
     }
   };
 
@@ -550,6 +593,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
     if (installStatus === "verificationSuccess") return "busy";
     if (installStatus === "verificationFailed") return "busy";
     if (installStatus === "verificationUnsupported") return "busy";
+    if (installStatus === "verificationDetails") return "busy";
     if (isInstalled) return "installed";
     return "missing";
   };
@@ -935,38 +979,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
                   : t("appDetails.securitySourceUnavailable")}
             </Typography>
 
-            {/* Debug info */}
-            {verificationResult?.sources[0]?.error && (
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  bgcolor: "rgba(0,0,0,0.3)",
-                  borderRadius: 1,
-                  fontFamily: "'Fira Code', 'Courier New', monospace",
-                  fontSize: "0.8rem",
-                  color: "#8B949E",
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{ color: "#6B7280", display: "block", mb: 1 }}
-                >
-                  Debug Info:
-                </Typography>
-                <div>URL: {verificationResult.sources[0].url}</div>
-                <div>
-                  Commit in manifest: {verificationResult.sources[0].commit}
-                </div>
-                <div>
-                  Remote commit:{" "}
-                  {verificationResult.sources[0].remote_commit || "N/A"}
-                </div>
-                <div style={{ color: "#FF6B6B", marginTop: 8 }}>
-                  Error: {verificationResult.sources[0].error}
-                </div>
-              </Box>
-            )}
+            {/* Debug info - removed, now shown in More Details */}
 
             {/* Action Buttons */}
             <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
@@ -988,6 +1001,9 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
               <Button
                 variant="contained"
                 onClick={handleForceContinue}
+                disabled={
+                  verificationResult?.isHashMismatch && riskCountdown !== null
+                }
                 sx={{
                   px: 3,
                   bgcolor: verificationResult?.isUnsupportedPlatform
@@ -1004,10 +1020,18 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
                         ? "#ff8585"
                         : "#f8db4e",
                   },
+                  "&.Mui-disabled": {
+                    bgcolor: verificationResult?.isHashMismatch
+                      ? "rgba(255, 107, 107, 0.5)"
+                      : "rgba(246, 211, 45, 0.5)",
+                    color: "#0D1117",
+                  },
                 }}
               >
                 {verificationResult?.isHashMismatch
-                  ? t("appDetails.securityContinueAnywayRisk")
+                  ? riskCountdown !== null
+                    ? `${t("appDetails.securityContinueAnywayRisk")} (${riskCountdown})`
+                    : t("appDetails.securityContinueAnywayRisk")
                   : t("appDetails.securityContinueAnyway")}
               </Button>
             </Box>
@@ -1023,6 +1047,99 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
             >
               {t("appDetails.securityCancelInstallation")}
             </Button>
+          </Box>
+        ) : installStatus === "verificationDetails" ? (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 3,
+              p: 4,
+              minHeight: 500,
+              bgcolor: "#161B22",
+              borderRadius: 2,
+              border: `1px solid ${
+                verificationResult?.isUnsupportedPlatform
+                  ? "rgba(246, 211, 45, 0.5)"
+                  : verificationResult?.isHashMismatch
+                    ? "rgba(255, 107, 107, 0.5)"
+                    : "rgba(246, 211, 45, 0.5)"
+              }`,
+            }}
+          >
+            <Typography
+              variant="h5"
+              textAlign="center"
+              sx={{
+                color: "#C9D1D9",
+                fontWeight: 500,
+              }}
+            >
+              {t("appDetails.securityVerificationDetails") ||
+                "Verification Details"}
+            </Typography>
+
+            <Box
+              sx={{
+                width: "100%",
+                maxWidth: 600,
+                maxHeight: 300,
+                overflow: "auto",
+                bgcolor: "rgba(0,0,0,0.3)",
+                borderRadius: 1,
+                p: 2,
+                fontFamily: "'Fira Code', 'Courier New', monospace",
+                fontSize: "0.85rem",
+                color: "#8B949E",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              }}
+            >
+              {installOutput.map((line, index) => (
+                <div key={index} style={{ marginBottom: 4 }}>
+                  {line}
+                </div>
+              ))}
+            </Box>
+
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={handleDownloadLog}
+                sx={{
+                  px: 3,
+                  borderColor: "rgba(255, 255, 255, 0.3)",
+                  color: "#C9D1D9",
+                  "&:hover": {
+                    borderColor: "rgba(255, 255, 255, 0.5)",
+                    bgcolor: "rgba(255, 255, 255, 0.05)",
+                  },
+                }}
+              >
+                {t("appDetails.saveLog") || "Save Log"}
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  setInstallOutput([]);
+                  setInstallStatus("verificationFailed");
+                }}
+                sx={{
+                  px: 3,
+                  bgcolor: "rgba(255, 255, 255, 0.1)",
+                  color: "#C9D1D9",
+                  borderColor: "rgba(255, 255, 255, 0.3)",
+                  border: "1px solid",
+                  "&:hover": {
+                    bgcolor: "rgba(255, 255, 255, 0.2)",
+                  },
+                }}
+              >
+                {t("appDetails.back") || "Back"}
+              </Button>
+            </Box>
           </Box>
         ) : installStatus === "installing" ? (
           <>
