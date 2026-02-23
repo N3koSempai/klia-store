@@ -38,7 +38,7 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.7.0" date="2026-02-21">
+    <release version="2.7.1" date="2026-02-23">
       <description>
         <p> New Feature: Enhanced Source Security Verification (only available for app install for now)</p>
         <ul>
