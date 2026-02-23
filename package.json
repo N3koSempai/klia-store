@@ -1,7 +1,7 @@
 {
   "name": "klia-store",
   "private": true,
-  "version": "2.7.0",
+  "version": "2.7.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -38,7 +38,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.6",
     "@tanstack/eslint-plugin-query": "^5.91.0",
-    "@tauri-apps/cli": "^2",
+    "@tauri-apps/cli": "2.9.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
