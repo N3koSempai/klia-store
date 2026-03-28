@@ -298,6 +298,25 @@
       "platform": "Platform"
     }
   },
+  "donation": {
+    "supportButton": "Support",
+    "supportTitle": "Support {{name}}",
+    "helpKeepAlive": "Help keep this project alive",
+    "selectCurrency": "Select currency",
+    "enterAmount": "Enter amount",
+    "sendTo": "Send to",
+    "copyAndDonate": "Copy address & donate",
+    "donate": "Donate",
+    "accepted": "Accepted",
+    "notConfigured": "Not configured by developer",
+    "btcNetwork": "Bitcoin network",
+    "ethNetwork": "Ethereum · ERC-20",
+    "btcPlaceholder": "0.00010000",
+    "usdcPlaceholder": "10",
+    "copyAddress": "Copy address",
+    "copied": "Copied!",
+    "tooltipSupport": "Support this app"
+  },
   "welcome": {
     "getStarted": "Get Started",
     "settingUp": "Setting up...",

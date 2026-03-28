@@ -1,6 +1,7 @@
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import {
   ArrowBack,
+  BoltRounded,
   ChevronLeft,
   ChevronRight,
   Delete,
@@ -22,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { AppActionButton } from "../../components/AppActionButton";
 import { AppMetaCapsule } from "../../components/AppMetaCapsule";
+import { DonationModal } from "../../components/DonationModal";
 import { CachedImage } from "../../components/CachedImage";
 import { DependencyInfoPopover } from "../../components/DependencyInfoPopover";
 import { GitHubStarBadge } from "../../components/GitHubStarBadge";
@@ -84,6 +86,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
     | "error"
   >("idle");
   const [isUninstalling, setIsUninstalling] = useState(false);
+  const [showDonationModal, setShowDonationModal] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{
     verified: boolean;
     sources: Array<{
@@ -685,6 +688,34 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
           }}
         >
           <Box sx={{ display: "flex", gap: 1 }}>
+            {urls?.donation && installStatus === "idle" && (
+              <Tooltip title={t("donation.tooltipSupport")} arrow placement="top">
+                <Button
+                  variant="outlined"
+                  onClick={() => setShowDonationModal(true)}
+                  startIcon={<BoltRounded />}
+                  sx={{
+                    py: 1.5,
+                    px: 2.5,
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    fontFamily: "Inter, sans-serif",
+                    textTransform: "uppercase",
+                    color: "#d29922",
+                    borderColor: "rgba(210, 153, 34, 0.45)",
+                    bgcolor: "rgba(210, 153, 34, 0.05)",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    "&:hover": {
+                      borderColor: "#d29922",
+                      bgcolor: "rgba(210, 153, 34, 0.1)",
+                    },
+                  }}
+                >
+                  {t("donation.supportButton")}
+                </Button>
+              </Tooltip>
+            )}
             <AppActionButton
               status={getButtonStatus()}
               busyAction={isUninstalling ? "uninstalling" : "installing"}
@@ -1376,6 +1407,14 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
           </Typography>
         </Box>
       )}
+
+      <DonationModal
+        open={showDonationModal}
+        onClose={() => setShowDonationModal(false)}
+        appName={app.name}
+        developerName={app.developer_name}
+        donationUrl={urls?.donation}
+      />
     </Box>
   );
 };
