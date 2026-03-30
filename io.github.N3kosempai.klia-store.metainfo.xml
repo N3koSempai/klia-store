@@ -15,7 +15,8 @@
   <url type="homepage">https://github.com/N3koSempai/klia-store</url>
   <url type="bugtracker">https://github.com/N3koSempai/klia-store/issues</url>
   <url type="vcs-browser">https://github.com/N3koSempai/klia-store</url>
-  <url type="donation">https://n3kosempai.github.io/KliaStore/bitcoin/donate?wallet=bc1qaq220dfa4dwc2eg0s76t4uzmrf28med2nr3fz0</url>
+  <url type="donation">https://kliastore.gatorand.com/bitcoin/?wallet=bc1q5y8are6m9r946h3ut7c3hxtuf6nm67rgz7ume7</url>
+  <url type="donation">https://kliastore.gatorand.com/ethereum/?wallet=0xC849612e4f29b81e5e6A40C9c6D543e0C41C863C</url>
   <screenshots>
     <screenshot type="default">
       <caption>Main application window showing start page</caption>
@@ -38,15 +39,16 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.7.2" date="2026-02-23">
+    <release version="2.8.0" date="2026-03-30">
       <description>
-        <p> New Feature: Enhanced Source Security Verification (only available for app install for now)</p>
+        <p>New Feature: Cryptocurrency Donations Support</p>
         <ul>
-          <li>Now Klia Store verifies the integrity of your Flatpak sources using SHA-256 cryptographic checksums.</li>
-          <li>Protects against tampering and ensures the authenticity of your application sources.</li>
-          <li>Automatic validation when adding new repositories keeps your system safe from potential threats.</li>
-          <li>Visual indicators show the verification status of each source at a glance.</li>
-
+          <li>Support developers directly with cryptocurrency donations (Bitcoin and Ethereum tokens like USDT).</li>
+          <li>Scan QR codes with your mobile wallet or copy addresses for easy payments.</li>
+          <li>Automatic on-chain verification ensures your donation reaches the developer.</li>
+          <li>Klia Store is the first app to support this feature!</li>
+          <li>More exciting features coming soon to the donation system!</li>
+          <li>(Other developers can add crypto donation support to their apps - see instructions in the Klia Store README on GitHub)</li>
         </ul>
       </description>
     </release>
