@@ -312,10 +312,20 @@
     "btcNetwork": "Bitcoin network",
     "ethNetwork": "Ethereum · ERC-20",
     "btcPlaceholder": "0.00010000",
-    "usdcPlaceholder": "10",
+    "usdtPlaceholder": "10",
     "copyAddress": "Copy address",
     "copied": "Copied!",
-    "tooltipSupport": "Support this app"
+    "tooltipSupport": "Support this app",
+    "sendExactly": "Send exactly",
+    "sendExactNote": "Send this exact amount so we can verify your payment",
+    "verify": "Verify payment",
+    "verifying": "Verifying...",
+    "back": "Back",
+    "notFoundYet": "Payment not found yet. It may take a few minutes to appear on the network. Try again shortly.",
+    "thankYou": "Thank you for your support!",
+    "paymentConfirmed": "Payment confirmed",
+    "paymentConfirmedDesc": "Your donation to {{name}} has been verified. Thank you!",
+    "close": "Close"
   },
   "welcome": {
     "getStarted": "Get Started",

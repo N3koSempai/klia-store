@@ -1411,9 +1411,12 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
       <DonationModal
         open={showDonationModal}
         onClose={() => setShowDonationModal(false)}
+        appId={app.app_id}
         appName={app.name}
         developerName={app.developer_name}
         donationUrl={urls?.donation}
+        isInstalled={isInstalled}
+        onInstall={handleInstall}
       />
     </Box>
   );

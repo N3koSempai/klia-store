@@ -106,11 +106,43 @@ export class DBCacheManager {
 				// Column already exists, ignore error
 			}
 
+			// Create donations table if not exists
+			await this.db.execute(`
+				CREATE TABLE IF NOT EXISTS donations (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					app_id TEXT NOT NULL,
+					app_name TEXT NOT NULL,
+					amount TEXT NOT NULL,
+					currency TEXT NOT NULL,
+					network TEXT NOT NULL,
+					tx_id TEXT,
+					donated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+				)
+			`);
+
 			console.log("All cache tables verified/created");
 		} catch (error) {
 			console.error("Error ensuring tables exist:", error);
 			// Don't throw - let the app continue and handle errors per operation
 		}
+	}
+
+	async recordDonation(params: {
+		appId: string;
+		appName: string;
+		amount: string;
+		currency: "BTC" | "USDT";
+		network: "Bitcoin" | "Ethereum";
+		txId: string | null;
+	}): Promise<void> {
+		if (!this.db) await this.initialize();
+		if (!this.db) throw new Error("Database not initialized");
+
+		await this.db.execute(
+			`INSERT INTO donations (app_id, app_name, amount, currency, network, tx_id)
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
+			[params.appId, params.appName, params.amount, params.currency, params.network, params.txId ?? null],
+		);
 	}
 
 	private getCurrentDate(): string {

@@ -1,3 +1,5 @@
+mod donations;
+
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -2888,7 +2890,9 @@ pub fn run() {
             check_pty_process,
             get_system_analytics,
             get_app_permissions_batch,
-            verify_app_hash
+            verify_app_hash,
+            donations::verify_btc_donation,
+            donations::verify_usdt_eth_donation
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
