@@ -87,6 +87,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
   >("idle");
   const [isUninstalling, setIsUninstalling] = useState(false);
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const hasCryptoDonation = !!(urls?.donation && /bitcoin|ethereum/i.test(urls.donation));
   const [verificationResult, setVerificationResult] = useState<{
     verified: boolean;
     sources: Array<{
@@ -688,7 +689,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
           }}
         >
           <Box sx={{ display: "flex", gap: 1 }}>
-            {urls?.donation && installStatus === "idle" && (
+            {hasCryptoDonation && installStatus === "idle" && (
               <Tooltip title={t("donation.tooltipSupport")} arrow placement="top">
                 <Button
                   variant="outlined"
