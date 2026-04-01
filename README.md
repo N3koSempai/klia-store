@@ -95,9 +95,11 @@ You'll need one or both of the following:
 - **Bitcoin (BTC)** wallet address
 - **Ethereum (ETH)** wallet address (supports all ERC-20 tokens)
 
-#### 2. Add Donation URLs to Your Flathub Manifest
+#### 2. Add Donation URL to Your Flathub Manifest
 
-Edit your app's `.metainfo.xml` file and add the donation URLs in the `<url>` section:
+> **Important**: Flathub only accepts **one** `<url type="donation">` entry per app. If you add more than one, the submission will be rejected. Choose the cryptocurrency you prefer to receive donations in.
+
+Edit your app's `.metainfo.xml` file and add **a single** donation URL in the `<url>` section:
 
 **For Bitcoin:**
 ```xml
@@ -109,7 +111,7 @@ Edit your app's `.metainfo.xml` file and add the donation URLs in the `<url>` se
 <url type="donation">https://kliastore.gatorand.com/ethereum/?wallet=YOUR_ETH_ADDRESS</url>
 ```
 
-**Example (Klia Store configuration):**
+**Example (Klia Store configuration — Bitcoin only):**
 ```xml
 <component>
   <id>io.github.N3kosempai.klia-store</id>
@@ -117,7 +119,6 @@ Edit your app's `.metainfo.xml` file and add the donation URLs in the `<url>` se
   <!-- ... other metadata ... -->
   <url type="homepage">https://github.com/N3koSempai/kliaStore</url>
   <url type="donation">https://kliastore.gatorand.com/bitcoin/?wallet=bc1q5y8are6m9r946h3ut7c3hxtuf6nm67rgz7ume7</url>
-  <url type="donation">https://kliastore.gatorand.com/ethereum/?wallet=0x1234567890abcdef1234567890abcdef12345678</url>
 </component>
 ```
 
