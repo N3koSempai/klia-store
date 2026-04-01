@@ -38,7 +38,7 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.8.0" date="2026-03-30">
+    <release version="2.8.1" date="2026-03-30">
       <description>
         <p>New Feature: Cryptocurrency Donations Support</p>
         <ul>
