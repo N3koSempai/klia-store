@@ -14,11 +14,12 @@ import {
   useTheme,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
 import { UpdateAllModal } from "../../components/UpdateAllModal";
+import { useAppVerification } from "../../hooks/useAppVerification";
 import { useUninstallApp } from "../../hooks/useUninstallApp";
 import { useUpdateAll } from "../../hooks/useUpdateAll";
 import { useUpdateApp } from "../../hooks/useUpdateApp";
@@ -158,6 +159,15 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
   const { updateApp, updatingApp, isUpdating, updateOutput, clearUpdate } =
     useUpdateApp();
 
+  // Verification hook for supply chain security before updates
+  const {
+    state: verificationState,
+    result: verificationResult,
+    verify: verifyApp,
+    forceContinue: verificationForceContinue,
+    reset: verificationReset,
+  } = useAppVerification();
+
   const {
     uninstallApp,
     uninstallingApp,
@@ -171,7 +181,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
     isUpdatingAll,
     updateAllProgress,
     updateAllOutput,
-    systemUpdatesCount,
+    systemUpdatesCount: _systemUpdatesCount,
     isUpdatingSystem,
     systemUpdateProgress,
     clearUpdateAll,
@@ -230,7 +240,24 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
     setSelectedAppForNotes(appId);
   }, []);
 
+  // Track which app the update dialog is for (covers both verification and update phases)
+  const [updateDialogAppId, setUpdateDialogAppId] = useState<string | null>(
+    null,
+  );
+  const [showVerificationDetails, setShowVerificationDetails] = useState(false);
+  const autoUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleUpdate = useCallback(
+    (appId: string) => {
+      setUpdateDialogAppId(appId);
+      verificationReset();
+      clearUpdate();
+      verifyApp(appId);
+    },
+    [verifyApp, verificationReset, clearUpdate],
+  );
+
+  const executeUpdate = useCallback(
     async (appId: string) => {
       const app = installedApps.find((a) => a.appId === appId);
       const success = await updateApp(appId, app?.name);
@@ -243,9 +270,47 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
     [updateApp, installedApps, reloadAvailableUpdates],
   );
 
+  // Auto-trigger update when verification succeeds
+  useEffect(() => {
+    if (verificationState === "success" && updateDialogAppId) {
+      // Clear any existing timer to prevent stale timeouts
+      if (autoUpdateTimerRef.current) {
+        clearTimeout(autoUpdateTimerRef.current);
+      }
+      // Small delay before starting update so user can see the success state
+      autoUpdateTimerRef.current = setTimeout(() => {
+        // Only execute if dialog is still open for this app (user didn't close)
+        if (updateDialogAppId) {
+          executeUpdate(updateDialogAppId);
+        }
+        autoUpdateTimerRef.current = null;
+      }, 1500);
+    }
+    return () => {
+      if (autoUpdateTimerRef.current) {
+        clearTimeout(autoUpdateTimerRef.current);
+        autoUpdateTimerRef.current = null;
+      }
+    };
+  }, [verificationState, updateDialogAppId, executeUpdate]);
+
+  const handleShowVerificationDetails = useCallback(() => {
+    if (verificationResult) {
+      setShowVerificationDetails(true);
+    }
+  }, [verificationResult]);
+
   const handleCloseUpdateDialog = useCallback(() => {
+    // Clear pending auto-update timer
+    if (autoUpdateTimerRef.current) {
+      clearTimeout(autoUpdateTimerRef.current);
+      autoUpdateTimerRef.current = null;
+    }
+    setUpdateDialogAppId(null);
+    setShowVerificationDetails(false);
+    verificationReset();
     clearUpdate();
-  }, [clearUpdate]);
+  }, [clearUpdate, verificationReset]);
 
   const handleUninstall = useCallback(
     async (appId: string) => {
@@ -261,28 +326,27 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
     await reloadInstalledApps();
   }, [clearUninstall, reloadInstalledApps]);
 
-  const handleUpdateAll = useCallback(async () => {
-    // Get all apps that need updates
-    const appsToUpdate = installedApps.filter((app) => hasUpdate(app.appId));
-    const initialSystemUpdates = updateCount - appsToUpdate.length;
-
-    if (appsToUpdate.length === 0 && initialSystemUpdates === 0) return;
-
-    // Open modal
+  const handleUpdateAll = useCallback(() => {
     setUpdateAllModalOpen(true);
+  }, []);
 
-    // Execute update all using the hook
-    await updateAll(appsToUpdate, initialSystemUpdates);
+  const executeUpdateAll = useCallback(
+    async (appsToInclude: Array<{ appId: string; appName: string }>) => {
+      const appsToUpdate = installedApps.filter((app) =>
+        appsToInclude.some((a) => a.appId === app.appId),
+      );
+      const initialSystemUpdates = Math.max(
+        0,
+        updateCount - appsToUpdate.length,
+      );
 
-    // Reload updates list after completion
-    await reloadAvailableUpdates();
-  }, [
-    installedApps,
-    hasUpdate,
-    updateCount,
-    updateAll,
-    reloadAvailableUpdates,
-  ]);
+      if (appsToUpdate.length === 0 && initialSystemUpdates === 0) return;
+
+      await updateAll(appsToUpdate, initialSystemUpdates);
+      await reloadAvailableUpdates();
+    },
+    [installedApps, updateCount, updateAll, reloadAvailableUpdates],
+  );
 
   const handleCloseUpdateAllModal = useCallback(async () => {
     setUpdateAllModalOpen(false);
@@ -494,7 +558,10 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
                 key={`${app.appId}-${app.name}`}
                 app={app}
                 hasUpdate={hasUpdate(app.appId)}
-                isUpdating={isUpdating && updatingApp === app.appId}
+                isUpdating={
+                  (isUpdating && updatingApp === app.appId) ||
+                  verificationState !== "idle"
+                }
                 isUninstalling={isUninstalling && uninstallingApp === app.appId}
                 cardHeight={CARD_HEIGHT}
                 onUpdate={handleUpdate}
@@ -533,24 +600,455 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
           />
         )}
 
-        {/* Update Dialog */}
+        {/* Update Dialog - Verification + Terminal */}
         <Dialog
-          open={updatingApp !== null}
-          onClose={!isUpdating ? handleCloseUpdateDialog : undefined}
-          maxWidth="md"
+          open={updateDialogAppId !== null || updatingApp !== null}
+          onClose={
+            !isUpdating && verificationState === "idle"
+              ? handleCloseUpdateDialog
+              : undefined
+          }
+          maxWidth={updatingApp !== null ? "md" : "sm"}
           fullWidth
+          PaperProps={{
+            sx: {
+              minWidth: updatingApp !== null ? 600 : 450,
+            },
+          }}
         >
           <DialogContent>
-            <Typography variant="h6" gutterBottom>
-              {t("myApps.updating", { appId: updatingApp })}
-            </Typography>
-            <Terminal output={updateOutput} isRunning={isUpdating} />
-            {!isUpdating && (
-              <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-                <Button variant="contained" onClick={handleCloseUpdateDialog}>
-                  {t("myApps.closeButton")}
-                </Button>
-              </Box>
+            {/* Verification View (only shown when not yet updating) */}
+            {verificationState !== "idle" && updatingApp === null && (
+              <>
+                {/* Verifying */}
+                {verificationState === "verifying" && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 3,
+                      p: 4,
+                      minHeight: 300,
+                      bgcolor: "rgba(255, 255, 255, 0.02)",
+                      borderRadius: 2,
+                      border: "1px solid rgba(88, 166, 255, 0.3)",
+                    }}
+                  >
+                    <CircularProgress size={48} sx={{ color: "#58A6FF" }} />
+                    <Typography
+                      variant="h6"
+                      textAlign="center"
+                      sx={{ color: "#C9D1D9", fontWeight: 500 }}
+                    >
+                      {t("appDetails.verifyingSecurity")}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      textAlign="center"
+                      sx={{ color: "#8B949E" }}
+                    >
+                      {t("appDetails.securityCheckingSignatures")}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Success */}
+                {verificationState === "success" && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 3,
+                      p: 4,
+                      minHeight: 300,
+                      bgcolor: "rgba(255, 255, 255, 0.02)",
+                      borderRadius: 2,
+                      border: "1px solid rgba(39, 201, 63, 0.3)",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: "50%",
+                        bgcolor: "rgba(39, 201, 63, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: "2px solid #27c93f",
+                      }}
+                    >
+                      <Typography sx={{ color: "#27c93f", fontSize: "2rem" }}>
+                        ✓
+                      </Typography>
+                    </Box>
+                    <Typography
+                      variant="h6"
+                      textAlign="center"
+                      sx={{ color: "#27c93f", fontWeight: 500 }}
+                    >
+                      {t("appDetails.securityVerificationSuccess")}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      textAlign="center"
+                      sx={{ color: "#8B949E", maxWidth: 500, px: 2 }}
+                    >
+                      {t("appDetails.securityHashVerifiedExplanation")}
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      textAlign="center"
+                      sx={{ color: "#C9D1D9" }}
+                    >
+                      {t("myApps.updateStartingShortly")}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Failed / Unsupported */}
+                {(verificationState === "failed" ||
+                  verificationState === "unsupported") &&
+                  !showVerificationDetails && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 3,
+                        p: 4,
+                        minHeight: 300,
+                        bgcolor: "rgba(255, 255, 255, 0.02)",
+                        borderRadius: 2,
+                        border: `1px solid ${
+                          verificationState === "unsupported"
+                            ? "rgba(246, 211, 45, 0.5)"
+                            : "rgba(255, 107, 107, 0.5)"
+                        }`,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 80,
+                          height: 80,
+                          borderRadius: "50%",
+                          bgcolor:
+                            verificationState === "unsupported"
+                              ? "rgba(246, 211, 45, 0.1)"
+                              : "rgba(255, 107, 107, 0.1)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          border: `2px solid ${
+                            verificationState === "unsupported"
+                              ? "#F6D32D"
+                              : "#FF6B6B"
+                          }`,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color:
+                              verificationState === "unsupported"
+                                ? "#F6D32D"
+                                : "#FF6B6B",
+                            fontSize: "2rem",
+                          }}
+                        >
+                          {verificationState === "unsupported" ? "⚠" : "✗"}
+                        </Typography>
+                      </Box>
+
+                      <Typography
+                        variant="h6"
+                        textAlign="center"
+                        sx={{
+                          color:
+                            verificationState === "unsupported"
+                              ? "#F6D32D"
+                              : "#FF6B6B",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {verificationState === "unsupported"
+                          ? t("appDetails.securityUnsupportedPlatform")
+                          : t("appDetails.securityVerificationFailed")}
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        textAlign="center"
+                        sx={{
+                          color: "#8B949E",
+                          maxWidth: 500,
+                          px: 2,
+                        }}
+                      >
+                        {t("appDetails.securityHashVerificationExplanation")}
+                      </Typography>
+
+                      <Typography
+                        variant="body1"
+                        textAlign="center"
+                        sx={{
+                          color: "#C9D1D9",
+                          maxWidth: 600,
+                        }}
+                      >
+                        {verificationState === "unsupported"
+                          ? t("appDetails.securityUnsupportedPlatformMessage")
+                          : verificationResult?.isHashMismatch
+                            ? t("appDetails.securityHashMismatch")
+                            : t("appDetails.securitySourceUnavailable")}
+                      </Typography>
+
+                      {/* Action Buttons */}
+                      <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+                        <Button
+                          variant="outlined"
+                          onClick={handleShowVerificationDetails}
+                          sx={{
+                            px: 3,
+                            borderColor: "rgba(255, 255, 255, 0.3)",
+                            color: "#C9D1D9",
+                            "&:hover": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                              bgcolor: "rgba(255, 255, 255, 0.05)",
+                            },
+                          }}
+                        >
+                          {t("appDetails.securityMoreDetails")}
+                        </Button>
+                        <Button
+                          variant="contained"
+                          onClick={() => {
+                            verificationForceContinue();
+                            if (updateDialogAppId) {
+                              executeUpdate(updateDialogAppId);
+                            }
+                          }}
+                          disabled={
+                            verificationResult?.isHashMismatch &&
+                            verificationState === "failed"
+                          }
+                          sx={{
+                            px: 3,
+                            bgcolor:
+                              verificationState === "unsupported"
+                                ? "#F6D32D"
+                                : "#FF6B6B",
+                            color: "#0D1117",
+                            fontWeight: 600,
+                            "&:hover": {
+                              bgcolor:
+                                verificationState === "unsupported"
+                                  ? "#f8db4e"
+                                  : "#ff8585",
+                            },
+                            "&.Mui-disabled": {
+                              bgcolor: "rgba(255, 107, 107, 0.5)",
+                              color: "#0D1117",
+                            },
+                          }}
+                        >
+                          {verificationResult?.isHashMismatch
+                            ? t("appDetails.securityContinueAnywayRisk")
+                            : t("appDetails.securityContinueAnyway")}
+                        </Button>
+                      </Box>
+
+                      <Button
+                        onClick={handleCloseUpdateDialog}
+                        sx={{
+                          color: "#8B949E",
+                          "&:hover": {
+                            color: "#C9D1D9",
+                          },
+                        }}
+                      >
+                        {t("appDetails.securityCancelInstallation")}
+                      </Button>
+                    </Box>
+                  )}
+
+                {/* Verification Details (terminal-like view) */}
+                {(verificationState === "failed" ||
+                  verificationState === "unsupported") &&
+                  showVerificationDetails && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 3,
+                        p: 4,
+                        minHeight: 300,
+                        bgcolor: "rgba(0, 0, 0, 0.2)",
+                        borderRadius: 2,
+                        border: `1px solid ${
+                          verificationState === "unsupported"
+                            ? "rgba(246, 211, 45, 0.5)"
+                            : "rgba(255, 107, 107, 0.5)"
+                        }`,
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        textAlign="center"
+                        sx={{ color: "#C9D1D9", fontWeight: 500 }}
+                      >
+                        {t("appDetails.securityVerificationDetails")}
+                      </Typography>
+
+                      <Box
+                        sx={{
+                          width: "100%",
+                          maxWidth: 600,
+                          maxHeight: 250,
+                          overflow: "auto",
+                          bgcolor: "rgba(0,0,0,0.3)",
+                          borderRadius: 1,
+                          p: 2,
+                          fontFamily:
+                            "'Fira Code', 'JetBrains Mono', monospace",
+                          fontSize: "0.85rem",
+                          color: "#8B949E",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {verificationResult && (
+                          <>
+                            <div
+                              style={{
+                                marginBottom: 8,
+                                color: "#C9D1D9",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {t(
+                                "appDetails.securityVerificationOverallStatus",
+                              )}
+                              : {verificationResult.verified ? "✓" : "✗"}{" "}
+                              {verificationResult.verified
+                                ? t("appDetails.securityVerificationVerified")
+                                : t("appDetails.securityVerificationFailed")}
+                            </div>
+                            <div style={{ marginBottom: 8 }}>
+                              {t(
+                                "appDetails.securityVerificationSourcesChecked",
+                              )}
+                              :
+                            </div>
+                            {verificationResult.sources.map((s, i) => (
+                              <div
+                                key={i}
+                                style={{
+                                  marginBottom: 4,
+                                  paddingLeft: 8,
+                                }}
+                              >
+                                [{s.verified ? "✓" : "✗"}] {s.url}
+                                <br />
+                                <span style={{ color: "#6E7681" }}>
+                                  {t(
+                                    "appDetails.securityVerificationCommitInManifest",
+                                  )}
+                                  : {s.commit || "N/A"}
+                                </span>
+                                {s.remote_commit && (
+                                  <>
+                                    <br />
+                                    <span style={{ color: "#6E7681" }}>
+                                      {t(
+                                        "appDetails.securityVerificationRemoteCommit",
+                                      )}
+                                      : {s.remote_commit}
+                                    </span>
+                                  </>
+                                )}
+                                {s.error && (
+                                  <>
+                                    <br />
+                                    <span style={{ color: "#FF6B6B" }}>
+                                      {t(
+                                        "appDetails.securityVerificationError",
+                                      )}
+                                      : {s.error}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                            {verificationResult.error && (
+                              <div
+                                style={{
+                                  marginTop: 8,
+                                  color: "#FF6B6B",
+                                }}
+                              >
+                                {t("appDetails.securityVerificationError")}:{" "}
+                                {verificationResult.error}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </Box>
+
+                      <Box sx={{ display: "flex", gap: 2 }}>
+                        <Button
+                          variant="contained"
+                          onClick={() => {
+                            setShowVerificationDetails(false);
+                          }}
+                          sx={{
+                            px: 3,
+                            bgcolor: "rgba(255, 255, 255, 0.1)",
+                            color: "#C9D1D9",
+                            border: "1px solid rgba(255, 255, 255, 0.3)",
+                            "&:hover": {
+                              bgcolor: "rgba(255, 255, 255, 0.2)",
+                            },
+                          }}
+                        >
+                          {t("appDetails.hideDetails")}
+                        </Button>
+                      </Box>
+                    </Box>
+                  )}
+              </>
+            )}
+
+            {/* Terminal View (shown after verification or when update is running) */}
+            {updatingApp !== null && (
+              <>
+                <Typography variant="h6" gutterBottom>
+                  {t("myApps.updating", { appId: updatingApp })}
+                </Typography>
+                <Terminal output={updateOutput} isRunning={isUpdating} />
+                {!isUpdating && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      mt: 2,
+                    }}
+                  >
+                    <Button
+                      variant="contained"
+                      onClick={handleCloseUpdateDialog}
+                    >
+                      {t("myApps.closeButton")}
+                    </Button>
+                  </Box>
+                )}
+              </>
             )}
           </DialogContent>
         </Dialog>
@@ -583,16 +1081,25 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
         {/* Update All Modal */}
         <UpdateAllModal
           open={updateAllModalOpen}
+          appsToVerify={installedApps
+            .filter((app) => hasUpdate(app.appId))
+            .map((app) => ({ appId: app.appId, appName: app.name }))}
+          onClose={handleCloseUpdateAllModal}
+          onProceedWithUpdate={executeUpdateAll}
+          systemUpdatesCount={Math.max(
+            0,
+            updateCount -
+              installedApps.filter((app) => hasUpdate(app.appId)).length,
+          )}
+          // Update phase props
+          isUpdating={isUpdatingAll}
+          updateOutput={updateAllOutput}
+          showTerminal={showUpdateAllTerminal}
+          onToggleTerminal={handleToggleUpdateAllTerminal}
           totalApps={updateAllProgress.totalApps}
           currentAppIndex={updateAllProgress.currentAppIndex}
           currentAppName={updateAllProgress.currentAppName}
           currentAppProgress={updateAllProgress.currentAppProgress}
-          output={updateAllOutput}
-          isUpdating={isUpdatingAll}
-          onClose={handleCloseUpdateAllModal}
-          showTerminal={showUpdateAllTerminal}
-          onToggleTerminal={handleToggleUpdateAllTerminal}
-          systemUpdatesCount={systemUpdatesCount}
           isUpdatingSystem={isUpdatingSystem}
           systemUpdateProgress={systemUpdateProgress}
         />

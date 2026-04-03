@@ -165,7 +165,13 @@
     "closeButton": "閉じる",
     "currentApp": "現在のアプリ",
     "errorInvokingCommand": "✗ コマンドの実行エラー：{{error}}",
-    "hideDetails": "技術詳細を隠す",
+    "hideDetails": "詳細を隠す",
+    "verificationSkipApp": "スキップ",
+    "verificationIncludeApp": "含める",
+    "verificationForceApp": "強制",
+    "verificationMoreDetails": "詳細",
+    "verificationCancelAll": "キャンセル",
+    "verificationWarningMessage": "このアプリのソースを完全に検証できませんでした。パッケージは安全かもしれませんが、更新前に詳細を確認することをお勧めします。",
     "installAppsMessage": "ストアからアプリをインストールしてここに表示してください",
     "installed": "インストール済み",
     "listUpdated": "✓ リストが更新されました。",
@@ -198,6 +204,7 @@
     "updatesCompletedWithErrors": "いくつかのエラーで更新が完了しました",
     "updating": "{{appId}}を更新中",
     "updatingAllApps": "すべてのアプリを更新中",
+    "updateStartingShortly": "更新はまもなく開始されます...",
     "waiting": "待機中..."
   },
   "notifications": {

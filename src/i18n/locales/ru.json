@@ -166,7 +166,13 @@
     "closeButton": "Закрыть",
     "currentApp": "Текущее приложение",
     "errorInvokingCommand": "✗ Ошибка при вызове команды: {{error}}",
-    "hideDetails": "Скрыть технические подробности",
+    "hideDetails": "Скрыть детали",
+    "verificationSkipApp": "Пропустить",
+    "verificationIncludeApp": "Включить",
+    "verificationForceApp": "Принудительно",
+    "verificationMoreDetails": "Детали",
+    "verificationCancelAll": "Отмена",
+    "verificationWarningMessage": "Не удалось полностью проверить источник этого приложения. Пакет может быть безопасным, но мы рекомендуем проверить детали перед обновлением.",
     "installAppsMessage": "Установите приложения из магазина, чтобы увидеть их здесь",
     "installed": "Установлено",
     "listUpdated": "✓ Список обновлен.",
@@ -199,6 +205,7 @@
     "updatesCompletedWithErrors": "Обновления завершены с ошибками",
     "updating": "Обновление {{appId}}",
     "updatingAllApps": "Обновление всех приложений",
+    "updateStartingShortly": "Обновление начнется в ближайшее время...",
     "waiting": "Ожидание..."
   },
   "notifications": {

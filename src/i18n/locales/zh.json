@@ -166,7 +166,13 @@
     "closeButton": "关闭",
     "currentApp": "当前应用",
     "errorInvokingCommand": "✗ 调用命令出错：{{error}}",
-    "hideDetails": "隐藏技术细节",
+    "hideDetails": "隐藏详情",
+    "verificationSkipApp": "跳过",
+    "verificationIncludeApp": "包含",
+    "verificationForceApp": "强制",
+    "verificationMoreDetails": "详情",
+    "verificationCancelAll": "取消",
+    "verificationWarningMessage": "无法完全验证此应用的来源。该包可能是安全的，但我们建议在更新前查看详情。",
     "installAppsMessage": "从商店安装应用后将在此显示",
     "installed": "已安装",
     "listUpdated": "✓ 列表已更新。",
@@ -199,6 +205,7 @@
     "updatesCompletedWithErrors": "更新完成，但出现一些错误",
     "updating": "正在更新 {{appId}}",
     "updatingAllApps": "正在更新所有应用",
+    "updateStartingShortly": "更新即将开始...",
     "waiting": "等待中..."
   },
   "notifications": {

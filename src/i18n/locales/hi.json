@@ -166,7 +166,13 @@
     "closeButton": "बंद करें",
     "currentApp": "वर्तमान ऐप",
     "errorInvokingCommand": "✗ कमांड चलाने में त्रुटि: {{error}}",
-    "hideDetails": "तकनीकी विवरण छिपाएं",
+    "hideDetails": "विवरण छिपाएं",
+    "verificationSkipApp": "छोड़ें",
+    "verificationIncludeApp": "शामिल करें",
+    "verificationForceApp": "जबरदस्ती",
+    "verificationMoreDetails": "विवरण",
+    "verificationCancelAll": "रद्द करें",
+    "verificationWarningMessage": "इस ऐप के स्रोत की पूरी तरह से पुष्टि नहीं की जा सकी। पैकेज सुरक्षित हो सकता है, लेकिन अपडेट करने से पहले विवरण देखने की सलाह दी जाती है।",
     "installAppsMessage": "उन्हें यहाँ देखने के लिए स्टोर से ऐप इंस्टॉल करें",
     "installed": "इंस्टॉल किया गया",
     "listUpdated": "✓ सूची अपडेट की गई।",
@@ -199,6 +205,7 @@
     "updatesCompletedWithErrors": "अपडेट कुछ त्रुटियों के साथ पूरे हुए",
     "updating": "{{appId}} अपडेट हो रहा है",
     "updatingAllApps": "सभी ऐप्स अपडेट हो रहे हैं",
+    "updateStartingShortly": "अपडेट जल्द ही शुरू होगा...",
     "waiting": "प्रतीक्षा करें..."
   },
   "notifications": {

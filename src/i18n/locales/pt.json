@@ -166,7 +166,13 @@
     "closeButton": "Fechar",
     "currentApp": "Aplicativo Atual",
     "errorInvokingCommand": "✗ Erro ao invocar comando: {{error}}",
-    "hideDetails": "Ocultar Detalhes Técnicos",
+    "hideDetails": "Ocultar detalhes",
+    "verificationSkipApp": "Pular",
+    "verificationIncludeApp": "Incluir",
+    "verificationForceApp": "Forçar",
+    "verificationMoreDetails": "Detalhes",
+    "verificationCancelAll": "Cancelar",
+    "verificationWarningMessage": "Não foi possível verificar completamente a origem deste app. O pacote pode ser seguro, mas recomendamos revisar os detalhes antes de atualizar.",
     "installAppsMessage": "Instale aplicativos da loja para vê-los aqui",
     "installed": "Instalado",
     "listUpdated": "✓ Lista atualizada.",
@@ -199,6 +205,7 @@
     "updatesCompletedWithErrors": "Atualizações concluídas com alguns erros",
     "updating": "Atualizando {{appId}}",
     "updatingAllApps": "Atualizando Todos os Aplicativos",
+    "updateStartingShortly": "A atualização começará em breve...",
     "waiting": "Aguardando..."
   },
   "notifications": {
