@@ -1954,6 +1954,8 @@ struct SourceVerification {
     remote_commit: Option<String>,
     error: Option<String>,
     platform: String,
+    #[serde(rename = "isSha256Unverifiable", default)]
+    is_sha256_unverifiable: bool,
 }
 
 /// Detecta la plataforma Git y extrae owner/repo
@@ -2390,8 +2392,13 @@ async fn get_github_tag_commit(owner: &str, repo: &str, tag: &str) -> Result<Str
 /// Extracts owner, repo, release tag, and filename from a GitHub/GitLab release URL
 /// Example: https://github.com/owner/repo/releases/download/v1.2.2/file.tar.gz
 /// Returns: Some((owner, repo, tag, filename))
-fn extract_release_info(url: &str) -> Option<(String, String, String, String)> {
+/// Extracts owner, repo, release tag, and filename from a GitHub/GitLab release URL
+/// Also returns whether the URL is an auto-generated archive (not a manually uploaded asset)
+/// Example: https://github.com/owner/repo/releases/download/v1.2.2/file.tar.gz
+/// Returns: Some((owner, repo, tag, filename, is_generated_archive))
+fn extract_release_info(url: &str) -> Option<(String, String, String, String, bool)> {
     // GitHub pattern: https://github.com/owner/repo/releases/download/tag/file
+    // These are manually uploaded assets and have SHA256 digest available
     if let Some(caps) = regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$")
         .ok()?
         .captures(url)
@@ -2400,7 +2407,20 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String)> {
         let repo = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
         let filename = caps.get(4)?.as_str().to_string();
-        return Some((owner, repo, tag, filename));
+        return Some((owner, repo, tag, filename, false));
+    }
+
+    // GitHub archive pattern: https://github.com/owner/repo/archive/refs/tags/tag/file
+    // These are auto-generated tarballs and do NOT have SHA256 digest available via API
+    if let Some(caps) = regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/archive/refs/tags/([^/]+)/(.+)$")
+        .ok()?
+        .captures(url)
+    {
+        let owner = caps.get(1)?.as_str().to_string();
+        let repo = caps.get(2)?.as_str().to_string();
+        let tag = caps.get(3)?.as_str().to_string();
+        let filename = caps.get(4)?.as_str().to_string();
+        return Some((owner, repo, tag, filename, true));
     }
 
     // GitLab pattern: https://gitlab.com/owner/repo/-/releases/tag/downloads/file
@@ -2413,7 +2433,7 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String)> {
         let repo = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
         let filename = caps.get(4)?.as_str().to_string();
-        return Some((owner, repo, tag, filename));
+        return Some((owner, repo, tag, filename, false));
     }
 
     None
@@ -2618,9 +2638,10 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
         println!("[verify_app_hash] Source is an archive from release");
 
         // Extract release info from URL (e.g., https://github.com/owner/repo/releases/download/v1.2.2/file.tar.gz)
-        if let Some((owner, repo, release_tag, filename)) = extract_release_info(&url) {
+        if let Some((owner, repo, release_tag, filename, is_generated_archive)) = extract_release_info(&url) {
             println!("[verify_app_hash] Detected release: {}/{} @ {}", owner, repo, release_tag);
             println!("[verify_app_hash] File: {}", filename);
+            println!("[verify_app_hash] Is auto-generated archive: {}", is_generated_archive);
 
             // Get SHA256 from manifest
             let manifest_sha256 = source.sha256.as_deref();
@@ -2630,15 +2651,30 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                 println!("[verify_app_hash] ⚠ No SHA256 in manifest");
             }
 
-            // Verify the release exists and SHA256 matches
-            let release_verified = verify_github_release(
-                &client,
-                &owner,
-                &repo,
-                &release_tag,
-                Some(&filename),
-                manifest_sha256,
-            ).await;
+            // For auto-generated archives (from /archive/refs/tags/), GitHub doesn't provide
+            // SHA256 digest in the API. We only verify the release exists.
+            // For manually uploaded assets, we verify both existence and SHA256.
+            let release_verified = if is_generated_archive {
+                // Just verify the release tag exists, skip SHA256 verification
+                verify_github_release(
+                    &client,
+                    &owner,
+                    &repo,
+                    &release_tag,
+                    None,
+                    None,
+                ).await
+            } else {
+                // Verify release exists and SHA256 matches
+                verify_github_release(
+                    &client,
+                    &owner,
+                    &repo,
+                    &release_tag,
+                    Some(&filename),
+                    manifest_sha256,
+                ).await
+            };
 
             return Ok(VerificationResult {
                 verified: release_verified.is_ok(),
@@ -2648,10 +2684,19 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                     commit: release_tag.clone(),
                     verified: release_verified.is_ok(),
                     remote_commit: Some(release_tag.clone()),
-                    error: release_verified.err(),
+                    error: if is_generated_archive {
+                        Some("SHA256 cannot be verified for auto-generated archives from GitHub. The release exists but the archive is generated on-demand and GitHub does not provide a digest for these.".to_string())
+                    } else {
+                        release_verified.err()
+                    },
                     platform: "github".to_string(),
+                    is_sha256_unverifiable: is_generated_archive,
                 }],
-                error: None,
+                error: if is_generated_archive {
+                    Some("SHA256 unverifiable for auto-generated archive".to_string())
+                } else {
+                    None
+                },
             });
         } else {
             return Ok(VerificationResult {
@@ -2664,6 +2709,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                     remote_commit: None,
                     error: Some("Could not extract release information from URL".to_string()),
                     platform: "unknown".to_string(),
+                    is_sha256_unverifiable: false,
                 }],
                 error: Some("Invalid release URL format".to_string()),
             });
