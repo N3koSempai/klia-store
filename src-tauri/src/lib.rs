@@ -727,6 +727,62 @@ fn check_cached_image_exists(
     }
 }
 
+
+#[tauri::command]
+fn get_cached_image_info(
+    app: tauri::AppHandle,
+    cache_key: String,
+    image_url: String,
+) -> Result<String, String> {
+    // Combina check_cached_image_exists + get_cached_image_path en una sola llamada
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+
+    let cache_images_dir = app_data_dir.join("cacheImages");
+
+    use xxhash_rust::xxh3::xxh3_64;
+
+    // Si hay cacheKey, usar eso; si no, usar imageUrl
+    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
+        cache_key
+    } else {
+        image_url.clone()
+    };
+
+    let hash = xxh3_64(key_to_hash.as_bytes());
+
+    // Determinar extension desde la URL
+    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
+        "svg"
+    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
+        "webp"
+    } else if image_url.ends_with(".jpg")
+        || image_url.ends_with(".jpeg")
+        || image_url.contains(".jpg?")
+        || image_url.contains(".jpeg?")
+    {
+        "jpg"
+    } else {
+        "png" // default
+    };
+
+    let filename = format!("{:x}.{}", hash, extension);
+    let file_path = cache_images_dir.join(&filename);
+
+    // Verificar que existe y retornar la ruta absoluta
+    if file_path.exists() {
+        // Usar canonicalize para obtener la ruta absoluta normalizada
+        let canonical_path = file_path
+            .canonicalize()
+            .unwrap_or_else(|_| file_path.clone());
+        Ok(canonical_path.to_string_lossy().to_string())
+    } else {
+        Err("Image not found in cache".to_string())
+    }
+}
+
 #[tauri::command]
 async fn get_installed_flatpaks(
     app: tauri::AppHandle,
@@ -2709,7 +2765,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                     remote_commit: None,
                     error: Some("Could not extract release information from URL".to_string()),
                     platform: "unknown".to_string(),
-                    is_sha256_unverifiable: false,
+                        is_sha256_unverifiable: false,
                 }],
                 error: Some("Invalid release URL format".to_string()),
             });
@@ -2727,6 +2783,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                 remote_commit: None,
                 error: Some("Missing URL or commit in source".to_string()),
                 platform: "unknown".to_string(),
+                is_sha256_unverifiable: false,
             }],
             error: Some("Main source is missing URL or commit".to_string()),
         });
@@ -2747,6 +2804,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                     remote_commit: None,
                     error: Some("Unsupported platform".to_string()),
                     platform: "unsupported".to_string(),
+                    is_sha256_unverifiable: false,
                 }],
                 error: Some("Unsupported platform".to_string()),
             });
@@ -2839,6 +2897,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
             remote_commit,
             error: error.clone(),
             platform: platform_name.to_string(),
+            is_sha256_unverifiable: false,
         }],
         error: error.map(|e| format!("Security verification failed: {}", e)),
     })

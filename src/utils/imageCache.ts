@@ -9,6 +9,10 @@ interface QueueItem {
 	retryCount?: number;
 }
 
+// Cache en memoria para respuestas rapidas
+const memoryCache = new Map<string, string>();
+const failedCache = new Set<string>();
+
 export class ImageCacheManager {
 	private static instance: ImageCacheManager;
 	private cacheDir: string | null = null;
@@ -66,20 +70,24 @@ export class ImageCacheManager {
 	): Promise<string | null> {
 		await this.initialize();
 
-		try {
-			// Si no hay imageUrl, usar cacheKeyOrUrl para ambos
-			const actualImageUrl = imageUrl || cacheKeyOrUrl;
-			const cacheKey = cacheKeyOrUrl;
+		// Si no hay imageUrl, usar cacheKeyOrUrl para ambos
+		const actualImageUrl = imageUrl || cacheKeyOrUrl;
+		const cacheKey = cacheKeyOrUrl;
 
-			// Verificar si ya existe en caché - el backend retorna el filename si existe
-			const filename = await invoke<string>("check_cached_image_exists", {
+		// 1. Verificar cache en memoria primero (instantaneo)
+		if (memoryCache.has(cacheKey)) {
+			return memoryCache.get(cacheKey)!;
+		}
+
+		// 2. Verificar si ya se sabe que fallo (evitar invoke innecesario)
+		if (failedCache.has(cacheKey)) {
+			return null;
+		}
+
+		try {
+			const fullPath = await invoke<string>("get_cached_image_info", {
 				cacheKey,
 				imageUrl: actualImageUrl,
-			});
-
-			// Si llegamos aquí, el archivo existe (no lanzó error)
-			const fullPath = await invoke<string>("get_cached_image_path", {
-				filename,
 			});
 
 			let convertedPath = convertFileSrc(fullPath);
@@ -91,9 +99,13 @@ export class ImageCacheManager {
 				convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
 			}
 
+			// Guardar en cache de memoria para futuras referencias
+			memoryCache.set(cacheKey, convertedPath);
+
 			return convertedPath;
 		} catch (error) {
-			// El error significa que no existe en caché
+			// El error significa que no existe en cache - guardar para evitar reintentos
+			failedCache.add(cacheKey);
 			return null;
 		}
 	}
@@ -141,7 +153,8 @@ export class ImageCacheManager {
 				convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
 			}
 
-			return convertedPath;
+				memoryCache.set(imageUrl, convertedPath);
+				return convertedPath;
 		} catch (error) {
 			console.error(`[ImageCache] Error caching image for ${appId}:`, error);
 
