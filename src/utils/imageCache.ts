@@ -1,12 +1,13 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
 interface QueueItem {
-	appId: string;
-	imageUrl: string;
-	priority: number; // 0 = high (visible), 1 = low (hidden)
-	resolve: (value: string) => void;
-	reject: (reason?: any) => void;
-	retryCount?: number;
+  appId: string;
+  imageUrl: string;
+  priority: number; // 0 = high (visible), 1 = low (hidden)
+  resolve: (value: string) => void;
+  reject: (reason?: any) => void;
+  retryCount?: number;
+  abortController: AbortController;
 }
 
 // Cache en memoria para respuestas rapidas
@@ -14,227 +15,278 @@ const memoryCache = new Map<string, string>();
 const failedCache = new Set<string>();
 
 export class ImageCacheManager {
-	private static instance: ImageCacheManager;
-	private cacheDir: string | null = null;
-	private initPromise: Promise<void> | null = null;
-	private queue: QueueItem[] = [];
-	private activeDownloads = 0;
-	private readonly MAX_CONCURRENT_DOWNLOADS = 6;
-	private readonly MAX_RETRIES = 2;
-	private readonly DELAY_BETWEEN_DOWNLOADS = 150; // ms
+  private static instance: ImageCacheManager;
+  private cacheDir: string | null = null;
+  private initPromise: Promise<void> | null = null;
+  private queue: QueueItem[] = [];
+  private activeDownloads = 0;
+  private readonly MAX_CONCURRENT_DOWNLOADS = 6;
+  private readonly MAX_RETRIES = 2;
+  private readonly DELAY_BETWEEN_DOWNLOADS = 150; // ms
 
-	private constructor() {}
+  private constructor() {}
 
-	static getInstance(): ImageCacheManager {
-		if (!ImageCacheManager.instance) {
-			ImageCacheManager.instance = new ImageCacheManager();
-		}
-		return ImageCacheManager.instance;
-	}
+  static getInstance(): ImageCacheManager {
+    if (!ImageCacheManager.instance) {
+      ImageCacheManager.instance = new ImageCacheManager();
+    }
+    return ImageCacheManager.instance;
+  }
 
-	async initialize(): Promise<void> {
-		// Si ya hay una inicialización en curso, esperar a que termine
-		if (this.initPromise) {
-			return this.initPromise;
-		}
+  async initialize(): Promise<void> {
+    // Si ya hay una inicialización en curso, esperar a que termine
+    if (this.initPromise) {
+      return this.initPromise;
+    }
 
-		// Si ya está inicializado, retornar inmediatamente
-		if (this.cacheDir) {
-			return;
-		}
+    // Si ya está inicializado, retornar inmediatamente
+    if (this.cacheDir) {
+      return;
+    }
 
-		// Crear la promesa de inicialización
-		this.initPromise = (async () => {
-			try {
-				// Limpiar cache antiguo si existe (basado en index.json)
-				await invoke("clear_old_cache");
+    // Crear la promesa de inicialización
+    this.initPromise = (async () => {
+      try {
+        // Limpiar cache antiguo si existe (basado en index.json)
+        await invoke("clear_old_cache");
 
-				// Obtener la ruta de la carpeta cacheImage
-				this.cacheDir = await invoke<string>("get_cache_image_dir");
+        // Obtener la ruta de la carpeta cacheImage
+        this.cacheDir = await invoke<string>("get_cache_image_dir");
 
-				console.log(`[ImageCache] Initializing cache at: ${this.cacheDir}`);
-				console.log("[ImageCache] Initialization complete");
-			} catch (error) {
-				console.error("[ImageCache] Error initializing image cache:", error);
-				this.initPromise = null; // Resetear para permitir reintento
-				throw error;
-			}
-		})();
+        console.log(`[ImageCache] Initializing cache at: ${this.cacheDir}`);
+        console.log("[ImageCache] Initialization complete");
+      } catch (error) {
+        console.error("[ImageCache] Error initializing image cache:", error);
+        this.initPromise = null; // Resetear para permitir reintento
+        throw error;
+      }
+    })();
 
-		return this.initPromise;
-	}
+    return this.initPromise;
+  }
 
-	async getCachedImagePath(
-		cacheKeyOrUrl: string,
-		imageUrl?: string,
-	): Promise<string | null> {
-		await this.initialize();
+  async getCachedImagePath(
+    cacheKeyOrUrl: string,
+    imageUrl?: string,
+  ): Promise<string | null> {
+    await this.initialize();
 
-		// Si no hay imageUrl, usar cacheKeyOrUrl para ambos
-		const actualImageUrl = imageUrl || cacheKeyOrUrl;
-		const cacheKey = cacheKeyOrUrl;
+    // Si no hay imageUrl, usar cacheKeyOrUrl para ambos
+    const actualImageUrl = imageUrl || cacheKeyOrUrl;
+    const cacheKey = cacheKeyOrUrl;
 
-		// 1. Verificar cache en memoria primero (instantaneo)
-		if (memoryCache.has(cacheKey)) {
-			return memoryCache.get(cacheKey)!;
-		}
+    // 1. Verificar cache en memoria primero (instantaneo)
+    if (memoryCache.has(cacheKey)) {
+      return memoryCache.get(cacheKey)!;
+    }
 
-		// 2. Verificar si ya se sabe que fallo (evitar invoke innecesario)
-		if (failedCache.has(cacheKey)) {
-			return null;
-		}
+    // 2. Verificar si ya se sabe que fallo (evitar invoke innecesario)
+    if (failedCache.has(cacheKey)) {
+      return null;
+    }
 
-		try {
-			const fullPath = await invoke<string>("get_cached_image_info", {
-				cacheKey,
-				imageUrl: actualImageUrl,
-			});
+    try {
+      const fullPath = await invoke<string>("get_cached_image_info", {
+        cacheKey,
+        imageUrl: actualImageUrl,
+      });
 
-			let convertedPath = convertFileSrc(fullPath);
+      let convertedPath = convertFileSrc(fullPath);
 
-			// Si detectamos doble encoding (%2F), decodificar una vez
-			if (convertedPath.includes("%2F")) {
-				const url = new URL(convertedPath);
-				const decodedPathname = decodeURIComponent(url.pathname);
-				convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
-			}
+      // Si detectamos doble encoding (%2F), decodificar una vez
+      if (convertedPath.includes("%2F")) {
+        const url = new URL(convertedPath);
+        const decodedPathname = decodeURIComponent(url.pathname);
+        convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
+      }
 
-			// Guardar en cache de memoria para futuras referencias
-			memoryCache.set(cacheKey, convertedPath);
+      // Guardar en cache de memoria para futuras referencias
+      memoryCache.set(cacheKey, convertedPath);
 
-			return convertedPath;
-		} catch (error) {
-			// El error significa que no existe en cache - guardar para evitar reintentos
-			failedCache.add(cacheKey);
-			return null;
-		}
-	}
+      return convertedPath;
+    } catch (error) {
+      // El error significa que no existe en cache - guardar para evitar reintentos
+      failedCache.add(cacheKey);
+      return null;
+    }
+  }
 
-	private sleep(ms: number): Promise<void> {
-		return new Promise((resolve) => setTimeout(resolve, ms));
-	}
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
-	private isTemporaryError(error: any): boolean {
-		const errorMsg = String(error).toLowerCase();
-		// Errores temporales: timeout, network, connection
-		return (
-			errorMsg.includes("timeout") ||
-			errorMsg.includes("error sending request") ||
-			errorMsg.includes("connection") ||
-			errorMsg.includes("network")
-		);
-	}
+  private isTemporaryError(error: any): boolean {
+    const errorMsg = String(error).toLowerCase();
+    // Errores temporales: timeout, network, connection
+    return (
+      errorMsg.includes("timeout") ||
+      errorMsg.includes("error sending request") ||
+      errorMsg.includes("connection") ||
+      errorMsg.includes("network")
+    );
+  }
 
-	private async downloadImage(
-		appId: string,
-		imageUrl: string,
-		retryCount = 0,
-	): Promise<string> {
-		console.log(
-			`[ImageCache] Downloading and caching image for ${appId}: ${imageUrl}${retryCount > 0 ? ` (retry ${retryCount})` : ""}`,
-		);
+  private async downloadImage(
+    appId: string,
+    imageUrl: string,
+    abortController: AbortController,
+    retryCount = 0,
+  ): Promise<string> {
+    if (abortController.signal.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
 
-		try {
-			// Descargar y guardar la imagen (el backend generará el hash)
-			const filename = await invoke<string>("download_and_cache_image", {
-				appId,
-				imageUrl,
-			});
+    console.log(
+      `[ImageCache] Downloading and caching image for ${appId}: ${imageUrl}${retryCount > 0 ? ` (retry ${retryCount})` : ""}`,
+    );
 
-			const fullPath = await invoke<string>("get_cached_image_path", {
-				filename,
-			});
-			let convertedPath = convertFileSrc(fullPath);
+    try {
+      // Descargar y guardar la imagen (el backend generará el hash)
+      const filename = await invoke<string>("download_and_cache_image", {
+        appId,
+        imageUrl,
+      });
 
-			// Si detectamos doble encoding, decodificar una vez
-			if (convertedPath.includes("%2F")) {
-				const url = new URL(convertedPath);
-				const decodedPathname = decodeURIComponent(url.pathname);
-				convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
-			}
+      if (abortController.signal.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
 
-				memoryCache.set(imageUrl, convertedPath);
-				return convertedPath;
-		} catch (error) {
-			console.error(`[ImageCache] Error caching image for ${appId}:`, error);
+      const fullPath = await invoke<string>("get_cached_image_path", {
+        filename,
+      });
 
-			// Si es un error temporal y aún quedan reintentos
-			if (this.isTemporaryError(error) && retryCount < this.MAX_RETRIES) {
-				// Exponential backoff: 500ms, 1000ms, 2000ms...
-				const backoffDelay = 500 * 2 ** retryCount;
-				console.log(`[ImageCache] Retrying in ${backoffDelay}ms...`);
-				await this.sleep(backoffDelay);
-				return this.downloadImage(appId, imageUrl, retryCount + 1);
-			}
+      if (abortController.signal.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
 
-			throw error;
-		}
-	}
+      let convertedPath = convertFileSrc(fullPath);
 
-	private async processQueue(): Promise<void> {
-		if (
-			this.activeDownloads >= this.MAX_CONCURRENT_DOWNLOADS ||
-			this.queue.length === 0
-		) {
-			return;
-		}
+      // Si detectamos doble encoding, decodificar una vez
+      if (convertedPath.includes("%2F")) {
+        const url = new URL(convertedPath);
+        const decodedPathname = decodeURIComponent(url.pathname);
+        convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
+      }
 
-		// Ordenar por prioridad (0 primero = visibles primero)
-		this.queue.sort((a, b) => a.priority - b.priority);
+      memoryCache.set(imageUrl, convertedPath);
+      return convertedPath;
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
 
-		const item = this.queue.shift();
-		if (!item) return;
+      console.error(`[ImageCache] Error caching image for ${appId}:`, error);
 
-		this.activeDownloads++;
+      // Si es un error temporal y aún quedan reintentos
+      if (this.isTemporaryError(error) && retryCount < this.MAX_RETRIES) {
+        if (abortController.signal.aborted) {
+          throw new DOMException("Aborted", "AbortError");
+        }
+        // Exponential backoff: 500ms, 1000ms, 2000ms...
+        const backoffDelay = 500 * 2 ** retryCount;
+        console.log(`[ImageCache] Retrying in ${backoffDelay}ms...`);
+        await this.sleep(backoffDelay);
+        return this.downloadImage(
+          appId,
+          imageUrl,
+          abortController,
+          retryCount + 1,
+        );
+      }
 
-		// Delay antes de iniciar descarga para espaciar las requests
-		if (this.activeDownloads > 1) {
-			await this.sleep(this.DELAY_BETWEEN_DOWNLOADS);
-		}
+      throw error;
+    }
+  }
 
-		try {
-			const result = await this.downloadImage(
-				item.appId,
-				item.imageUrl,
-				item.retryCount || 0,
-			);
-			item.resolve(result);
-		} catch (error) {
-			item.reject(error);
-		} finally {
-			this.activeDownloads--;
-			this.processQueue(); // Procesar siguiente en cola
-		}
-	}
+  private async processQueue(): Promise<void> {
+    if (
+      this.activeDownloads >= this.MAX_CONCURRENT_DOWNLOADS ||
+      this.queue.length === 0
+    ) {
+      return;
+    }
 
-	async cacheImage(
-		appId: string,
-		imageUrl: string,
-		priority: number = 1,
-	): Promise<string> {
-		await this.initialize();
+    // Ordenar por prioridad (0 primero = visibles primero)
+    this.queue.sort((a, b) => a.priority - b.priority);
 
-		return new Promise((resolve, reject) => {
-			this.queue.push({ appId, imageUrl, priority, resolve, reject });
-			this.processQueue();
-		});
-	}
+    const item = this.queue.shift();
+    if (!item) return;
 
-	async getOrCacheImage(
-		appId: string,
-		imageUrl: string,
-		priority: number = 1,
-	): Promise<string> {
-		// Primero intentar obtener de caché usando la URL
-		const cachedPath = await this.getCachedImagePath(imageUrl);
+    // Skip if already aborted
+    if (item.abortController.signal.aborted) {
+      this.processQueue();
+      return;
+    }
 
-		if (cachedPath) {
-			return cachedPath;
-		}
+    this.activeDownloads++;
 
-		// Si no está en caché, descargar y cachear con prioridad
-		return await this.cacheImage(appId, imageUrl, priority);
-	}
+    // Delay antes de iniciar descarga para espaciar las requests
+    if (this.activeDownloads > 1) {
+      await this.sleep(this.DELAY_BETWEEN_DOWNLOADS);
+    }
+
+    try {
+      const result = await this.downloadImage(
+        item.appId,
+        item.imageUrl,
+        item.abortController,
+        item.retryCount || 0,
+      );
+      item.resolve(result);
+    } catch (error) {
+      item.reject(error);
+    } finally {
+      this.activeDownloads--;
+      this.processQueue(); // Procesar siguiente en cola
+    }
+  }
+
+  async cacheImage(
+    appId: string,
+    imageUrl: string,
+    priority: number = 1,
+  ): Promise<string> {
+    await this.initialize();
+
+    return new Promise((resolve, reject) => {
+      const abortController = new AbortController();
+      this.queue.push({
+        appId,
+        imageUrl,
+        priority,
+        resolve,
+        reject,
+        abortController,
+      });
+      this.processQueue();
+    });
+  }
+
+  abortPending(key: string): void {
+    const index = this.queue.findIndex(
+      (item) => item.appId === key || item.imageUrl === key,
+    );
+    if (index !== -1) {
+      this.queue[index].abortController.abort();
+      this.queue.splice(index, 1);
+    }
+  }
+
+  async getOrCacheImage(
+    appId: string,
+    imageUrl: string,
+    priority: number = 1,
+  ): Promise<string> {
+    // Primero intentar obtener de caché usando la URL
+    const cachedPath = await this.getCachedImagePath(imageUrl);
+
+    if (cachedPath) {
+      return cachedPath;
+    }
+
+    // Si no está en caché, descargar y cachear con prioridad
+    return await this.cacheImage(appId, imageUrl, priority);
+  }
 }
 
 export const imageCacheManager = ImageCacheManager.getInstance();
