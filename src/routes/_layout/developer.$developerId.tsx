@@ -33,7 +33,6 @@ function DeveloperRoute() {
 			navigate({
 				to: "/app/$appId",
 				params: { appId: developerAppId },
-				search: { developerName, developerAppId },
 			});
 		} else {
 			navigate({ to: "/" });
