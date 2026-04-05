@@ -1,11 +1,18 @@
 import react from "@vitejs/plugin-react";
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import { defineConfig } from "vite";
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react()],
+  plugins: [
+    TanStackRouterVite({
+      target: "react",
+      autoCodeSplitting: true,
+    }),
+    react(),
+  ],
   assetsInclude: ["**/*.lottie"],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
