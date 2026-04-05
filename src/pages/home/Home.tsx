@@ -28,7 +28,11 @@ import { CategoriesSection } from "./components/CategoriesSection";
 import { FeaturedSection } from "./components/FeaturedSection";
 
 interface HomeProps {
-	onAppSelect: (app: CategoryApp, searchQuery?: string, searchResults?: CategoryApp[]) => void;
+	onAppSelect: (
+		app: CategoryApp,
+		searchQuery?: string,
+		searchResults?: CategoryApp[],
+	) => void;
 	onCategorySelect: (categoryId: string) => void;
 	onMyAppsClick: () => void;
 	onAnalyticsClick: () => void;
@@ -47,7 +51,8 @@ export const Home = ({
 	const { t } = useTranslation();
 	const { getUpdateCount } = useInstalledAppsStore();
 	const updateCount = getUpdateCount();
-	const [searchResults, setSearchResults] = useState<CategoryApp[]>(initialSearchResults);
+	const [searchResults, setSearchResults] =
+		useState<CategoryApp[]>(initialSearchResults);
 	const [isSearching, setIsSearching] = useState(false);
 	const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
 	const [aboutModalOpen, setAboutModalOpen] = useState(false);
@@ -132,7 +137,7 @@ export const Home = ({
 					<AppSearchBar
 						onSearch={handleSearch}
 						onLoading={setIsSearching}
-						initialValue={initialSearchQuery}
+						initialValue={initialSearchQuery || searchQuery}
 					/>
 
 					<NotificationMenu

@@ -102,7 +102,7 @@ export class DBCacheManager {
 					ALTER TABLE app_permissions ADD COLUMN outdated INTEGER DEFAULT 0
 				`);
 				console.log("Added outdated column to app_permissions table");
-			} catch (error) {
+			} catch {
 				// Column already exists, ignore error
 			}
 
@@ -141,7 +141,14 @@ export class DBCacheManager {
 		await this.db.execute(
 			`INSERT INTO donations (app_id, app_name, amount, currency, network, tx_id)
 			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			[params.appId, params.appName, params.amount, params.currency, params.network, params.txId ?? null],
+			[
+				params.appId,
+				params.appName,
+				params.amount,
+				params.currency,
+				params.network,
+				params.txId ?? null,
+			],
 		);
 	}
 
@@ -450,9 +457,7 @@ export class DBCacheManager {
 			if (apps.length === 0) return result;
 
 			// Build a single query with placeholders for all (app_id, version) pairs
-			const placeholders = apps
-				.map(() => "(?, ?)")
-				.join(", ");
+			const placeholders = apps.map(() => "(?, ?)").join(", ");
 
 			const values = apps.flatMap((app) => [app.appId, app.version]);
 
@@ -532,7 +537,10 @@ export class DBCacheManager {
 	}
 
 	// Clean old cached versions for a specific app (keep only the current version)
-	async cleanOldPermissions(appId: string, currentVersion: string): Promise<void> {
+	async cleanOldPermissions(
+		appId: string,
+		currentVersion: string,
+	): Promise<void> {
 		await this.initialize();
 		if (!this.db) throw new Error("Database not initialized");
 
@@ -559,9 +567,7 @@ export class DBCacheManager {
 
 			// Build a more efficient query to delete in one statement
 			// Keep only entries that match (app_id, version) pairs in currentApps
-			const placeholders = currentApps
-				.map(() => "(?, ?)")
-				.join(", ");
+			const placeholders = currentApps.map(() => "(?, ?)").join(", ");
 
 			const values = currentApps.flatMap((app) => [app.appId, app.version]);
 

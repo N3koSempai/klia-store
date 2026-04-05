@@ -2,16 +2,15 @@ import { alpha, Box, Card, Chip, Skeleton, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import hetairosLogo from "../../../assets/internalPromo/hentairos_logo.png";
 import { CachedImage } from "../../../components/CachedImage";
 import { useAppOfTheDay } from "../../../hooks/useAppOfTheDay";
 import { apiService } from "../../../services/api";
 import type { CategoryApp } from "../../../types";
-import hetairosLogo from "../../../assets/internalPromo/hentairos_logo.png";
 
 interface FeaturedSectionProps {
 	onAppSelect: (app: CategoryApp) => void;
 }
-
 
 // Promoted app card component (disabled by default)
 interface PromotedAppCardData {
@@ -154,9 +153,15 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 						},
 					}}
 					onClick={() => {
-						if (currentSlide.type === "backend" && currentSlide.data?.categoryApp) {
+						if (
+							currentSlide.type === "backend" &&
+							currentSlide.data?.categoryApp
+						) {
 							onAppSelect(currentSlide.data.categoryApp);
-						} else if (currentSlide.type === "promoted" && currentSlide.data.categoryApp) {
+						} else if (
+							currentSlide.type === "promoted" &&
+							currentSlide.data.categoryApp
+						) {
 							onAppSelect(currentSlide.data.categoryApp);
 						}
 					}}
@@ -174,13 +179,11 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 									sx={{
 										width: 140,
 										height: 140,
-										bgcolor: "#21262d",
-										borderRadius: 3,
+										bgcolor: "transparent",
 										display: "flex",
 										alignItems: "center",
 										justifyContent: "center",
 										boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-										overflow: "hidden",
 									}}
 								>
 									{currentSlide.type === "promoted" ? (

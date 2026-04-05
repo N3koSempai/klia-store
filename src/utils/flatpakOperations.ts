@@ -26,6 +26,7 @@ export async function executeFlatpakOperation(
 	let unlistenError: UnlistenFn | null = null;
 	let unlistenCompleted: UnlistenFn | null = null;
 
+	// biome-ignore lint/suspicious/noAsyncPromiseExecutor: async executor needed to await event listeners before resolving
 	return new Promise<FlatpakOperationResult>(async (resolve, reject) => {
 		try {
 			// Listen to output events

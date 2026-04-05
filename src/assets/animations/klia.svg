@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="240" height="240">
+  <defs>
+    <style>
+      .accent {
+        fill: #007AFF;
+        stroke: #007AFF;
+        stroke-width: 6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: drop-shadow(0 0 4px rgba(0, 122, 255, 0.5));
+      }
+      .dot {
+        fill: #007AFF;
+        stroke: none;
+        opacity: 0;
+      }
+    </style>
+  </defs>
+
+  <!-- Sync element: fires loop.repeat every 2.5s to restart all animations -->
+  <rect width="0" height="0" opacity="0">
+    <animate id="loop" attributeName="opacity" values="0;0" dur="2.5s" repeatCount="indefinite"/>
+  </rect>
+
+  <g>
+    <circle class="dot" r="3">
+      <animateMotion dur="1.2s" begin="0s; loop.repeat" fill="remove"
+        path="M -10,60 C 10,20 20,30 35,30" />
+      <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.2;1" dur="1.3s" begin="0s; loop.repeat" fill="remove" />
+    </circle>
+
+    <circle class="dot" r="3">
+      <animateMotion dur="1.2s" begin="0.1s; loop.repeat+0.1s" fill="remove"
+        path="M 35,130 C 35,110 35,100 35,90" />
+      <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.2;1" dur="1.3s" begin="0.1s; loop.repeat+0.1s" fill="remove" />
+    </circle>
+
+    <circle class="dot" r="3">
+      <animateMotion dur="1s" begin="0.2s; loop.repeat+0.2s" fill="remove"
+        path="M 130,60 C 100,60 70,60 35,60" />
+      <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.2;1" dur="1.2s" begin="0.2s; loop.repeat+0.2s" fill="remove" />
+    </circle>
+
+    <path class="accent" d="M 35,30 L 35,90" stroke-dasharray="100" stroke-dashoffset="100">
+      <animate attributeName="stroke-dashoffset" from="100" to="0" dur="0.6s" begin="1s; loop.repeat+1s" fill="remove" />
+    </path>
+
+    <path class="accent" d="M 35,60 L 80,30" stroke-dasharray="100" stroke-dashoffset="100">
+      <animate attributeName="stroke-dashoffset" from="100" to="0" dur="0.5s" begin="1.2s; loop.repeat+1.2s" fill="remove" />
+    </path>
+
+    <path class="accent" d="M 35,60 L 80,90" stroke-dasharray="100" stroke-dashoffset="100">
+      <animate attributeName="stroke-dashoffset" from="100" to="0" dur="0.5s" begin="1.4s; loop.repeat+1.4s" fill="remove" />
+    </path>
+  </g>
+</svg>

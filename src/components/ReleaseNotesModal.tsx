@@ -44,6 +44,7 @@ export const ReleaseNotesModal = ({
 	const [releases, setReleases] = useState<Release[]>([]);
 	const [error, setError] = useState<string | null>(null);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: t from useTranslation is stable across renders
 	useEffect(() => {
 		if (!open) return;
 
@@ -151,7 +152,7 @@ export const ReleaseNotesModal = ({
 										sx={{ mb: 2, display: "block" }}
 									>
 										{new Date(
-											Number.parseInt(release.timestamp) * 1000,
+											Number.parseInt(release.timestamp, 10) * 1000,
 										).toLocaleDateString()}
 									</Typography>
 								)}

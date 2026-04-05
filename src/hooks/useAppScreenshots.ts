@@ -51,20 +51,21 @@ export const useAppScreenshots = (app: AppStream): UseAppScreenshotsReturn => {
 				setIsLoading(true);
 				setError(null);
 
-				// Intentar encontrar screenshots en caché
-				let foundInCache = false;
+				// Intentar encontrar screenshots en caché en batch
+				// Generar hasta 10 keys y consultarlas en paralelo
+				const cacheKeys = Array.from(
+					{ length: 10 },
+					(_, i) => `${app.id}:::${i + 1}`,
+				);
+
+				const cachedPaths = await Promise.all(
+					cacheKeys.map((key) => imageCacheManager.getCachedImagePath(key)),
+				);
+
+				// Construir screenshots solo con los resultados existentes (sin huecos)
 				const cachedScreenshots: AppStream["screenshots"] = [];
-
-				// Buscar screenshots en caché usando el formato appId:::1, appId:::2, etc.
-				for (let i = 1; i <= 10; i++) {
-					// Buscar hasta 10 screenshots
-					const cacheKey = `${app.id}:::${i}`;
-					const cachedPath =
-						await imageCacheManager.getCachedImagePath(cacheKey);
-
+				for (const cachedPath of cachedPaths) {
 					if (cachedPath) {
-						foundInCache = true;
-						// Si encontramos en caché, agregarlo a la lista
 						cachedScreenshots.push({
 							sizes: [
 								{
@@ -80,6 +81,8 @@ export const useAppScreenshots = (app: AppStream): UseAppScreenshotsReturn => {
 						break;
 					}
 				}
+
+				const foundInCache = cachedScreenshots.length > 0;
 
 				if (foundInCache && isMounted) {
 					setScreenshots(cachedScreenshots);
@@ -121,7 +124,7 @@ export const useAppScreenshots = (app: AppStream): UseAppScreenshotsReturn => {
 		return () => {
 			isMounted = false;
 		};
-	}, [app.id, app.screenshots]);
+	}, [app.id, app.screenshots, app.urls]);
 
 	return { screenshots, urls, isLoading, error };
 };

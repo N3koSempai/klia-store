@@ -358,9 +358,9 @@ export function DependencyInfoPopover({
 							</Typography>
 
 							<Stack spacing={1}>
-								{processedDeps.map((dep, index) => (
+								{processedDeps.map((dep) => (
 									<Box
-										key={index}
+										key={dep.id}
 										sx={{
 											display: "flex",
 											justifyContent: "space-between",

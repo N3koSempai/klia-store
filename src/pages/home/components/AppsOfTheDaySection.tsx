@@ -173,7 +173,7 @@ export const AppsOfTheDaySection = ({
 											sx={{
 												width: 72,
 												height: 72,
-												bgcolor: "#21262d",
+												bgcolor: "transparent",
 												borderRadius: 2,
 												mb: 2,
 												display: "flex",

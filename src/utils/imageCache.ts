@@ -5,9 +5,14 @@ interface QueueItem {
 	imageUrl: string;
 	priority: number; // 0 = high (visible), 1 = low (hidden)
 	resolve: (value: string) => void;
-	reject: (reason?: any) => void;
+	reject: (reason?: unknown) => void;
 	retryCount?: number;
+	abortController: AbortController;
 }
+
+// Cache en memoria para respuestas rapidas
+const memoryCache = new Map<string, string>();
+const failedCache = new Set<string>();
 
 export class ImageCacheManager {
 	private static instance: ImageCacheManager;
@@ -66,20 +71,25 @@ export class ImageCacheManager {
 	): Promise<string | null> {
 		await this.initialize();
 
-		try {
-			// Si no hay imageUrl, usar cacheKeyOrUrl para ambos
-			const actualImageUrl = imageUrl || cacheKeyOrUrl;
-			const cacheKey = cacheKeyOrUrl;
+		// Si no hay imageUrl, usar cacheKeyOrUrl para ambos
+		const actualImageUrl = imageUrl || cacheKeyOrUrl;
+		const cacheKey = cacheKeyOrUrl;
 
-			// Verificar si ya existe en caché - el backend retorna el filename si existe
-			const filename = await invoke<string>("check_cached_image_exists", {
+		// 1. Verificar cache en memoria primero (instantaneo)
+		const cached = memoryCache.get(cacheKey);
+		if (cached !== undefined) {
+			return cached;
+		}
+
+		// 2. Verificar si ya se sabe que fallo (evitar invoke innecesario)
+		if (failedCache.has(cacheKey)) {
+			return null;
+		}
+
+		try {
+			const fullPath = await invoke<string>("get_cached_image_info", {
 				cacheKey,
 				imageUrl: actualImageUrl,
-			});
-
-			// Si llegamos aquí, el archivo existe (no lanzó error)
-			const fullPath = await invoke<string>("get_cached_image_path", {
-				filename,
 			});
 
 			let convertedPath = convertFileSrc(fullPath);
@@ -91,9 +101,13 @@ export class ImageCacheManager {
 				convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
 			}
 
+			// Guardar en cache de memoria para futuras referencias
+			memoryCache.set(cacheKey, convertedPath);
+
 			return convertedPath;
-		} catch (error) {
-			// El error significa que no existe en caché
+		} catch {
+			// El error significa que no existe en cache - guardar para evitar reintentos
+			failedCache.add(cacheKey);
 			return null;
 		}
 	}
@@ -102,7 +116,7 @@ export class ImageCacheManager {
 		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
 
-	private isTemporaryError(error: any): boolean {
+	private isTemporaryError(error: unknown): boolean {
 		const errorMsg = String(error).toLowerCase();
 		// Errores temporales: timeout, network, connection
 		return (
@@ -116,8 +130,13 @@ export class ImageCacheManager {
 	private async downloadImage(
 		appId: string,
 		imageUrl: string,
+		abortController: AbortController,
 		retryCount = 0,
 	): Promise<string> {
+		if (abortController.signal.aborted) {
+			throw new DOMException("Aborted", "AbortError");
+		}
+
 		console.log(
 			`[ImageCache] Downloading and caching image for ${appId}: ${imageUrl}${retryCount > 0 ? ` (retry ${retryCount})` : ""}`,
 		);
@@ -129,9 +148,18 @@ export class ImageCacheManager {
 				imageUrl,
 			});
 
+			if (abortController.signal.aborted) {
+				throw new DOMException("Aborted", "AbortError");
+			}
+
 			const fullPath = await invoke<string>("get_cached_image_path", {
 				filename,
 			});
+
+			if (abortController.signal.aborted) {
+				throw new DOMException("Aborted", "AbortError");
+			}
+
 			let convertedPath = convertFileSrc(fullPath);
 
 			// Si detectamos doble encoding, decodificar una vez
@@ -141,17 +169,30 @@ export class ImageCacheManager {
 				convertedPath = `${url.protocol}//${url.host}${decodedPathname}`;
 			}
 
+			memoryCache.set(imageUrl, convertedPath);
 			return convertedPath;
 		} catch (error) {
+			if (abortController.signal.aborted) {
+				throw new DOMException("Aborted", "AbortError");
+			}
+
 			console.error(`[ImageCache] Error caching image for ${appId}:`, error);
 
 			// Si es un error temporal y aún quedan reintentos
 			if (this.isTemporaryError(error) && retryCount < this.MAX_RETRIES) {
+				if (abortController.signal.aborted) {
+					throw new DOMException("Aborted", "AbortError");
+				}
 				// Exponential backoff: 500ms, 1000ms, 2000ms...
 				const backoffDelay = 500 * 2 ** retryCount;
 				console.log(`[ImageCache] Retrying in ${backoffDelay}ms...`);
 				await this.sleep(backoffDelay);
-				return this.downloadImage(appId, imageUrl, retryCount + 1);
+				return this.downloadImage(
+					appId,
+					imageUrl,
+					abortController,
+					retryCount + 1,
+				);
 			}
 
 			throw error;
@@ -172,6 +213,12 @@ export class ImageCacheManager {
 		const item = this.queue.shift();
 		if (!item) return;
 
+		// Skip if already aborted
+		if (item.abortController.signal.aborted) {
+			this.processQueue();
+			return;
+		}
+
 		this.activeDownloads++;
 
 		// Delay antes de iniciar descarga para espaciar las requests
@@ -183,6 +230,7 @@ export class ImageCacheManager {
 			const result = await this.downloadImage(
 				item.appId,
 				item.imageUrl,
+				item.abortController,
 				item.retryCount || 0,
 			);
 			item.resolve(result);
@@ -202,9 +250,27 @@ export class ImageCacheManager {
 		await this.initialize();
 
 		return new Promise((resolve, reject) => {
-			this.queue.push({ appId, imageUrl, priority, resolve, reject });
+			const abortController = new AbortController();
+			this.queue.push({
+				appId,
+				imageUrl,
+				priority,
+				resolve,
+				reject,
+				abortController,
+			});
 			this.processQueue();
 		});
+	}
+
+	abortPending(key: string): void {
+		const index = this.queue.findIndex(
+			(item) => item.appId === key || item.imageUrl === key,
+		);
+		if (index !== -1) {
+			this.queue[index].abortController.abort();
+			this.queue.splice(index, 1);
+		}
 	}
 
 	async getOrCacheImage(

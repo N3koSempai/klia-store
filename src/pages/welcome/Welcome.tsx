@@ -40,6 +40,7 @@ export function Welcome({ onComplete }: WelcomeProps) {
 		},
 	];
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: slides.length is constant; adding slides array would cause unnecessary re-runs
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			if (currentSlide < slides.length - 1) {

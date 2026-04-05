@@ -23,6 +23,20 @@
 			"quoteStyle": "double"
 		}
 	},
+	"overrides": [
+		{
+			"includes": ["src/routeTree.gen.ts"],
+			"linter": { "enabled": false }
+		},
+		{
+			"includes": ["src/pages/home/components/FeaturedSection.tsx"],
+			"linter": {
+				"rules": {
+					"suspicious": { "noArrayIndexKey": "off" }
+				}
+			}
+		}
+	],
 	"assist": {
 		"enabled": true,
 		"actions": {

@@ -1,6 +1,11 @@
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
-import { CircularProgress, IconButton, InputAdornment, TextField } from "@mui/material";
+import {
+	CircularProgress,
+	IconButton,
+	InputAdornment,
+	TextField,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedCallback } from "use-debounce";
@@ -13,7 +18,11 @@ interface AppSearchBarProps {
 	initialValue?: string;
 }
 
-export const AppSearchBar = ({ onSearch, onLoading, initialValue = "" }: AppSearchBarProps) => {
+export const AppSearchBar = ({
+	onSearch,
+	onLoading,
+	initialValue = "",
+}: AppSearchBarProps) => {
 	const { t } = useTranslation();
 	const [inputValue, setInputValue] = useState(initialValue);
 	const [isSearching, setIsSearching] = useState(false);

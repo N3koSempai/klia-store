@@ -46,6 +46,7 @@ export const CachedImage = ({
 	const [isVisible, setIsVisible] = useState(isScreenshot); // Screenshots always visible
 	const containerRef = useRef<HTMLDivElement>(null);
 	const imageRef = useRef<HTMLImageElement>(null);
+	const abortControllerRef = useRef<AbortController | null>(null);
 
 	// IntersectionObserver for lazy loading (only for non-screenshots)
 	useEffect(() => {
@@ -77,6 +78,11 @@ export const CachedImage = ({
 	useEffect(() => {
 		let isMounted = true;
 
+		// Abort any pending download for this key when dependencies change
+		abortControllerRef.current?.abort();
+		abortControllerRef.current = new AbortController();
+		const currentAbort = abortControllerRef.current;
+
 		// If already in cache, skip loading
 		if (failedImagesCache.has(keyToUse)) {
 			setHasError(true);
@@ -85,10 +91,13 @@ export const CachedImage = ({
 		}
 
 		if (loadedImagesCache.has(keyToUse)) {
-			setImageSrc(loadedImagesCache.get(keyToUse)!);
-			setImageLoaded(true);
-			setIsLoading(false);
-			return;
+			const cached = loadedImagesCache.get(keyToUse);
+			if (cached) {
+				setImageSrc(cached);
+				setImageLoaded(true);
+				setIsLoading(false);
+				return;
+			}
 		}
 
 		// Only load if visible (or is screenshot)
@@ -110,12 +119,16 @@ export const CachedImage = ({
 					isScreenshot ? 0 : priority, // Screenshots always high priority
 				);
 
+				if (currentAbort.signal.aborted) return;
+
 				if (isMounted) {
 					setImageSrc(cachedPath);
 					loadedImagesCache.set(keyToUse, cachedPath);
 					setIsLoading(false);
 				}
 			} catch (err) {
+				if (currentAbort.signal.aborted) return;
+
 				console.error("Error loading cached image:", err);
 				if (isMounted) {
 					const errorMsg = String(err).toLowerCase();
@@ -166,17 +179,16 @@ export const CachedImage = ({
 
 		return () => {
 			isMounted = false;
+			currentAbort.abort();
 		};
 	}, [
-		appId,
 		imageUrl,
-		cacheKey,
-		keyToUse,
 		retryCount,
 		maxRetries,
 		showErrorPlaceholder,
 		isVisible,
 		isScreenshot,
+		keyToUse,
 	]);
 
 	// If there's a definitive error, show placeholder
@@ -228,6 +240,9 @@ export const CachedImage = ({
 					<img
 						src={imageSrc}
 						alt={alt}
+						loading="lazy"
+						decoding="async"
+						fetchPriority={isVisible ? "high" : "low"}
 						style={{
 							...style,
 							opacity: imageLoaded ? 1 : 0,
@@ -263,6 +278,9 @@ export const CachedImage = ({
 			ref={imageRef}
 			src={imageSrc}
 			alt={alt}
+			loading="lazy"
+			decoding="async"
+			fetchPriority={isVisible ? "high" : "low"}
 			style={style}
 			className={className}
 			onError={() => {

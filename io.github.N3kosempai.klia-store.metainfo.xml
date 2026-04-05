@@ -38,16 +38,15 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.8.1" date="2026-03-30">
+    <release version="2.9.0" date="2026-04-05">
       <description>
-        <p>New Feature: Cryptocurrency Donations Support</p>
+        <p>Performance, Navigation &amp; Visual Improvements</p>
         <ul>
-          <li>Support developers directly with cryptocurrency donations (Bitcoin and Ethereum tokens like USDT).</li>
-          <li>Scan QR codes with your mobile wallet or copy addresses for easy payments.</li>
-          <li>Automatic on-chain verification ensures your donation reaches the developer.</li>
-          <li>Klia Store is the first app to support this feature!</li>
-          <li>More exciting features coming soon to the donation system!</li>
-          <li>(Other developers can add crypto donation support to their apps - see instructions in the Klia Store README on GitHub)</li>
+          <li>Images now load up to 3x faster thanks to a full rewrite of the image caching system, moving processing to the native backend and reducing redundant network requests.</li>
+          <li>Switched to TanStack Router, enabling proper URL-based navigation — you can now deep-link directly to apps, categories, and developer pages.</li>
+          <li>App icons now display with transparent backgrounds, giving the interface a cleaner and more polished look.</li>
+          <li>Improved app verification: Klia Store now correctly distinguishes between manually uploaded GitHub release assets and auto-generated archives, providing more accurate integrity information.</li>
+          <li>Various internal code quality improvements to keep the app stable and maintainable.</li>
         </ul>
       </description>
     </release>
