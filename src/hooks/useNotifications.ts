@@ -15,6 +15,7 @@ export const useNotifications = () => {
 	const [viewedNotifications, setViewedNotifications] = useState<string[]>([]);
 	const [unreadCount, setUnreadCount] = useState(0);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: loadNotifications only uses stable setState functions
 	useEffect(() => {
 		loadNotifications();
 	}, []);

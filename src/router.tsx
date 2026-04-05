@@ -5,16 +5,16 @@ import { routeTree } from "./routeTree.gen";
 export const queryClient = new QueryClient();
 
 export const router = createRouter({
-  routeTree,
-  context: {
-    queryClient,
-  },
-  defaultPreload: "intent",
-  defaultPreloadStaleTime: 0,
+	routeTree,
+	context: {
+		queryClient,
+	},
+	defaultPreload: "intent",
+	defaultPreloadStaleTime: 0,
 });
 
 declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router;
-  }
+	interface Register {
+		router: typeof router;
+	}
 }

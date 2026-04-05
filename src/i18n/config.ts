@@ -31,7 +31,10 @@ const resources = {
 
 // Get system language or default to 'en'
 const getSystemLanguage = () => {
-	const lang = navigator.language || (navigator as any).userLanguage || "en";
+	const lang =
+		navigator.language ||
+		(navigator as Navigator & { userLanguage?: string }).userLanguage ||
+		"en";
 	return lang.split("-")[0]; // Use 'es' instead of 'es-ES'
 };
 

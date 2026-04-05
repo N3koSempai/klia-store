@@ -85,6 +85,7 @@ export const NotificationMenu = ({
 		return (
 			<Typography
 				variant="body2"
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: content comes from local notifications.json, not user input
 				dangerouslySetInnerHTML={{ __html: content }}
 				onClick={(e) => {
 					const target = e.target as HTMLElement;
