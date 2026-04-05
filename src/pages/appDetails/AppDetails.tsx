@@ -87,7 +87,9 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
   >("idle");
   const [isUninstalling, setIsUninstalling] = useState(false);
   const [showDonationModal, setShowDonationModal] = useState(false);
-  const hasCryptoDonation = !!(urls?.donation && /bitcoin|ethereum/i.test(urls.donation));
+  const hasCryptoDonation = !!(
+    urls?.donation && /bitcoin|ethereum/i.test(urls.donation)
+  );
   const [verificationResult, setVerificationResult] = useState<{
     verified: boolean;
     sources: Array<{
@@ -104,8 +106,12 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
   } | null>(null);
   const [countdown, setCountdown] = useState(5);
   const [riskCountdown, setRiskCountdown] = useState<number | null>(null);
-  const riskCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const riskCountdownIntervalRef = useRef<ReturnType<
+    typeof setInterval
+  > | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
 
   // Use ref to track isInstalling state in event listeners
   const isInstallingRef = useRef(false);
@@ -629,7 +635,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
               height: 80,
               borderRadius: 2,
               overflow: "hidden",
-              bgcolor: "grey.800",
+              bgcolor: "transparent",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -690,7 +696,11 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
         >
           <Box sx={{ display: "flex", gap: 1 }}>
             {hasCryptoDonation && installStatus === "idle" && (
-              <Tooltip title={t("donation.tooltipSupport")} arrow placement="top">
+              <Tooltip
+                title={t("donation.tooltipSupport")}
+                arrow
+                placement="top"
+              >
                 <Button
                   variant="outlined"
                   onClick={() => setShowDonationModal(true)}
@@ -1259,7 +1269,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
                   sx={{
                     width: "100%",
                     height: 500,
-                    bgcolor: "grey.900",
+                    bgcolor: "transparent",
                     borderRadius: 2,
                     overflow: "hidden",
                     position: "relative",
