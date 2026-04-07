@@ -1,6 +1,8 @@
 import CloseIcon from "@mui/icons-material/Close";
+import EmailIcon from "@mui/icons-material/Email";
 import {
 	Box,
+	Button,
 	Dialog,
 	DialogContent,
 	Divider,
@@ -193,6 +195,32 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 								</Typography>
 							</Box>
 						</Box>
+
+						{/* Contact Button */}
+						<Button
+							variant="contained"
+							startIcon={<EmailIcon />}
+							onClick={() => handleOpenLink("mailto:me@nekosempai.addy.io")}
+							sx={{
+								mt: 2,
+								px: 4,
+								py: 1.5,
+								borderRadius: 2,
+								background:
+									"linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)",
+								textTransform: "none",
+								fontSize: "1rem",
+								fontWeight: "bold",
+								boxShadow: "0 4px 15px rgba(25, 118, 210, 0.3)",
+								"&:hover": {
+									background:
+										"linear-gradient(135deg, #1565c0 0%, #1976d2 100%)",
+									boxShadow: "0 6px 20px rgba(25, 118, 210, 0.4)",
+								},
+							}}
+						>
+							{t("about.contactMe")}
+						</Button>
 					</Paper>
 
 					<Divider sx={{ width: "100%", my: 1 }} />
