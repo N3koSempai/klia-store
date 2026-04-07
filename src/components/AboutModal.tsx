@@ -141,17 +141,14 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 							{t("about.createdBy")}
 						</Typography>
 
-						<Typography variant="h5" sx={{ mb: 2, fontWeight: "bold" }}>
-							Alvaro M
-						</Typography>
-
 						<Box
 							component="button"
 							onClick={() => handleOpenLink("https://alvaromweb3.com/")}
 							sx={{
 								color: "primary.main",
 								textDecoration: "none",
-								fontSize: "1.1rem",
+								fontSize: "1.5rem",
+								fontWeight: "bold",
 								"&:hover": { textDecoration: "underline" },
 								mb: 3,
 								cursor: "pointer",
@@ -166,7 +163,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 								"&:active": { boxShadow: "none" },
 							}}
 						>
-							@nekosempai
+							@N3koSempai
 						</Box>
 
 						{/* Availability Status */}

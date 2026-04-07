@@ -206,6 +206,14 @@
 		"updating": "Actualizando {{appId}}",
 		"updatingAllApps": "Actualizando todas las aplicaciones",
 		"updateStartingShortly": "La actualización comenzará en breve...",
+		"updateStartingInSeconds": "Iniciando actualización en {{countdown}} segundos...",
+		"verificationPending": "pendiente",
+		"verificationReviewDetails": "Revisar detalles",
+		"updateSummarySuccess": "{{count}} aplicación actualizada correctamente",
+		"updateSummarySuccess_plural": "{{count}} aplicaciones actualizadas correctamente",
+		"updateSummaryWithErrors": "{{success}} actualizadas, {{errors}} con errores",
+		"systemPackageNote": "+ {{count}} paquete del sistema también se actualizará",
+		"systemPackageNote_plural": "+ {{count}} paquetes del sistema también se actualizarán",
 		"waiting": "Esperando..."
 	},
 	"notifications": {

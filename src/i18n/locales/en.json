@@ -204,6 +204,14 @@
 		"updating": "Updating {{appId}}",
 		"updatingAllApps": "Updating All Apps",
 		"updateStartingShortly": "Update will start shortly...",
+		"updateStartingInSeconds": "Starting update in {{countdown}} seconds...",
+		"verificationPending": "pending",
+		"verificationReviewDetails": "Review Details",
+		"updateSummarySuccess": "{{count}} app updated successfully",
+		"updateSummarySuccess_plural": "{{count}} apps updated successfully",
+		"updateSummaryWithErrors": "{{success}} updated, {{errors}} failed",
+		"systemPackageNote": "+ {{count}} system package will also be updated",
+		"systemPackageNote_plural": "+ {{count}} system packages will also be updated",
 		"waiting": "Waiting..."
 	},
 	"notifications": {

@@ -184,6 +184,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		systemUpdatesCount: _systemUpdatesCount,
 		isUpdatingSystem,
 		systemUpdateProgress,
+		updateSummary,
 		clearUpdateAll,
 	} = useUpdateAll();
 
@@ -726,9 +727,9 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												bgcolor: "rgba(255, 255, 255, 0.02)",
 												borderRadius: 2,
 												border: `1px solid ${
-													verificationState === "unsupported"
-														? "rgba(246, 211, 45, 0.5)"
-														: "rgba(255, 107, 107, 0.5)"
+													verificationResult?.isHashMismatch
+														? "rgba(255, 107, 107, 0.5)"
+														: "rgba(246, 211, 45, 0.5)"
 												}`,
 											}}
 										>
@@ -737,30 +738,28 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 													width: 80,
 													height: 80,
 													borderRadius: "50%",
-													bgcolor:
-														verificationState === "unsupported"
-															? "rgba(246, 211, 45, 0.1)"
-															: "rgba(255, 107, 107, 0.1)",
+													bgcolor: verificationResult?.isHashMismatch
+														? "rgba(255, 107, 107, 0.1)"
+														: "rgba(246, 211, 45, 0.1)",
 													display: "flex",
 													alignItems: "center",
 													justifyContent: "center",
 													border: `2px solid ${
-														verificationState === "unsupported"
-															? "#F6D32D"
-															: "#FF6B6B"
+														verificationResult?.isHashMismatch
+															? "#FF6B6B"
+															: "#F6D32D"
 													}`,
 												}}
 											>
 												<Typography
 													sx={{
-														color:
-															verificationState === "unsupported"
-																? "#F6D32D"
-																: "#FF6B6B",
+														color: verificationResult?.isHashMismatch
+															? "#FF6B6B"
+															: "#F6D32D",
 														fontSize: "2rem",
 													}}
 												>
-													{verificationState === "unsupported" ? "⚠" : "✗"}
+													{verificationResult?.isHashMismatch ? "✗" : "⚠"}
 												</Typography>
 											</Box>
 
@@ -768,16 +767,17 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												variant="h6"
 												textAlign="center"
 												sx={{
-													color:
-														verificationState === "unsupported"
-															? "#F6D32D"
-															: "#FF6B6B",
+													color: verificationResult?.isHashMismatch
+														? "#FF6B6B"
+														: "#F6D32D",
 													fontWeight: 500,
 												}}
 											>
 												{verificationState === "unsupported"
 													? t("appDetails.securityUnsupportedPlatform")
-													: t("appDetails.securityVerificationFailed")}
+													: verificationResult?.isHashMismatch
+														? t("appDetails.securityVerificationFailed")
+														: t("appDetails.securityVerificationFailed")}
 											</Typography>
 
 											<Typography
@@ -822,7 +822,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 														},
 													}}
 												>
-													{t("appDetails.securityMoreDetails")}
+													{t("myApps.verificationMoreDetails")}
 												</Button>
 												<Button
 													variant="contained"
@@ -838,17 +838,15 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 													}
 													sx={{
 														px: 3,
-														bgcolor:
-															verificationState === "unsupported"
-																? "#F6D32D"
-																: "#FF6B6B",
+														bgcolor: verificationResult?.isHashMismatch
+															? "#FF6B6B"
+															: "#F6D32D",
 														color: "#0D1117",
 														fontWeight: 600,
 														"&:hover": {
-															bgcolor:
-																verificationState === "unsupported"
-																	? "#f8db4e"
-																	: "#ff8585",
+															bgcolor: verificationResult?.isHashMismatch
+																? "#ff8585"
+																: "#f8db4e",
 														},
 														"&.Mui-disabled": {
 															bgcolor: "rgba(255, 107, 107, 0.5)",
@@ -892,9 +890,9 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												bgcolor: "rgba(0, 0, 0, 0.2)",
 												borderRadius: 2,
 												border: `1px solid ${
-													verificationState === "unsupported"
-														? "rgba(246, 211, 45, 0.5)"
-														: "rgba(255, 107, 107, 0.5)"
+													verificationResult?.isHashMismatch
+														? "rgba(255, 107, 107, 0.5)"
+														: "rgba(246, 211, 45, 0.5)"
 												}`,
 											}}
 										>
@@ -928,17 +926,26 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 														<div
 															style={{
 																marginBottom: 8,
-																color: "#C9D1D9",
+																color: verificationResult.isHashMismatch
+																	? "#FF6B6B"
+																	: "#F6D32D",
 																fontWeight: 600,
 															}}
 														>
 															{t(
 																"appDetails.securityVerificationOverallStatus",
 															)}
-															: {verificationResult.verified ? "✓" : "✗"}{" "}
+															:{" "}
+															{verificationResult.verified
+																? "✓"
+																: verificationResult.isHashMismatch
+																	? "✗"
+																	: "⚠"}{" "}
 															{verificationResult.verified
 																? t("appDetails.securityVerificationVerified")
-																: t("appDetails.securityVerificationFailed")}
+																: verificationResult.isHashMismatch
+																	? t("appDetails.securityVerificationFailed")
+																	: t("appDetails.securitySourceUnavailable")}
 														</div>
 														<div style={{ marginBottom: 8 }}>
 															{t(
@@ -946,51 +953,72 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 															)}
 															:
 														</div>
-														{verificationResult.sources.map((s) => (
-															<div
-																key={s.url}
-																style={{
-																	marginBottom: 4,
-																	paddingLeft: 8,
-																}}
-															>
-																[{s.verified ? "✓" : "✗"}] {s.url}
-																<br />
-																<span style={{ color: "#6E7681" }}>
-																	{t(
-																		"appDetails.securityVerificationCommitInManifest",
+														{verificationResult.sources.map((s) => {
+															const isHashMismatch =
+																s.error
+																	?.toLowerCase()
+																	.includes("hash mismatch") ||
+																s.error?.toLowerCase().includes("mismatch");
+															return (
+																<div
+																	key={s.url}
+																	style={{
+																		marginBottom: 4,
+																		paddingLeft: 8,
+																	}}
+																>
+																	[
+																	{s.verified
+																		? "✓"
+																		: isHashMismatch
+																			? "✗"
+																			: "⚠"}
+																	] {s.url}
+																	<br />
+																	<span style={{ color: "#6E7681" }}>
+																		{t(
+																			"appDetails.securityVerificationCommitInManifest",
+																		)}
+																		: {s.commit || "N/A"}
+																	</span>
+																	{s.remote_commit && (
+																		<>
+																			<br />
+																			<span style={{ color: "#6E7681" }}>
+																				{t(
+																					"appDetails.securityVerificationRemoteCommit",
+																				)}
+																				: {s.remote_commit}
+																			</span>
+																		</>
 																	)}
-																	: {s.commit || "N/A"}
-																</span>
-																{s.remote_commit && (
-																	<>
-																		<br />
-																		<span style={{ color: "#6E7681" }}>
-																			{t(
-																				"appDetails.securityVerificationRemoteCommit",
-																			)}
-																			: {s.remote_commit}
-																		</span>
-																	</>
-																)}
-																{s.error && (
-																	<>
-																		<br />
-																		<span style={{ color: "#FF6B6B" }}>
-																			{t(
-																				"appDetails.securityVerificationError",
-																			)}
-																			: {s.error}
-																		</span>
-																	</>
-																)}
-															</div>
-														))}
+																	{s.error && (
+																		<>
+																			<br />
+																			<span
+																				style={{
+																					color: isHashMismatch
+																						? "#FF6B6B"
+																						: "#F6D32D",
+																				}}
+																			>
+																				{t(
+																					"appDetails.securityVerificationError",
+																				)}
+																				: {s.error}
+																			</span>
+																		</>
+																	)}
+																</div>
+															);
+														})}
 														{verificationResult.error && (
 															<div
 																style={{
 																	marginTop: 8,
-																	color: "#FF6B6B",
+																	color: verificationResult.isHashMismatch
+																		? "#FF6B6B"
+																		: "#F6D32D",
 																}}
 															>
 																{t("appDetails.securityVerificationError")}:{" "}
@@ -1017,7 +1045,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 														},
 													}}
 												>
-													{t("appDetails.hideDetails")}
+													{t("myApps.hideDetails")}
 												</Button>
 											</Box>
 										</Box>
@@ -1102,6 +1130,8 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 					currentAppProgress={updateAllProgress.currentAppProgress}
 					isUpdatingSystem={isUpdatingSystem}
 					systemUpdateProgress={systemUpdateProgress}
+					updateSuccessCount={updateSummary?.successCount ?? 0}
+					updateErrorCount={updateSummary?.errorCount ?? 0}
 				/>
 			</Container>
 		</Box>

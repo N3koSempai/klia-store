@@ -14,6 +14,11 @@ interface UpdateAllProgress {
 	currentAppProgress: number;
 }
 
+interface UpdateSummary {
+	successCount: number;
+	errorCount: number;
+}
+
 interface UseUpdateAllReturn {
 	updateAll: (
 		appsToUpdate: InstalledAppInfo[],
@@ -25,6 +30,7 @@ interface UseUpdateAllReturn {
 	systemUpdatesCount: number;
 	isUpdatingSystem: boolean;
 	systemUpdateProgress: number;
+	updateSummary: UpdateSummary | null;
 	clearUpdateAll: () => void;
 }
 
@@ -42,6 +48,7 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 	const [systemUpdatesCount, setSystemUpdatesCount] = useState(0);
 	const [isUpdatingSystem, setIsUpdatingSystem] = useState(false);
 	const [systemUpdateProgress, setSystemUpdateProgress] = useState(0);
+	const [updateSummary, setUpdateSummary] = useState<UpdateSummary | null>(null);
 
 	const updateAll = useCallback(
 		async (appsToUpdate: InstalledAppInfo[], initialSystemUpdates: number) => {
@@ -219,6 +226,10 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 			}
 
 			// ===== PHASE 3: Complete =====
+			setUpdateSummary({
+				successCount: successfullyUpdatedAppIds.length,
+				errorCount,
+			});
 			setIsUpdatingAll(false);
 			if (errorCount === 0) {
 				setUpdateAllOutput((prev) => [
@@ -251,6 +262,7 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 			currentAppProgress: 0,
 		});
 		setSystemUpdateProgress(0);
+		setUpdateSummary(null);
 	}, []);
 
 	return {
@@ -261,6 +273,7 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 		systemUpdatesCount,
 		isUpdatingSystem,
 		systemUpdateProgress,
+		updateSummary,
 		clearUpdateAll,
 	};
 }
