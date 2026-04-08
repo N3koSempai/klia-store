@@ -38,7 +38,7 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.9.0" date="2026-04-05">
+    <release version="2.9.1" date="2026-04-05">
       <description>
         <p>Performance, Navigation &amp; Visual Improvements</p>
         <ul>

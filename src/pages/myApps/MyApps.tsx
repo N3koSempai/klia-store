@@ -556,7 +556,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 					>
 						{sortedApps.map((app) => (
 							<AppCardWrapper
-								key={`${app.appId}-${app.name}`}
+								key={app.instanceId}
 								app={app}
 								hasUpdate={hasUpdate(app.appId)}
 								isUpdating={
