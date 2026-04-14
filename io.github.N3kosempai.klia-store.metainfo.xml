@@ -15,7 +15,7 @@
   <url type="homepage">https://github.com/N3koSempai/klia-store</url>
   <url type="bugtracker">https://github.com/N3koSempai/klia-store/issues</url>
   <url type="vcs-browser">https://github.com/N3koSempai/klia-store</url>
-  <url type="donation">https://kliastore.gatorand.com/bitcoin/?wallet=bc1q5y8are6m9r946h3ut7c3hxtuf6nm67rgz7ume7</url>
+  <url type="donation">https://n3kosempai.github.io/KliaStore/bitcoin/donate?wallet=bc1qaq220dfa4dwc2eg0s76t4uzmrf28med2nr3fz0</url>
   <screenshots>
     <screenshot type="default">
       <caption>Main application window showing start page</caption>
@@ -38,16 +38,10 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.9.2" date="2026-04-05">
+    <release version="2.9.3" date="2026-04-05">
       <description>
-        <p>Performance, Navigation &amp; Visual Improvements</p>
-        <ul>
-          <li>Images now load up to 3x faster thanks to a full rewrite of the image caching system, moving processing to the native backend and reducing redundant network requests.</li>
-          <li>Switched to TanStack Router, enabling proper URL-based navigation — you can now deep-link directly to apps, categories, and developer pages.</li>
-          <li>App icons now display with transparent backgrounds, giving the interface a cleaner and more polished look.</li>
-          <li>Improved app verification: Klia Store now correctly distinguishes between manually uploaded GitHub release assets and auto-generated archives, providing more accurate integrity information.</li>
-          <li>Various internal code quality improvements to keep the app stable and maintainable.</li>
-        </ul>
+        <p>Solve metadata issues</p>
+
       </description>
     </release>
   </releases>

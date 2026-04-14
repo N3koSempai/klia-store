@@ -103,7 +103,7 @@ Edit your app's `.metainfo.xml` file and add **a single** donation URL in the `<
 
 **For Bitcoin:**
 ```xml
-<url type="donation">https://kliastore.gatorand.com/bitcoin/?wallet=YOUR_BTC_ADDRESS</url>
+<url type="donation">https://n3kosempai.github.io/KliaStore/bitcoin/donate?wallet=bc1qaq220dfa4dwc2eg0s76t4uzmrf28med2nr3fz0</url>
 ```
 
 **For Ethereum (any ERC-20 token):**
