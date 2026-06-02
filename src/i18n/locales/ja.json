@@ -1,5 +1,11 @@
 {
+  "settings": {
+    "title": "設定",
+    "subtitle": "Klia Store のエクスペリエンスをカスタマイズ",
+    "accessibilitySection": "アクセシビリティ"
+  },
   "about": {
+    "title": "Klia Storeについて",
     "availabilityLabel": "仕事の可否：",
     "availabilityStatus": {
       "available": "仕事可能",
@@ -10,7 +16,6 @@
     "createdBy": "作成者",
     "description": "Klia StoreはLinux向けの最新のアプリケーションストアで、アプリケーションの検索、インストール、管理を簡単かつ直感的に行うことができます。Kliaソフトウェアスイートの一部です。",
     "license": "ライセンス",
-    "title": "Klia Storeについて",
     "version": "バージョン",
     "viewContributing": "貢献ガイドラインを見る",
     "viewLicense": "ライセンスを見る"
@@ -73,7 +78,10 @@
     "uninstalling": "アンインストール中...",
     "update": "更新",
     "updating": "更新中...",
-    "version": "バージョン"
+    "version": "バージョン",
+    "screenshotN": "スクリーンショット {{number}}",
+    "prevScreenshot": "前のスクリーンショット",
+    "nextScreenshot": "次のスクリーンショット"
   },
   "categoryApps": {
     "error": "アプリの読み込みエラー",
@@ -92,7 +100,12 @@
     "retry": "再試行",
     "save": "保存",
     "search": "検索",
-    "unknown": "不明"
+    "unknown": "不明",
+    "skipToContent": "コンテンツへスキップ",
+    "windowMinimize": "ウィンドウを最小化",
+    "windowMaximize": "ウィンドウを最大化",
+    "windowRestore": "ウィンドウを元に戻す",
+    "windowClose": "ウィンドウを閉じる"
   },
   "dependency": {
     "alreadyInstalled": "システムにインストール済み",
@@ -150,11 +163,14 @@
     "noIcon": "アイコンなし",
     "noImage": "画像なし",
     "noResultsFor": "「{{query}}」の検索結果が見つかりません",
+    "searchLabel": "アプリを検索",
+    "searchClear": "検索をクリア",
     "searchPlaceholder": "アプリを検索...",
     "searchResults": "「{{query}}」の検索結果",
     "searching": "検索中...",
     "promoted": "プロモーション",
-    "wantYourAppHere": "あなたのアプリをここに掲載しますか？"
+    "wantYourAppHere": "あなたのアプリをここに掲載しますか？",
+    "goToSlide": "スライド {{index}} に移動"
   },
   "myApps": {
     "allUpdatesCompleted": "✓ すべての更新が正常に完了しました！",
@@ -245,7 +261,9 @@
   },
   "notifications": {
     "title": "通知",
-    "noNotifications": "通知はありません"
+    "noNotifications": "通知はありません",
+    "label": "通知",
+    "labelWithCount": "通知、{{count}} 件未読"
   },
   "releaseNotes": {
     "noNotes": "リリースノートはありません",
@@ -365,6 +383,20 @@
     "slide5": {
       "description": "一緒にオープンソースアプリケーションの世界を探索しましょう！",
       "title": "準備完了"
+    },
+    "accessibility": {
+      "title": "アクセシビリティ",
+      "subtitle": "設定はいつでも変更できます",
+      "reducedMotion": "アニメーション軽減",
+      "reducedMotionDesc": "アニメーションとトランジションを無効にする",
+      "highContrast": "ハイコントラスト",
+      "highContrastDesc": "読みやすさのためにテキストの明るさを上げる",
+      "colorBlind": "色覚補正モード",
+      "colorBlindDesc": "色覚異常に対してカラーパレットを調整する",
+      "colorBlindNone": "なし",
+      "colorBlindDeuteranopia": "緑色盲（赤緑）",
+      "colorBlindProtanopia": "赤色盲",
+      "colorBlindTritanopia": "青黄色盲"
     }
   }
 }

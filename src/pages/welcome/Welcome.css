@@ -59,6 +59,74 @@
 	line-height: 1.6;
 }
 
+.accessibility-panel {
+	background: rgba(255, 255, 255, 0.08);
+	backdrop-filter: blur(12px);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 16px;
+	padding: 1.25rem 1.5rem;
+	margin-bottom: 1.5rem;
+	text-align: left;
+}
+
+.a11y-panel-title {
+	font-size: 0.85rem !important;
+	font-weight: 700 !important;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: rgba(255, 255, 255, 0.5) !important;
+	margin-bottom: 0.25rem !important;
+}
+
+.a11y-panel-subtitle {
+	font-size: 0.78rem !important;
+	color: rgba(255, 255, 255, 0.45) !important;
+	margin-bottom: 1rem !important;
+	line-height: 1.4 !important;
+}
+
+.a11y-toggles {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.a11y-toggles .MuiFormControlLabel-root {
+	margin: 0;
+	align-items: flex-start;
+}
+
+.a11y-toggles .MuiSwitch-root {
+	margin-top: 2px;
+}
+
+.a11y-toggle-label {
+	display: block;
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.9);
+	line-height: 1.3;
+}
+
+.a11y-toggle-desc {
+	display: block;
+	font-size: 0.78rem;
+	color: rgba(255, 255, 255, 0.5);
+	line-height: 1.3;
+}
+
+.a11y-select-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 2px 0;
+}
+
+.a11y-select-row > span {
+	flex: 1;
+}
+
 .slide-indicators {
 	display: flex;
 	justify-content: center;

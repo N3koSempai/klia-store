@@ -7,9 +7,11 @@ import {
 	DialogContent,
 	Divider,
 	IconButton,
+	Link,
 	Paper,
 	styled,
 	Typography,
+	useTheme,
 } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
@@ -53,6 +55,7 @@ const StatusIndicator = styled(Box)<{ status: AvailabilityStatus }>(
 
 export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 	const { t } = useTranslation();
+	const theme = useTheme();
 	const currentStatus: AvailabilityStatus = "busy";
 
 	const handleOpenLink = async (url: string) => {
@@ -94,7 +97,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 						sx={{
 							fontWeight: "bold",
 							textAlign: "center",
-							background: "linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)",
+							background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.light} 100%)`,
 							WebkitBackgroundClip: "text",
 							WebkitTextFillColor: "transparent",
 						}}
@@ -130,8 +133,8 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 							maxWidth: "500px",
 							textAlign: "center",
 							background:
-								"linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(66, 165, 245, 0.05) 100%)",
-							border: "1px solid rgba(25, 118, 210, 0.2)",
+								`linear-gradient(135deg, ${theme.palette.primary.dark}1A 0%, ${theme.palette.primary.main}0D 100%)`,
+							border: `1px solid ${theme.palette.primary.dark}33`,
 							mt: 2,
 						}}
 					>
@@ -143,30 +146,18 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 							{t("about.createdBy")}
 						</Typography>
 
-						<Box
-							component="button"
+						<Link
 							onClick={() => handleOpenLink("https://alvaromweb3.com/")}
 							sx={{
-								color: "primary.main",
-								textDecoration: "none",
 								fontSize: "1.5rem",
 								fontWeight: "bold",
-								"&:hover": { textDecoration: "underline" },
 								mb: 3,
 								cursor: "pointer",
-								border: "none",
-								background: "transparent",
-								padding: 0,
-								font: "inherit",
-								textAlign: "center",
 								display: "inline-block",
-								boxShadow: "none",
-								"&:focus": { outline: "none", boxShadow: "none" },
-								"&:active": { boxShadow: "none" },
 							}}
 						>
 							@N3koSempai
-						</Box>
+						</Link>
 
 						{/* Availability Status */}
 						<Box
@@ -207,15 +198,15 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 								py: 1.5,
 								borderRadius: 2,
 								background:
-									"linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)",
+									`linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
 								textTransform: "none",
 								fontSize: "1rem",
 								fontWeight: "bold",
-								boxShadow: "0 4px 15px rgba(25, 118, 210, 0.3)",
+								boxShadow: `0 4px 15px ${theme.palette.primary.dark}4D`,
 								"&:hover": {
 									background:
-										"linear-gradient(135deg, #1565c0 0%, #1976d2 100%)",
-									boxShadow: "0 6px 20px rgba(25, 118, 210, 0.4)",
+										`linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.dark} 100%)`,
+									boxShadow: `0 6px 20px ${theme.palette.primary.dark}66`,
 								},
 							}}
 						>
@@ -242,29 +233,16 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 							>
 								{t("about.license")}
 							</Typography>
-							<Box
-								component="button"
+							<Link
 								onClick={() =>
 									handleOpenLink(
 										"https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md",
 									)
 								}
-								sx={{
-									color: "primary.main",
-									textDecoration: "none",
-									"&:hover": { textDecoration: "underline" },
-									cursor: "pointer",
-									border: "none",
-									background: "transparent",
-									padding: 0,
-									font: "inherit",
-									boxShadow: "none",
-									"&:focus": { outline: "none", boxShadow: "none" },
-									"&:active": { boxShadow: "none" },
-								}}
+								sx={{ cursor: "pointer" }}
 							>
 								{t("about.viewLicense")}
-							</Box>
+							</Link>
 						</Box>
 
 						<Box sx={{ textAlign: "center" }}>
@@ -275,29 +253,16 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 							>
 								{t("about.contributing")}
 							</Typography>
-							<Box
-								component="button"
+							<Link
 								onClick={() =>
 									handleOpenLink(
 										"https://github.com/N3koSempai/KliaStore/blob/master/CONTRIBUTING.md",
 									)
 								}
-								sx={{
-									color: "primary.main",
-									textDecoration: "none",
-									"&:hover": { textDecoration: "underline" },
-									cursor: "pointer",
-									border: "none",
-									background: "transparent",
-									padding: 0,
-									font: "inherit",
-									boxShadow: "none",
-									"&:focus": { outline: "none", boxShadow: "none" },
-									"&:active": { boxShadow: "none" },
-								}}
+								sx={{ cursor: "pointer" }}
 							>
 								{t("about.viewContributing")}
-							</Box>
+							</Link>
 						</Box>
 					</Box>
 				</Box>

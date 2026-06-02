@@ -9,6 +9,7 @@ import {
 import {
 	Box,
 	Button,
+	ButtonBase,
 	IconButton,
 	Skeleton,
 	Tooltip,
@@ -614,7 +615,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	return (
 		<Box sx={{ p: 3, minHeight: "100vh" }}>
 			{/* Botón de regreso */}
-			<IconButton onClick={onBack} sx={{ mb: 2 }}>
+			<IconButton aria-label={t("appDetails.back")} onClick={onBack} sx={{ mb: 2 }}>
 				<ArrowBack />
 			</IconButton>
 
@@ -1328,6 +1329,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 								{screenshots.length > 1 && (
 									<>
 										<IconButton
+											aria-label={t("appDetails.prevScreenshot")}
 											onClick={handlePrevImage}
 											sx={{
 												position: "absolute",
@@ -1344,6 +1346,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 											<ChevronLeft />
 										</IconButton>
 										<IconButton
+											aria-label={t("appDetails.nextScreenshot")}
 											onClick={handleNextImage}
 											sx={{
 												position: "absolute",
@@ -1370,9 +1373,11 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 											}}
 										>
 											{screenshots.map((_, index) => (
-												<Box
+												<ButtonBase
 													key={uuidv4()}
 													onClick={() => setCurrentImageIndex(index)}
+													aria-label={t("appDetails.screenshotN", { number: index + 1 })}
+													aria-pressed={index === currentImageIndex}
 													sx={{
 														width: 8,
 														height: 8,
@@ -1381,7 +1386,6 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 															index === currentImageIndex
 																? "primary.main"
 																: "grey.600",
-														cursor: "pointer",
 														transition: "all 0.3s",
 														"&:hover": {
 															bgcolor:

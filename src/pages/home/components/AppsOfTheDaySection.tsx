@@ -1,4 +1,6 @@
-import { alpha, Box, Paper, Skeleton, Typography } from "@mui/material";
+import { alpha, Box, Link, Paper, Skeleton, Typography,
+	useTheme
+} from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
@@ -46,6 +48,7 @@ export const AppsOfTheDaySection = ({
 	onAppSelect,
 }: AppsOfTheDaySectionProps) => {
 	const { t } = useTranslation();
+	const theme = useTheme();
 	const { data, isLoading, error } = useAppsOfTheWeek();
 
 	const handleContactClick = async () => {
@@ -133,7 +136,24 @@ export const AppsOfTheDaySection = ({
 							...data.map((app) => (
 								<Paper
 									key={app.app_id}
+									role="button"
+									tabIndex={0}
+									aria-label={app.name || app.app_id}
 									elevation={0}
+									onClick={() => {
+										if (app.categoryApp) {
+											onAppSelect(app.categoryApp);
+										} else if (app.appStream) {
+											onAppSelect(appStreamToCategoryApp(app.appStream));
+										}
+									}}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.preventDefault();
+											if (app.categoryApp) onAppSelect(app.categoryApp);
+											else if (app.appStream) onAppSelect(appStreamToCategoryApp(app.appStream));
+										}
+									}}
 									sx={{
 										minWidth: 200,
 										maxWidth: 200,
@@ -149,14 +169,6 @@ export const AppsOfTheDaySection = ({
 											boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
 											zIndex: 1,
 										},
-									}}
-									onClick={() => {
-										// Use categoryApp if available, otherwise convert appStream
-										if (app.categoryApp) {
-											onAppSelect(app.categoryApp);
-										} else if (app.appStream) {
-											onAppSelect(appStreamToCategoryApp(app.appStream));
-										}
 									}}
 								>
 									<Box
@@ -248,7 +260,7 @@ export const AppsOfTheDaySection = ({
 										sx={{
 											width: 72,
 											height: 72,
-											bgcolor: alpha("#4A86CF", 0.1),
+											bgcolor: alpha(theme.palette.primary.main, 0.1),
 											borderRadius: 2,
 											mb: 2,
 											display: "flex",
@@ -271,26 +283,12 @@ export const AppsOfTheDaySection = ({
 									>
 										{t("home.wantYourAppHere")}
 									</Typography>
-									<Box
-										component="button"
+									<Link
 										onClick={handleContactClick}
-										sx={{
-											color: "primary.main",
-											textDecoration: "none",
-											"&:hover": { textDecoration: "underline" },
-											cursor: "pointer",
-											border: "none",
-											background: "transparent",
-											padding: 0,
-											font: "inherit",
-											fontSize: "0.875rem",
-											boxShadow: "none",
-											"&:focus": { outline: "none", boxShadow: "none" },
-											"&:active": { boxShadow: "none" },
-										}}
+										sx={{ cursor: "pointer", fontSize: "0.875rem" }}
 									>
 										{t("home.contactUs")}
-									</Box>
+									</Link>
 								</Box>
 							</Paper>,
 						]}

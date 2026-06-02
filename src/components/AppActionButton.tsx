@@ -34,11 +34,11 @@ export const AppActionButton = ({
 					fontSize: "1rem",
 					fontWeight: 600,
 					fontFamily: "Inter, sans-serif",
-					bgcolor: "#238636",
+					bgcolor: "success.dark",
 					color: "white",
 					textTransform: "uppercase",
 					"&:hover": {
-						bgcolor: "#2EA043",
+						bgcolor: "success.main",
 					},
 				}}
 			>
@@ -61,8 +61,8 @@ export const AppActionButton = ({
 					fontSize: "1rem",
 					fontWeight: 600,
 					fontFamily: "Inter, sans-serif",
-					color: "#4A86CF",
-					borderColor: "#4A86CF",
+					color: "primary.main",
+					borderColor: "primary.main",
 					textTransform: "capitalize",
 				}}
 			>
@@ -110,11 +110,11 @@ export const AppActionButton = ({
 				fontSize: "1rem",
 				fontWeight: 600,
 				fontFamily: "Inter, sans-serif",
-				bgcolor: "#4A86CF",
+				bgcolor: "primary.main",
 				color: "white",
 				textTransform: "uppercase",
 				"&:hover": {
-					bgcolor: "#3A6FB5",
+					bgcolor: "primary.dark",
 				},
 			}}
 		>

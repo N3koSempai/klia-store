@@ -85,10 +85,29 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 				</Typography>
 			</Box>
 
+			{/* Región aria-live oculta — solo anuncia la última línea nueva */}
+			<Box
+				aria-live="polite"
+				aria-atomic="true"
+				sx={{
+					position: "absolute",
+					width: 1,
+					height: 1,
+					overflow: "hidden",
+					clip: "rect(0,0,0,0)",
+					whiteSpace: "nowrap",
+				}}
+			>
+				{output[output.length - 1]?.replace(/^\r/, "") ?? ""}
+			</Box>
+
 			{/* Contenido de la terminal */}
 			<Box
 				ref={terminalRef}
 				onScroll={handleScroll}
+				role="log"
+				aria-label={t("terminal.flatpakInstallation")}
+				aria-relevant="additions"
 				sx={{
 					p: 2,
 					height: 500,

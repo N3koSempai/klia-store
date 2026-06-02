@@ -144,7 +144,7 @@ export const DeveloperProfile = ({
 								fontFamily: '"IBM Plex Sans", sans-serif',
 								fontSize: "48px",
 								fontWeight: 700,
-								color: "#4A86CF",
+								color: "primary.main",
 							}}
 						>
 							{avatarInitial}
@@ -180,7 +180,7 @@ export const DeveloperProfile = ({
 								fontFamily: '"JetBrains Mono", monospace',
 								fontSize: "0.875rem",
 								bgcolor: "rgba(74, 134, 207, 0.15)",
-								color: "#4A86CF",
+								color: "primary.main",
 								border: "1px solid rgba(74, 134, 207, 0.3)",
 								fontWeight: 600,
 							}}
@@ -302,7 +302,7 @@ export const DeveloperProfile = ({
 											willChange: "transform, box-shadow, border-color",
 											"&:hover": {
 												transform: "translateY(-5px)",
-												borderColor: "#4A86CF",
+												borderColor: "primary.main",
 												boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
 												zIndex: 1,
 											},

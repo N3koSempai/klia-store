@@ -1,6 +1,18 @@
+import {
+	FormControl,
+	FormControlLabel,
+	MenuItem,
+	Select,
+	Switch,
+	Typography,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { completeSetup } from "../../hooks/useCompleteSetup";
+import {
+	type ColorBlindMode,
+	useAccessibilityStore,
+} from "../../store/accessibilityStore";
 import "./Welcome.css";
 
 interface WelcomeProps {
@@ -11,6 +23,9 @@ export function Welcome({ onComplete }: WelcomeProps) {
 	const { t } = useTranslation();
 	const [currentSlide, setCurrentSlide] = useState(0);
 	const [isCompleting, setIsCompleting] = useState(false);
+
+	const { colorBlindMode, reducedMotion, highContrast, setColorBlindMode, setReducedMotion, setHighContrast } =
+		useAccessibilityStore();
 
 	const slides = [
 		{
@@ -40,16 +55,16 @@ export function Welcome({ onComplete }: WelcomeProps) {
 		},
 	];
 
+	const isLastSlide = currentSlide === slides.length - 1;
+
 	// biome-ignore lint/correctness/useExhaustiveDependencies: slides.length is constant; adding slides array would cause unnecessary re-runs
 	useEffect(() => {
+		if (isLastSlide) return;
 		const timer = setTimeout(() => {
-			if (currentSlide < slides.length - 1) {
-				setCurrentSlide(currentSlide + 1);
-			}
-		}, 5000); // 5 seconds per slide
-
+			setCurrentSlide(currentSlide + 1);
+		}, 5000);
 		return () => clearTimeout(timer);
-	}, [currentSlide]);
+	}, [currentSlide, isLastSlide]);
 
 	const handleComplete = async () => {
 		setIsCompleting(true);
@@ -66,10 +81,6 @@ export function Welcome({ onComplete }: WelcomeProps) {
 		if (currentSlide < slides.length - 1) {
 			setCurrentSlide(currentSlide + 1);
 		}
-	};
-
-	const handleAccept = async () => {
-		await handleComplete();
 	};
 
 	const handleIndicatorClick = (index: number) => {
@@ -118,6 +129,76 @@ export function Welcome({ onComplete }: WelcomeProps) {
 					)}
 				</div>
 
+				{isLastSlide && (
+					<div className="accessibility-panel">
+						<Typography className="a11y-panel-title">
+							{t("welcome.accessibility.title")}
+						</Typography>
+						<Typography className="a11y-panel-subtitle">
+							{t("welcome.accessibility.subtitle")}
+						</Typography>
+
+						<div className="a11y-toggles">
+							<FormControlLabel
+								control={
+									<Switch
+										checked={reducedMotion}
+										onChange={(e) => setReducedMotion(e.target.checked)}
+										color="primary"
+									/>
+								}
+								label={
+									<span>
+										<span className="a11y-toggle-label">{t("welcome.accessibility.reducedMotion")}</span>
+										<span className="a11y-toggle-desc">{t("welcome.accessibility.reducedMotionDesc")}</span>
+									</span>
+								}
+							/>
+
+							<FormControlLabel
+								control={
+									<Switch
+										checked={highContrast}
+										onChange={(e) => setHighContrast(e.target.checked)}
+										color="primary"
+									/>
+								}
+								label={
+									<span>
+										<span className="a11y-toggle-label">{t("welcome.accessibility.highContrast")}</span>
+										<span className="a11y-toggle-desc">{t("welcome.accessibility.highContrastDesc")}</span>
+									</span>
+								}
+							/>
+
+							<div className="a11y-select-row">
+								<span>
+									<span className="a11y-toggle-label">{t("welcome.accessibility.colorBlind")}</span>
+									<span className="a11y-toggle-desc">{t("welcome.accessibility.colorBlindDesc")}</span>
+								</span>
+								<FormControl size="small" sx={{ minWidth: 200 }}>
+									<Select
+										value={colorBlindMode}
+										onChange={(e) => setColorBlindMode(e.target.value as ColorBlindMode)}
+										inputProps={{ "aria-label": t("welcome.accessibility.colorBlind") }}
+										sx={{
+											color: "white",
+											backgroundColor: "rgba(255,255,255,0.1)",
+											"& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.3)" },
+											"& .MuiSvgIcon-root": { color: "white" },
+										}}
+									>
+										<MenuItem value="none">{t("welcome.accessibility.colorBlindNone")}</MenuItem>
+										<MenuItem value="deuteranopia">{t("welcome.accessibility.colorBlindDeuteranopia")}</MenuItem>
+										<MenuItem value="protanopia">{t("welcome.accessibility.colorBlindProtanopia")}</MenuItem>
+										<MenuItem value="tritanopia">{t("welcome.accessibility.colorBlindTritanopia")}</MenuItem>
+									</Select>
+								</FormControl>
+							</div>
+						</div>
+					</div>
+				)}
+
 				<div className="slide-indicators">
 					{slides.map((slide, index) => (
 						<button
@@ -131,7 +212,7 @@ export function Welcome({ onComplete }: WelcomeProps) {
 				</div>
 
 				<div className="welcome-actions">
-					{currentSlide < slides.length - 1 && (
+					{!isLastSlide && (
 						<button
 							type="button"
 							onClick={handleSkip}
@@ -143,7 +224,7 @@ export function Welcome({ onComplete }: WelcomeProps) {
 					)}
 					<button
 						type="button"
-						onClick={handleAccept}
+						onClick={handleComplete}
 						className="btn-accept"
 						disabled={isCompleting}
 					>

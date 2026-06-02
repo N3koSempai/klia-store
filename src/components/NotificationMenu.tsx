@@ -111,13 +111,23 @@ export const NotificationMenu = ({
 
 	return (
 		<>
-			<IconButton onClick={handleClick} sx={{ color: "text.secondary" }}>
+			<IconButton
+				onClick={handleClick}
+				aria-label={unreadCount > 0
+					? t("notifications.labelWithCount", { count: unreadCount })
+					: t("notifications.label")}
+				aria-haspopup="true"
+				aria-expanded={open}
+				aria-controls={open ? "notifications-popover" : undefined}
+				sx={{ color: "text.secondary" }}
+			>
 				<Badge badgeContent={unreadCount} color="error">
 					<NotificationsIcon />
 				</Badge>
 			</IconButton>
 
 			<Popover
+				id="notifications-popover"
 				open={open}
 				anchorEl={anchorEl}
 				onClose={handleClose}

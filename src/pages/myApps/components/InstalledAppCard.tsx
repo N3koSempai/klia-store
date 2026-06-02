@@ -236,7 +236,7 @@ const InstalledAppCardComponent = ({
 							fontFamily: '"IBM Plex Sans", sans-serif',
 							fontWeight: 600,
 							fontSize: "0.875rem",
-							color: "#4A86CF",
+							color: "primary.main",
 							backgroundColor: "rgba(74, 134, 207, 0.08)",
 							borderRadius: 2,
 							maxWidth: "100%",

@@ -1,5 +1,11 @@
 {
+  "settings": {
+    "title": "设置",
+    "subtitle": "自定义您的 Klia Store 体验",
+    "accessibilitySection": "无障碍功能"
+  },
   "about": {
+    "title": "关于 Klia Store",
     "availabilityLabel": "工作状态：",
     "availabilityStatus": {
       "available": "可承接工作",
@@ -10,7 +16,6 @@
     "createdBy": "创建者",
     "description": "Klia Store 是一款现代化的 Linux 应用商店，提供简单直观的方式来发现、安装和管理应用程序。它是 Klia 软件套件的一部分。",
     "license": "许可证",
-    "title": "关于 Klia Store",
     "version": "版本",
     "viewContributing": "查看贡献指南",
     "viewLicense": "查看许可证"
@@ -73,7 +78,10 @@
     "uninstalling": "正在卸载...",
     "update": "更新",
     "updating": "正在更新...",
-    "version": "版本"
+    "version": "版本",
+    "screenshotN": "截图 {{number}}",
+    "prevScreenshot": "上一张截图",
+    "nextScreenshot": "下一张截图"
   },
   "categoryApps": {
     "error": "加载应用出错",
@@ -93,7 +101,12 @@
     "noResults": "未找到结果",
     "retry": "重试",
     "save": "保存",
-    "search": "搜索"
+    "search": "搜索",
+    "skipToContent": "跳转到内容",
+    "windowMinimize": "最小化窗口",
+    "windowMaximize": "最大化窗口",
+    "windowRestore": "还原窗口",
+    "windowClose": "关闭窗口"
   },
   "dependency": {
     "alreadyInstalled": "系统中已安装",
@@ -152,10 +165,13 @@
     "noImage": "无图片",
     "noResultsFor": "未找到关于“{{query}}”的结果",
     "promoted": "推广",
+    "searchLabel": "搜索应用",
+    "searchClear": "清除搜索",
     "searchPlaceholder": "搜索应用...",
     "searchResults": "“{{query}}”的搜索结果",
     "searching": "正在搜索...",
-    "wantYourAppHere": "想在这里展示您的应用吗？"
+    "wantYourAppHere": "想在这里展示您的应用吗？",
+    "goToSlide": "转到幻灯片 {{index}}"
   },
   "myApps": {
     "allUpdatesCompleted": "✓ 所有更新已成功完成！",
@@ -246,6 +262,8 @@
   },
   "notifications": {
     "noNotifications": "暂无通知",
+    "label": "通知",
+    "labelWithCount": "通知，{{count}} 条未读",
     "title": "通知"
   },
   "releaseNotes": {
@@ -366,6 +384,20 @@
     "slide5": {
       "description": "让我们一起探索开源应用的世界！",
       "title": "准备开始"
+    },
+    "accessibility": {
+      "title": "无障碍功能",
+      "subtitle": "自定义您的体验——您可以随时在设置中更改",
+      "reducedMotion": "减少动态效果",
+      "reducedMotionDesc": "禁用动画和过渡效果",
+      "highContrast": "高对比度",
+      "highContrastDesc": "增加文字亮度以提高可读性",
+      "colorBlind": "色盲模式",
+      "colorBlindDesc": "针对色觉障碍调整配色方案",
+      "colorBlindNone": "无",
+      "colorBlindDeuteranopia": "绿色盲（红绿）",
+      "colorBlindProtanopia": "红色盲",
+      "colorBlindTritanopia": "蓝黄色盲"
     }
   }
 }

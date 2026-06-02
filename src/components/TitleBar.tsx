@@ -5,12 +5,14 @@ import {
 	FilterNone,
 	Remove,
 } from "@mui/icons-material";
-import { Box, Stack, Typography, useTheme } from "@mui/material";
+import { Box, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const TitleBar = () => {
 	const theme = useTheme();
+	const { t } = useTranslation();
 	const [appWindow, setAppWindow] = useState<ReturnType<
 		typeof getCurrentWindow
 	> | null>(null);
@@ -89,12 +91,15 @@ const TitleBar = () => {
 				}}
 			>
 				{/* Minimizar */}
-				<WindowButton onClick={handleMinimize}>
+				<WindowButton aria-label={t("common.windowMinimize")} onClick={handleMinimize}>
 					<Remove sx={{ fontSize: 16 }} />
 				</WindowButton>
 
 				{/* Maximizar / Restaurar */}
-				<WindowButton onClick={handleMaximize}>
+				<WindowButton
+					aria-label={isMaximized ? t("common.windowRestore") : t("common.windowMaximize")}
+					onClick={handleMaximize}
+				>
 					{isMaximized ? (
 						<FilterNone sx={{ fontSize: 14 }} />
 					) : (
@@ -103,7 +108,7 @@ const TitleBar = () => {
 				</WindowButton>
 
 				{/* Cerrar (Rojo al hover) */}
-				<WindowButton onClick={handleClose} isClose>
+				<WindowButton aria-label={t("common.windowClose")} onClick={handleClose} isClose>
 					<Close sx={{ fontSize: 18 }} />
 				</WindowButton>
 			</Stack>
@@ -116,18 +121,23 @@ interface WindowButtonProps {
 	children: React.ReactNode;
 	onClick: () => void;
 	isClose?: boolean;
+	"aria-label": string;
 }
 
-const WindowButton = ({ children, onClick, isClose }: WindowButtonProps) => (
-	<Box
+const WindowButton = ({
+	children,
+	onClick,
+	isClose,
+	"aria-label": ariaLabel,
+}: WindowButtonProps) => (
+	<IconButton
+		aria-label={ariaLabel}
 		onClick={onClick}
+		disableRipple
 		sx={{
 			width: 46,
 			height: 40,
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "center",
-			cursor: "default",
+			borderRadius: 0,
 			color: "text.secondary",
 			transition: "all 0.2s",
 			"&:hover": {
@@ -137,7 +147,7 @@ const WindowButton = ({ children, onClick, isClose }: WindowButtonProps) => (
 		}}
 	>
 		{children}
-	</Box>
+	</IconButton>
 );
 
 export default TitleBar;
