@@ -50,7 +50,7 @@ export const AppMetaCapsule = ({
 
 	const licenseInfo = parseLicense(license);
 	const isProprietary = license.toLowerCase().includes("proprietary");
-	const licenseColor = isProprietary ? "#F6D32D" : "#C9D1D9";
+	const licenseColor = isProprietary ? "secondary.main" : "text.primary";
 
 	const handleLicenseClick = async () => {
 		if (licenseInfo.url) {
@@ -86,7 +86,7 @@ export const AppMetaCapsule = ({
 						alignItems: "center",
 						px: 1.5,
 						py: 0.5,
-						color: isVerified ? "#4A86CF" : "#8B949E",
+						color: isVerified ? "primary.main" : "text.secondary",
 					}}
 				>
 					{isVerified ? (
@@ -150,7 +150,7 @@ export const AppMetaCapsule = ({
 					gap: 0.5,
 					px: 1.5,
 					py: 0.5,
-					color: "#8B949E",
+					color: "text.secondary",
 					fontSize: "0.75rem",
 					fontWeight: 600,
 				}}

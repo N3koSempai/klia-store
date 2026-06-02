@@ -78,6 +78,9 @@ export const AppSearchBar = ({
 			onChange={handleInputChange}
 			placeholder={t("home.searchPlaceholder")}
 			variant="outlined"
+			slotProps={{
+				htmlInput: { role: "searchbox", "aria-label": t("home.searchLabel") },
+			}}
 			sx={{
 				maxWidth: 600,
 				"& .MuiOutlinedInput-root": {
@@ -112,6 +115,7 @@ export const AppSearchBar = ({
 							<CircularProgress size={20} sx={{ color: "primary.main" }} />
 						) : inputValue ? (
 							<IconButton
+								aria-label={t("home.searchClear")}
 								onClick={handleClear}
 								sx={{
 									color: "text.secondary",

@@ -1,4 +1,6 @@
-import { alpha, Box, Grid, Paper, Skeleton, Typography } from "@mui/material";
+import { alpha, Box, Grid, Paper, Skeleton, Typography,
+	useTheme
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { useCategories } from "../../../hooks/useCategories";
@@ -11,6 +13,7 @@ export const CategoriesSection = ({
 	onCategorySelect,
 }: CategoriesSectionProps) => {
 	const { t } = useTranslation();
+	const theme = useTheme();
 	const { data: categories, isLoading, error } = useCategories();
 
 	return (
@@ -47,6 +50,16 @@ export const CategoriesSection = ({
 					: categories?.map((category) => (
 							<Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={category}>
 								<Paper
+									role="button"
+									tabIndex={0}
+									onClick={() => onCategorySelect(category)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.preventDefault();
+											onCategorySelect(category);
+										}
+									}}
+									aria-label={category}
 									sx={{
 										p: 2,
 										bgcolor: "background.paper",
@@ -61,12 +74,11 @@ export const CategoriesSection = ({
 										overflow: "hidden",
 										"&:hover": {
 											borderColor: "secondary.main",
-											bgcolor: alpha("#F6D32D", 0.05),
+											bgcolor: alpha(theme.palette.secondary.main, 0.05),
 											transform: "translateX(4px)",
 											boxShadow: "0 0 15px rgba(246, 211, 45, 0.1)",
 										},
 									}}
-									onClick={() => onCategorySelect(category)}
 								>
 									<Typography
 										variant="body2"

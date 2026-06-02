@@ -46,7 +46,7 @@ export const CategoryApps = ({
 				<IconButton
 					onClick={onBack}
 					sx={{
-						color: "#C9D1D9",
+						color: "text.primary",
 						mr: 2,
 						"&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
 					}}
@@ -58,7 +58,7 @@ export const CategoryApps = ({
 					sx={{
 						fontFamily: '"IBM Plex Sans", sans-serif',
 						fontWeight: 700,
-						color: "#C9D1D9",
+						color: "text.primary",
 						textTransform: "capitalize",
 					}}
 				>
@@ -92,7 +92,7 @@ export const CategoryApps = ({
 							<Box key={uuidv4()}>
 								<Card
 									sx={{
-										bgcolor: "#161B22",
+										bgcolor: "background.paper",
 										borderRadius: "12px",
 										border: "1px solid rgba(255, 255, 255, 0.1)",
 										height: "100%",
@@ -152,7 +152,7 @@ export const CategoryApps = ({
 							<Box key={app.app_id} sx={{ minWidth: 0 }}>
 								<Card
 									sx={{
-										bgcolor: "#161B22",
+										bgcolor: "background.paper",
 										borderRadius: "12px",
 										border: "1px solid rgba(255, 255, 255, 0.1)",
 										height: "100%",
@@ -166,7 +166,7 @@ export const CategoryApps = ({
 										willChange: "transform, box-shadow, border-color",
 										"&:hover": {
 											transform: "translateY(-5px)",
-											borderColor: "#4A86CF",
+											borderColor: "primary.main",
 											boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
 											zIndex: 1,
 										},
@@ -220,7 +220,7 @@ export const CategoryApps = ({
 												) : (
 													<Typography
 														variant="caption"
-														sx={{ color: "#8B949E" }}
+														sx={{ color: "text.secondary" }}
 													>
 														{t("home.noIcon")}
 													</Typography>
@@ -234,7 +234,7 @@ export const CategoryApps = ({
 													sx={{
 														fontFamily: '"IBM Plex Sans", sans-serif',
 														fontWeight: 600,
-														color: "#C9D1D9",
+														color: "text.primary",
 														mb: 0.5,
 													}}
 													noWrap
@@ -245,7 +245,7 @@ export const CategoryApps = ({
 													variant="caption"
 													sx={{
 														fontFamily: '"Inter", sans-serif',
-														color: "#8B949E",
+														color: "text.secondary",
 													}}
 													noWrap
 												>
@@ -260,7 +260,7 @@ export const CategoryApps = ({
 												variant="body2"
 												sx={{
 													fontFamily: '"Inter", sans-serif',
-													color: "#8B949E",
+													color: "text.secondary",
 													display: "-webkit-box",
 													WebkitLineClamp: 2,
 													WebkitBoxOrient: "vertical",

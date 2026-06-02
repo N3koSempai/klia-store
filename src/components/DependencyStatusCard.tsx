@@ -83,7 +83,7 @@ export const DependencyStatusCard = ({
 							width: 8,
 							height: 8,
 							borderRadius: "50%",
-							bgcolor: "#F6D32D",
+							bgcolor: "secondary.main",
 							ml: 1,
 						}}
 					/>
@@ -94,7 +94,7 @@ export const DependencyStatusCard = ({
 				onClick={handleClick}
 				sx={{
 					bgcolor: "rgba(246, 211, 45, 0.1)",
-					color: "#F6D32D",
+					color: "secondary.main",
 					border: "1px solid rgba(246, 211, 45, 0.3)",
 					fontFamily: "IBM Plex Sans, sans-serif",
 					fontSize: "0.875rem",
@@ -108,7 +108,7 @@ export const DependencyStatusCard = ({
 						borderColor: "rgba(246, 211, 45, 0.5)",
 					},
 					"& .MuiChip-deleteIcon": {
-						color: "#F6D32D",
+						color: "secondary.main",
 						"&:hover": {
 							color: "#f8e45c",
 						},
@@ -131,7 +131,7 @@ export const DependencyStatusCard = ({
 				slotProps={{
 					paper: {
 						sx: {
-							bgcolor: "#161B22",
+							bgcolor: "background.paper",
 							border: "1px solid rgba(255, 255, 255, 0.1)",
 							borderRadius: 2,
 							mt: 1,
@@ -147,7 +147,7 @@ export const DependencyStatusCard = ({
 							fontFamily: "IBM Plex Sans, sans-serif",
 							fontSize: "0.875rem",
 							fontWeight: 600,
-							color: "#C9D1D9",
+							color: "text.primary",
 							mb: 1.5,
 						}}
 					>
@@ -173,7 +173,7 @@ export const DependencyStatusCard = ({
 										sx: {
 											fontFamily: "JetBrains Mono, monospace",
 											fontSize: "0.8rem",
-											color: "#F6D32D",
+											color: "secondary.main",
 											wordBreak: "break-all",
 										},
 									}}
@@ -190,7 +190,7 @@ export const DependencyStatusCard = ({
 										sx={{
 											fontFamily: "Inter, sans-serif",
 											fontSize: "0.75rem",
-											color: "#8B949E",
+											color: "text.secondary",
 										}}
 									>
 										{t("dependency.download")}: {dep.download_size}
@@ -199,7 +199,7 @@ export const DependencyStatusCard = ({
 										sx={{
 											fontFamily: "Inter, sans-serif",
 											fontSize: "0.75rem",
-											color: "#8B949E",
+											color: "text.secondary",
 										}}
 									>
 										{t("dependency.installed")}: {dep.installed_size}
@@ -213,7 +213,7 @@ export const DependencyStatusCard = ({
 						sx={{
 							fontFamily: "Inter, sans-serif",
 							fontSize: "0.75rem",
-							color: "#8B949E",
+							color: "text.secondary",
 							mt: 2,
 							fontStyle: "italic",
 						}}

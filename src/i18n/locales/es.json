@@ -1,5 +1,11 @@
 {
+  "settings": {
+    "title": "Ajustes",
+    "subtitle": "Personaliza tu experiencia en Klia Store",
+    "accessibilitySection": "Accesibilidad"
+  },
   "about": {
+    "title": "Acerca de Klia Store",
     "availabilityLabel": "Status:",
     "availabilityStatus": {
       "available": "Disponible para trabajar",
@@ -11,7 +17,6 @@
     "createdBy": "Creado por",
     "description": "Klia Store es una tienda de aplicaciones moderna para Linux, que ofrece una forma fácil e intuitiva de descubrir, instalar y gestionar aplicaciones. Parte de la Suite de Software Klia.",
     "license": "Licencia",
-    "title": "Acerca de Klia Store",
     "version": "Versión",
     "viewContributing": "Ver Guía de Contribución",
     "viewLicense": "Ver Licencia"
@@ -74,7 +79,10 @@
     "uninstalling": "Desinstalando...",
     "update": "Actualizar",
     "updating": "Actualizando...",
-    "version": "Versión"
+    "version": "Versión",
+    "screenshotN": "Captura de pantalla {{number}}",
+    "prevScreenshot": "Captura anterior",
+    "nextScreenshot": "Captura siguiente"
   },
   "categoryApps": {
     "error": "Error al cargar aplicaciones",
@@ -95,7 +103,12 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "skipToContent": "Ir al contenido",
+    "windowMinimize": "Minimizar ventana",
+    "windowMaximize": "Maximizar ventana",
+    "windowRestore": "Restaurar ventana",
+    "windowClose": "Cerrar ventana"
   },
   "dependency": {
     "alreadyInstalled": "Ya instalado en su sistema",
@@ -154,10 +167,13 @@
     "noImage": "Sin imagen",
     "noResultsFor": "No se encontraron resultados para \"{{query}}\"",
     "promoted": "Promocionado",
+    "searchLabel": "Buscar aplicaciones",
+    "searchClear": "Limpiar búsqueda",
     "searchPlaceholder": "Buscar aplicaciones...",
     "searchResults": "Resultados para \"{{query}}\"",
     "searching": "Buscando...",
-    "wantYourAppHere": "¿Quieres tu aplicación aquí?"
+    "wantYourAppHere": "¿Quieres tu aplicación aquí?",
+    "goToSlide": "Ir a la diapositiva {{index}}"
   },
   "myApps": {
     "allUpdatesCompleted": "¡✓ Todas las actualizaciones se completaron con éxito!",
@@ -210,9 +226,6 @@
     "updating": "Actualizando {{appId}}",
     "updatingAllApps": "Actualizando todas las aplicaciones",
     "updateStartingShortly": "La actualización comenzará en breve...",
-    "updateStartingInSeconds": "Iniciando actualización en {{countdown}} segundos...",
-    "verificationPending": "pendiente",
-    "verificationReviewDetails": "Revisar detalles",
     "updateSummarySuccess": "{{count}} aplicación actualizada correctamente",
     "updateSummarySuccess_plural": "{{count}} aplicaciones actualizadas correctamente",
     "updateSummaryWithErrors": "{{success}} actualizadas, {{errors}} con errores",
@@ -222,6 +235,8 @@
   },
   "notifications": {
     "noNotifications": "No hay notificaciones",
+    "label": "Notificaciones",
+    "labelWithCount": "Notificaciones, {{count}} sin leer",
     "title": "Notificaciones"
   },
   "releaseNotes": {
@@ -342,6 +357,20 @@
     "slide5": {
       "description": "¡Exploremos juntos el mundo de las aplicaciones de código abierto!",
       "title": "Listo para empezar"
+    },
+    "accessibility": {
+      "title": "Accesibilidad",
+      "subtitle": "Personaliza tu experiencia — puedes cambiar esto en cualquier momento en ajustes",
+      "reducedMotion": "Movimiento reducido",
+      "reducedMotionDesc": "Desactiva animaciones y transiciones",
+      "highContrast": "Alto contraste",
+      "highContrastDesc": "Aumenta el brillo del texto para mejor legibilidad",
+      "colorBlind": "Modo daltonismo",
+      "colorBlindDesc": "Ajusta la paleta de colores para deficiencias de visión del color",
+      "colorBlindNone": "Ninguno",
+      "colorBlindDeuteranopia": "Deuteranopía (rojo-verde)",
+      "colorBlindProtanopia": "Protanopía (ciego al rojo)",
+      "colorBlindTritanopia": "Tritanopía (azul-amarillo)"
     },
     "donation": {
       "accepted": "Aceptado",

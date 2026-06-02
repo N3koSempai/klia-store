@@ -1,5 +1,6 @@
 import BarChartIcon from "@mui/icons-material/BarChart";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import {
 	alpha,
 	Box,
@@ -12,11 +13,13 @@ import {
 	Skeleton,
 	Stack,
 	Typography,
+	useTheme,
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { AboutModal } from "../../components/AboutModal";
+import { SettingsModal } from "../../components/SettingsModal";
 import { AppSearchBar } from "../../components/AppSearchBar";
 import { CachedImage } from "../../components/CachedImage";
 import { NotificationMenu } from "../../components/NotificationMenu";
@@ -49,6 +52,7 @@ export const Home = ({
 	initialSearchResults = [],
 }: HomeProps) => {
 	const { t } = useTranslation();
+	const theme = useTheme();
 	const { getUpdateCount } = useInstalledAppsStore();
 	const updateCount = getUpdateCount();
 	const [searchResults, setSearchResults] =
@@ -56,6 +60,7 @@ export const Home = ({
 	const [isSearching, setIsSearching] = useState(false);
 	const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
 	const [aboutModalOpen, setAboutModalOpen] = useState(false);
+	const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
 	const {
 		notifications,
@@ -113,7 +118,7 @@ export const Home = ({
 							transition: "all 0.2s",
 							"&:hover": {
 								borderColor: "primary.main",
-								bgcolor: alpha("#4A86CF", 0.05),
+								bgcolor: alpha(theme.palette.primary.main, 0.05),
 							},
 						}}
 					>
@@ -154,7 +159,7 @@ export const Home = ({
 							color: "text.secondary",
 							"&:hover": {
 								color: "primary.main",
-								bgcolor: alpha("#4A86CF", 0.1),
+								bgcolor: alpha(theme.palette.primary.main, 0.1),
 							},
 						}}
 					>
@@ -162,8 +167,29 @@ export const Home = ({
 					</IconButton>
 
 					<IconButton
+						aria-label={t("settings.title")}
+						onClick={() => setSettingsModalOpen(true)}
+						sx={{
+							color: "text.secondary",
+							"&:hover": {
+								color: "primary.main",
+								bgcolor: alpha(theme.palette.primary.main, 0.1),
+							},
+						}}
+					>
+						<SettingsOutlinedIcon />
+					</IconButton>
+
+					<IconButton
+						aria-label={t("about.title")}
 						onClick={() => setAboutModalOpen(true)}
-						sx={{ color: "text.secondary" }}
+						sx={{
+							color: "text.secondary",
+							"&:hover": {
+								color: "primary.main",
+								bgcolor: alpha(theme.palette.primary.main, 0.1),
+							},
+						}}
 					>
 						<InfoOutlinedIcon />
 					</IconButton>
@@ -198,7 +224,7 @@ export const Home = ({
 										<Box key={uuidv4()}>
 											<Card
 												sx={{
-													bgcolor: "#161B22",
+													bgcolor: "background.paper",
 													borderRadius: "12px",
 													border: "1px solid rgba(255, 255, 255, 0.1)",
 													height: "100%",
@@ -256,7 +282,7 @@ export const Home = ({
 										<Box key={app.app_id} sx={{ minWidth: 0 }}>
 											<Card
 												sx={{
-													bgcolor: "#161B22",
+													bgcolor: "background.paper",
 													borderRadius: "12px",
 													border: "1px solid rgba(255, 255, 255, 0.1)",
 													height: "100%",
@@ -270,7 +296,7 @@ export const Home = ({
 													willChange: "transform, box-shadow, border-color",
 													"&:hover": {
 														transform: "translateY(-5px)",
-														borderColor: "#4A86CF",
+														borderColor: "primary.main",
 														boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
 														zIndex: 1,
 													},
@@ -322,7 +348,7 @@ export const Home = ({
 															) : (
 																<Typography
 																	variant="caption"
-																	sx={{ color: "#8B949E" }}
+																	sx={{ color: "text.secondary" }}
 																>
 																	{t("home.noIcon")}
 																</Typography>
@@ -335,7 +361,7 @@ export const Home = ({
 																sx={{
 																	fontFamily: '"IBM Plex Sans", sans-serif',
 																	fontWeight: 600,
-																	color: "#C9D1D9",
+																	color: "text.primary",
 																	mb: 0.5,
 																}}
 																noWrap
@@ -346,7 +372,7 @@ export const Home = ({
 																variant="caption"
 																sx={{
 																	fontFamily: '"Inter", sans-serif',
-																	color: "#8B949E",
+																	color: "text.secondary",
 																}}
 																noWrap
 															>
@@ -362,7 +388,7 @@ export const Home = ({
 															variant="body2"
 															sx={{
 																fontFamily: '"Inter", sans-serif',
-																color: "#8B949E",
+																color: "text.secondary",
 																display: "-webkit-box",
 																WebkitLineClamp: 2,
 																WebkitBoxOrient: "vertical",
@@ -398,6 +424,12 @@ export const Home = ({
 						<CategoriesSection onCategorySelect={onCategorySelect} />
 					</>
 				)}
+
+				{/* Settings Modal */}
+				<SettingsModal
+					open={settingsModalOpen}
+					onClose={() => setSettingsModalOpen(false)}
+				/>
 
 				{/* About Modal */}
 				<AboutModal

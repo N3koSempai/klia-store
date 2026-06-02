@@ -1,5 +1,11 @@
 {
+  "settings": {
+    "title": "सेटिंग्स",
+    "subtitle": "Klia Store में अपना अनुभव अनुकूलित करें",
+    "accessibilitySection": "अभिगम्यता"
+  },
   "about": {
+    "title": "Klia Store के बारे में",
     "availabilityLabel": "कार्य उपलब्धता:",
     "availabilityStatus": {
       "available": "कार्य के लिए उपलब्ध",
@@ -10,7 +16,6 @@
     "createdBy": "द्वारा बनाया गया",
     "description": "Klia Store लिनक्स के लिए एक आधुनिक एप्लिकेशन स्टोर है, जो एप्लिकेशन खोजने, इंस्टॉल करने और प्रबंधित करने का एक आसान और सहज तरीका प्रदान करता है। Klia सॉफ्टवेयर सूट का हिस्सा।",
     "license": "लाइसेंस",
-    "title": "Klia Store के बारे में",
     "version": "संस्करण",
     "viewContributing": "योगदान दिशानिर्देश देखें",
     "viewLicense": "लाइसेंस देखें"
@@ -73,7 +78,10 @@
     "uninstalling": "अनइंस्टॉल हो रहा है...",
     "update": "अपडेट करें",
     "updating": "अपडेट हो रहा है...",
-    "version": "संस्करण"
+    "version": "संस्करण",
+    "screenshotN": "स्क्रीनशॉट {{number}}",
+    "prevScreenshot": "पिछला स्क्रीनशॉट",
+    "nextScreenshot": "अगला स्क्रीनशॉट"
   },
   "categoryApps": {
     "error": "ऐप्स लोड करने में त्रुटि",
@@ -93,7 +101,12 @@
     "noResults": "कोई परिणाम नहीं मिला",
     "retry": "पुनः प्रयास करें",
     "save": "सहेजें",
-    "search": "खोजें"
+    "search": "खोजें",
+    "skipToContent": "सामग्री पर जाएं",
+    "windowMinimize": "विंडो छोटी करें",
+    "windowMaximize": "विंडो बड़ी करें",
+    "windowRestore": "विंडो पुनर्स्थापित करें",
+    "windowClose": "विंडो बंद करें"
   },
   "dependency": {
     "alreadyInstalled": "आपके सिस्टम पर पहले से इंस्टॉल है",
@@ -152,10 +165,13 @@
     "noImage": "कोई छवि नहीं",
     "noResultsFor": "\"{{query}}\" के लिए कोई परिणाम नहीं मिला",
     "promoted": "प्रचारित",
+    "searchLabel": "ऐप्स खोजें",
+    "searchClear": "खोज साफ़ करें",
     "searchPlaceholder": "ऐप्स खोजें...",
     "searchResults": "\"{{query}}\" के परिणाम",
     "searching": "खोजा जा रहा है...",
-    "wantYourAppHere": "अपना ऐप यहाँ चाहते हैं?"
+    "wantYourAppHere": "अपना ऐप यहाँ चाहते हैं?",
+    "goToSlide": "स्लाइड {{index}} पर जाएं"
   },
   "myApps": {
     "allUpdatesCompleted": "✓ सभी अपडेट सफलतापूर्वक पूरे हुए!",
@@ -246,6 +262,8 @@
   },
   "notifications": {
     "noNotifications": "कोई सूचना नहीं",
+    "label": "सूचनाएं",
+    "labelWithCount": "सूचनाएं, {{count}} अपठित",
     "title": "सूचनाएं"
   },
   "releaseNotes": {
@@ -366,6 +384,20 @@
     "slide5": {
       "description": "आइए मिलकर ओपन सोर्स एप्लिकेशन की दुनिया का अन्वेषण करें!",
       "title": "शुरू करने के लिए तैयार"
+    },
+    "accessibility": {
+      "title": "अभिगम्यता",
+      "subtitle": "अपना अनुभव अनुकूलित करें — आप इसे सेटिंग्स में कभी भी बदल सकते हैं",
+      "reducedMotion": "कम गति",
+      "reducedMotionDesc": "एनिमेशन और ट्रांज़िशन अक्षम करें",
+      "highContrast": "उच्च कंट्रास्ट",
+      "highContrastDesc": "बेहतर पठनीयता के लिए टेक्स्ट की चमक बढ़ाएं",
+      "colorBlind": "वर्णांधता मोड",
+      "colorBlindDesc": "रंग दृष्टि दोषों के लिए रंग पैलेट समायोजित करें",
+      "colorBlindNone": "कोई नहीं",
+      "colorBlindDeuteranopia": "ड्यूटेरानोपिया (लाल-हरा)",
+      "colorBlindProtanopia": "प्रोटानोपिया (लाल अंधापन)",
+      "colorBlindTritanopia": "ट्रिटानोपिया (नीला-पीला)"
     }
   }
 }

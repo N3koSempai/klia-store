@@ -1,4 +1,6 @@
-import { alpha, Box, Card, Chip, Skeleton, Typography } from "@mui/material";
+import { alpha, Box, ButtonBase, Card, Chip, Skeleton, Typography,
+	useTheme
+} from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,6 +28,7 @@ const PROMOTED_APP_ID = "io.github.N3kosempai.hetairos-ai";
 
 export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const { t } = useTranslation();
+	const theme = useTheme();
 	const { data: appOfTheDay, isLoading, error } = useAppOfTheDay();
 
 	// Fetch promoted app with React Query (cached)
@@ -136,6 +139,35 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 			{/* Hero Card */}
 			{currentSlide && (
 				<Card
+					role="button"
+					tabIndex={0}
+					aria-label={
+						currentSlide.type === "backend"
+							? (currentSlide.data?.name || currentSlide.data?.app_id || "")
+							: currentSlide.data.name
+					}
+					onClick={() => {
+						if (
+							currentSlide.type === "backend" &&
+							currentSlide.data?.categoryApp
+						) {
+							onAppSelect(currentSlide.data.categoryApp);
+						} else if (
+							currentSlide.type === "promoted" &&
+							currentSlide.data.categoryApp
+						) {
+							onAppSelect(currentSlide.data.categoryApp);
+						}
+					}}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							if (currentSlide.type === "backend" && currentSlide.data?.categoryApp)
+								onAppSelect(currentSlide.data.categoryApp);
+							else if (currentSlide.type === "promoted" && currentSlide.data.categoryApp)
+								onAppSelect(currentSlide.data.categoryApp);
+						}
+					}}
 					sx={{
 						position: "relative",
 						overflow: "hidden",
@@ -151,19 +183,6 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 							boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
 							zIndex: 1,
 						},
-					}}
-					onClick={() => {
-						if (
-							currentSlide.type === "backend" &&
-							currentSlide.data?.categoryApp
-						) {
-							onAppSelect(currentSlide.data.categoryApp);
-						} else if (
-							currentSlide.type === "promoted" &&
-							currentSlide.data.categoryApp
-						) {
-							onAppSelect(currentSlide.data.categoryApp);
-						}
 					}}
 				>
 					<Box sx={{ p: 5 }}>
@@ -224,7 +243,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 											: t("home.promoted").toUpperCase()
 									}
 									sx={{
-										bgcolor: alpha("#4A86CF", 0.15),
+										bgcolor: alpha(theme.palette.primary.main, 0.15),
 										color: "primary.main",
 										fontWeight: 800,
 										fontSize: "0.7rem",
@@ -275,16 +294,17 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 					}}
 				>
 					{slides.map((_, index) => (
-						<Box
+						<ButtonBase
 							key={index}
 							onClick={() => setActiveSlide(index)}
+							aria-label={t("home.goToSlide", { index: index + 1 })}
+							aria-pressed={activeSlide === index}
 							sx={{
 								width: 10,
 								height: 10,
 								borderRadius: "50%",
 								bgcolor:
 									activeSlide === index ? "primary.main" : "action.disabled",
-								cursor: "pointer",
 								transition: "background-color 0.3s",
 								"&:hover": {
 									bgcolor:

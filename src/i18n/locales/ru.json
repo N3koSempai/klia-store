@@ -1,5 +1,11 @@
 {
+  "settings": {
+    "title": "Настройки",
+    "subtitle": "Настройте свой опыт в Klia Store",
+    "accessibilitySection": "Доступность"
+  },
   "about": {
+    "title": "О Klia Store",
     "availabilityLabel": "Доступность для работы:",
     "availabilityStatus": {
       "available": "Доступен для работы",
@@ -10,7 +16,6 @@
     "createdBy": "Создано:",
     "description": "Klia Store — это современный магазин приложений для Linux, обеспечивающий простой и интуитивно понятный способ поиска, установки и управления приложениями. Часть программного комплекса Klia Software Suite.",
     "license": "Лицензия",
-    "title": "О Klia Store",
     "version": "Версия",
     "viewContributing": "Посмотреть руководство для разработчиков",
     "viewLicense": "Посмотреть лицензию"
@@ -73,7 +78,10 @@
     "uninstalling": "Удаление...",
     "update": "Обновить",
     "updating": "Обновление...",
-    "version": "Версия"
+    "version": "Версия",
+    "screenshotN": "Снимок экрана {{number}}",
+    "prevScreenshot": "Предыдущий снимок",
+    "nextScreenshot": "Следующий снимок"
   },
   "categoryApps": {
     "error": "Ошибка загрузки приложений",
@@ -93,7 +101,12 @@
     "noResults": "Результатов не найдено",
     "retry": "Повторить",
     "save": "Сохранить",
-    "search": "Поиск"
+    "search": "Поиск",
+    "skipToContent": "Перейти к содержимому",
+    "windowMinimize": "Свернуть окно",
+    "windowMaximize": "Развернуть окно",
+    "windowRestore": "Восстановить окно",
+    "windowClose": "Закрыть окно"
   },
   "dependency": {
     "alreadyInstalled": "Уже установлено в вашей системе",
@@ -152,10 +165,13 @@
     "noImage": "Нет изображения",
     "noResultsFor": "Результатов по запросу «{{query}}» не найдено",
     "promoted": "Рекламное",
+    "searchLabel": "Поиск приложений",
+    "searchClear": "Очистить поиск",
     "searchPlaceholder": "Поиск приложений...",
     "searchResults": "Результаты по запросу «{{query}}»",
     "searching": "Поиск...",
-    "wantYourAppHere": "Хотите видеть свое приложение здесь?"
+    "wantYourAppHere": "Хотите видеть свое приложение здесь?",
+    "goToSlide": "Перейти к слайду {{index}}"
   },
   "myApps": {
     "allUpdatesCompleted": "✓ Все обновления успешно завершены!",
@@ -164,35 +180,6 @@
     "checkingUpdates": "Проверка обновлений...",
     "closeButton": "Закрыть",
     "currentApp": "Текущее приложение",
-    "donation": {
-      "accepted": "Принято",
-      "back": "Назад",
-      "btcNetwork": "Сеть Bitcoin",
-      "btcPlaceholder": "0.00010000",
-      "close": "Закрыть",
-      "copied": "Скопировано!",
-      "copyAddress": "Скопировать адрес",
-      "copyAndDonate": "Скопировать адрес и пожертвовать",
-      "donate": "Пожертвовать",
-      "enterAmount": "Введите сумму",
-      "ethNetwork": "Ethereum · ERC-20",
-      "helpKeepAlive": "Помогите поддерживать этот проект",
-      "notConfigured": "Не настроено разработчиком",
-      "notFoundYet": "Платеж еще не найден. Для появления в сети может потребоваться несколько минут. Попробуйте еще раз позже.",
-      "paymentConfirmed": "Платеж подтвержден",
-      "paymentConfirmedDesc": "Ваше пожертвование для {{name}} было подтверждено. Спасибо!",
-      "selectCurrency": "Выберите валюту",
-      "sendExactNote": "Отправьте эту точную сумму, чтобы мы могли подтвердить ваш платеж",
-      "sendExactly": "Отправить ровно",
-      "sendTo": "Отправить на",
-      "supportButton": "Поддержать",
-      "supportTitle": "Поддержать {{name}}",
-      "thankYou": "Спасибо за вашу поддержку!",
-      "tooltipSupport": "Поддержать это приложение",
-      "usdtPlaceholder": "10",
-      "verify": "Подтвердить платеж",
-      "verifying": "Проверка..."
-    },
     "donation": {
       "accepted": "Принято",
       "back": "Назад",
@@ -275,6 +262,8 @@
   },
   "notifications": {
     "noNotifications": "Нет уведомлений",
+    "label": "Уведомления",
+    "labelWithCount": "Уведомления, {{count}} непрочитанных",
     "title": "Уведомления"
   },
   "releaseNotes": {
@@ -395,6 +384,20 @@
     "slide5": {
       "description": "Давайте вместе исследовать мир приложений с открытым исходным кодом!",
       "title": "Готовы начать?"
+    },
+    "accessibility": {
+      "title": "Доступность",
+      "subtitle": "Настройте свой опыт — вы можете изменить это в настройках в любое время",
+      "reducedMotion": "Уменьшенное движение",
+      "reducedMotionDesc": "Отключает анимацию и переходы",
+      "highContrast": "Высокий контраст",
+      "highContrastDesc": "Увеличивает яркость текста для лучшей читаемости",
+      "colorBlind": "Режим дальтонизма",
+      "colorBlindDesc": "Настраивает цветовую палитру для нарушений цветового зрения",
+      "colorBlindNone": "Нет",
+      "colorBlindDeuteranopia": "Дейтеранопия (красно-зелёная)",
+      "colorBlindProtanopia": "Протанопия (красный цвет)",
+      "colorBlindTritanopia": "Тританопия (сине-жёлтая)"
     }
   }
 }

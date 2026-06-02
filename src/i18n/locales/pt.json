@@ -1,5 +1,11 @@
 {
+  "settings": {
+    "title": "Configurações",
+    "subtitle": "Personalize sua experiência no Klia Store",
+    "accessibilitySection": "Acessibilidade"
+  },
   "about": {
+    "title": "Sobre a Klia Store",
     "availabilityLabel": "Disponibilidade de trabalho:",
     "availabilityStatus": {
       "available": "Disponível para trabalhar",
@@ -10,7 +16,6 @@
     "createdBy": "Criado por",
     "description": "Klia Store é uma loja de aplicativos moderna para Linux, proporcionando uma maneira fácil e intuitiva de descobrir, instalar e gerenciar aplicativos. Parte da Klia Software Suite.",
     "license": "Licença",
-    "title": "Sobre a Klia Store",
     "version": "Versão",
     "viewContributing": "Ver Diretrizes de Contribuição",
     "viewLicense": "Ver Licença"
@@ -73,7 +78,10 @@
     "uninstalling": "Desinstalando...",
     "update": "Atualizar",
     "updating": "Atualizando...",
-    "version": "Versão"
+    "version": "Versão",
+    "screenshotN": "Captura de tela {{number}}",
+    "prevScreenshot": "Captura anterior",
+    "nextScreenshot": "Próxima captura"
   },
   "categoryApps": {
     "error": "Erro ao carregar aplicativos",
@@ -93,7 +101,12 @@
     "noResults": "Nenhum resultado encontrado",
     "retry": "Tentar novamente",
     "save": "Salvar",
-    "search": "Pesquisar"
+    "search": "Pesquisar",
+    "skipToContent": "Ir para o conteúdo",
+    "windowMinimize": "Minimizar janela",
+    "windowMaximize": "Maximizar janela",
+    "windowRestore": "Restaurar janela",
+    "windowClose": "Fechar janela"
   },
   "dependency": {
     "alreadyInstalled": "Já instalado no seu sistema",
@@ -152,10 +165,13 @@
     "noImage": "Sem imagem",
     "noResultsFor": "Nenhum resultado encontrado para \"{{query}}\"",
     "promoted": "Promovido",
+    "searchLabel": "Pesquisar aplicativos",
+    "searchClear": "Limpar pesquisa",
     "searchPlaceholder": "Pesquisar aplicativos...",
     "searchResults": "Resultados para \"{{query}}\"",
     "searching": "Pesquisando...",
-    "wantYourAppHere": "Quer seu aplicativo aqui?"
+    "wantYourAppHere": "Quer seu aplicativo aqui?",
+    "goToSlide": "Ir para slide {{index}}"
   },
   "myApps": {
     "allUpdatesCompleted": "✓ Todas as atualizações foram concluídas com sucesso!",
@@ -240,11 +256,12 @@
     "updatesCompletedWithErrors": "Atualizações concluídas com alguns erros",
     "updating": "Atualizando {{appId}}",
     "updatingAllApps": "Atualizando Todos os Aplicativos",
-    "updateStartingShortly": "A atualização começará em breve...",
     "waiting": "Aguardando..."
   },
   "notifications": {
     "noNotifications": "Nenhuma notificação",
+    "label": "Notificações",
+    "labelWithCount": "Notificações, {{count}} não lidas",
     "title": "Notificações"
   },
   "releaseNotes": {
@@ -365,6 +382,20 @@
     "slide5": {
       "description": "Vamos explorar o mundo dos aplicativos de código aberto juntos!",
       "title": "Pronto para Começar"
+    },
+    "accessibility": {
+      "title": "Acessibilidade",
+      "subtitle": "Personalize sua experiência — você pode alterar isso a qualquer momento nas configurações",
+      "reducedMotion": "Movimento reduzido",
+      "reducedMotionDesc": "Desativa animações e transições",
+      "highContrast": "Alto contraste",
+      "highContrastDesc": "Aumenta o brilho do texto para melhor legibilidade",
+      "colorBlind": "Modo daltônico",
+      "colorBlindDesc": "Ajusta a paleta de cores para deficiências de visão de cor",
+      "colorBlindNone": "Nenhum",
+      "colorBlindDeuteranopia": "Deuteranopia (vermelho-verde)",
+      "colorBlindProtanopia": "Protanopia (cego ao vermelho)",
+      "colorBlindTritanopia": "Tritanopia (azul-amarelo)"
     }
   }
 }

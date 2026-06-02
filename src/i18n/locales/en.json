@@ -1,5 +1,11 @@
 {
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Customize your Klia Store experience",
+    "accessibilitySection": "Accessibility"
+  },
   "about": {
+    "title": "About",
     "availabilityLabel": "Status:",
     "availabilityStatus": {
       "available": "Available for work",
@@ -66,6 +72,9 @@
     "securityVerificationDetails": "Verification Details",
     "saveLog": "Save Log",
     "back": "Back",
+    "screenshotN": "Screenshot {{number}}",
+    "prevScreenshot": "Previous screenshot",
+    "nextScreenshot": "Next screenshot",
     "securityUnsupportedPlatformMessage": "The source code is hosted on a platform we cannot verify. Only GitHub and GitLab are currently supported.",
     "releaseNotes": "Release Notes",
     "screenshots": "Screenshots",
@@ -95,7 +104,12 @@
     "retry": "Retry",
     "save": "Save",
     "search": "Search",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "skipToContent": "Skip to content",
+    "windowMinimize": "Minimize window",
+    "windowMaximize": "Maximize window",
+    "windowRestore": "Restore window",
+    "windowClose": "Close window"
   },
   "dependency": {
     "alreadyInstalled": "Already installed on your system",
@@ -153,11 +167,14 @@
     "noIcon": "No icon",
     "noImage": "No image",
     "noResultsFor": "No results found for \"{{query}}\"",
+    "searchLabel": "Search apps",
+    "searchClear": "Clear search",
     "searchPlaceholder": "Search for apps...",
     "searchResults": "Results for \"{{query}}\"",
     "searching": "Searching...",
     "promoted": "Promoted",
-    "wantYourAppHere": "Want your app here?"
+    "wantYourAppHere": "Want your app here?",
+    "goToSlide": "Go to slide {{index}}"
   },
   "myApps": {
     "allUpdatesCompleted": "✓ All updates completed successfully!",
@@ -219,7 +236,9 @@
   },
   "notifications": {
     "title": "Notifications",
-    "noNotifications": "No notifications"
+    "noNotifications": "No notifications",
+    "label": "Notifications",
+    "labelWithCount": "Notifications, {{count}} unread"
   },
   "releaseNotes": {
     "noNotes": "No release notes available",
@@ -368,6 +387,20 @@
     "slide5": {
       "description": "Let's explore the world of open source applications together!",
       "title": "Ready to Start"
+    },
+    "accessibility": {
+      "title": "Accessibility",
+      "subtitle": "Customize your experience — you can change these anytime in settings",
+      "reducedMotion": "Reduced motion",
+      "reducedMotionDesc": "Disables animations and transitions",
+      "highContrast": "High contrast",
+      "highContrastDesc": "Increases text brightness for better readability",
+      "colorBlind": "Color blind mode",
+      "colorBlindDesc": "Adjusts the color palette for color vision deficiencies",
+      "colorBlindNone": "None",
+      "colorBlindDeuteranopia": "Deuteranopia (red-green)",
+      "colorBlindProtanopia": "Protanopia (red-blind)",
+      "colorBlindTritanopia": "Tritanopia (blue-yellow)"
     }
   }
 }

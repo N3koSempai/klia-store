@@ -30,6 +30,10 @@ function LayoutComponent() {
 			<>
 				<TitleBar />
 				<Box
+					component="main"
+					id="main-content"
+					aria-busy="true"
+					aria-label={t("common.initializing")}
 					sx={{
 						marginTop: "40px",
 						height: "calc(100vh - 40px)",
@@ -93,8 +97,13 @@ function LayoutComponent() {
 	// Show main app with TitleBar and scroll container for child routes
 	return (
 		<>
+			<a href="#main-content" className="skip-to-content">
+				{t("common.skipToContent")}
+			</a>
 			<TitleBar />
 			<Box
+				component="main"
+				id="main-content"
 				ref={scrollContainerRef}
 				sx={{
 					marginTop: "40px",
