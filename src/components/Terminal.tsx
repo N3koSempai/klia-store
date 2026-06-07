@@ -33,6 +33,7 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 	return (
 		<Box
 			sx={{
+				position: "relative",
 				width: "100%",
 				maxWidth: 900,
 				margin: "0 auto",
@@ -91,11 +92,12 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 				aria-atomic="true"
 				sx={{
 					position: "absolute",
-					width: 1,
-					height: 1,
+					width: "1px",
+					height: "1px",
 					overflow: "hidden",
 					clip: "rect(0,0,0,0)",
 					whiteSpace: "nowrap",
+					pointerEvents: "none",
 				}}
 			>
 				{output[output.length - 1]?.replace(/^\r/, "") ?? ""}

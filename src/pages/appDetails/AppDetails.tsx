@@ -613,7 +613,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	};
 
 	return (
-		<Box sx={{ p: 3, minHeight: "100vh" }}>
+		<Box sx={{ p: 3 }}>
 			{/* Botón de regreso */}
 			<IconButton aria-label={t("appDetails.back")} onClick={onBack} sx={{ mb: 2 }}>
 				<ArrowBack />

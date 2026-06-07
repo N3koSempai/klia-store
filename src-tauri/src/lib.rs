@@ -2451,8 +2451,9 @@ async fn get_github_tag_commit(owner: &str, repo: &str, tag: &str) -> Result<Str
 /// Extracts owner, repo, release tag, and filename from a GitHub/GitLab release URL
 /// Also returns whether the URL is an auto-generated archive (not a manually uploaded asset)
 /// Example: https://github.com/owner/repo/releases/download/v1.2.2/file.tar.gz
-/// Returns: Some((owner, repo, tag, filename, is_generated_archive))
-fn extract_release_info(url: &str) -> Option<(String, String, String, String, bool)> {
+/// Returns: Some((owner, repo, tag, filename, is_generated_archive, platform))
+/// platform is "github" or "gitlab"
+fn extract_release_info(url: &str) -> Option<(String, String, String, String, bool, String)> {
     // GitHub pattern: https://github.com/owner/repo/releases/download/tag/file
     // These are manually uploaded assets and have SHA256 digest available
     if let Some(caps) = regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$")
@@ -2463,7 +2464,7 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String, bo
         let repo = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
         let filename = caps.get(4)?.as_str().to_string();
-        return Some((owner, repo, tag, filename, false));
+        return Some((owner, repo, tag, filename, false, "github".to_string()));
     }
 
     // GitHub archive pattern: https://github.com/owner/repo/archive/refs/tags/tag/file
@@ -2476,20 +2477,34 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String, bo
         let repo = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
         let filename = caps.get(4)?.as_str().to_string();
-        return Some((owner, repo, tag, filename, true));
+        return Some((owner, repo, tag, filename, true, "github".to_string()));
     }
 
-    // GitLab pattern: https://gitlab.com/owner/repo/-/releases/tag/downloads/file
-    // or https://gitlab.DOMAIN/owner/repo/-/archive/tag/file
-    if let Some(caps) = regex::Regex::new(r"https://gitlab\.[^/]+/([^/]+)/([^/]+)/-/(?:releases|archive)/([^/]+)/(.+)$")
+    // GitLab releases pattern: https://gitlab.DOMAIN/owner/repo/-/releases/tag/downloads/file
+    // These are manually uploaded assets; a companion .sha256sum link may be available
+    if let Some(caps) = regex::Regex::new(r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/releases/([^/]+)/downloads/(.+)$")
         .ok()?
         .captures(url)
     {
-        let owner = caps.get(1)?.as_str().to_string();
-        let repo = caps.get(2)?.as_str().to_string();
+        let domain = caps.get(1)?.as_str().to_string();
+        let project_path = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
         let filename = caps.get(4)?.as_str().to_string();
-        return Some((owner, repo, tag, filename, false));
+        // Encode owner as "domain/project_path" so the caller can reconstruct the API URL
+        return Some((domain, project_path, tag, filename, false, "gitlab".to_string()));
+    }
+
+    // GitLab archive pattern: https://gitlab.DOMAIN/owner/repo/-/archive/tag/file
+    // Auto-generated tarballs, no sha256sum companion expected
+    if let Some(caps) = regex::Regex::new(r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/archive/([^/]+)/(.+)$")
+        .ok()?
+        .captures(url)
+    {
+        let domain = caps.get(1)?.as_str().to_string();
+        let project_path = caps.get(2)?.as_str().to_string();
+        let tag = caps.get(3)?.as_str().to_string();
+        let filename = caps.get(4)?.as_str().to_string();
+        return Some((domain, project_path, tag, filename, true, "gitlab".to_string()));
     }
 
     None
@@ -2574,6 +2589,108 @@ async fn verify_github_release(
     // No SHA256 verification requested, just confirm release exists
     println!("[verify_github_release] Release {} exists and is public", tag);
     Ok(())
+}
+
+/// Verifies a GitLab release exists and checks SHA256 via the companion .sha256sum link if present.
+/// domain: e.g. "gitlab.gnome.org"
+/// project_path: e.g. "World/design/app-icon-preview"
+async fn verify_gitlab_release(
+    client: &reqwest::Client,
+    domain: &str,
+    project_path: &str,
+    tag: &str,
+    filename: &str,
+    expected_sha256: Option<&str>,
+) -> Result<(), String> {
+    let encoded_path = project_path.replace('/', "%2F");
+    let api_url = format!(
+        "https://{}/api/v4/projects/{}/releases/{}",
+        domain, encoded_path, tag
+    );
+
+    println!("[verify_gitlab_release] Checking release: {}", api_url);
+
+    let response = client
+        .get(&api_url)
+        .header("User-Agent", "klia-store-hash-verification")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch release: {}", e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        return Err(format!("Release {} not found or not public (status: {})", tag, status));
+    }
+
+    let Some(expected) = expected_sha256 else {
+        println!("[verify_gitlab_release] Release {} exists (no SHA256 to verify)", tag);
+        return Ok(());
+    };
+
+    let release_text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read release data: {}", e))?;
+
+    let release_data: serde_json::Value = serde_json::from_str(&release_text)
+        .map_err(|e| format!("Failed to parse release data: {}", e))?;
+
+    // Look for a .sha256sum companion link in assets.links
+    let sha256sum_filename = format!("{}.sha256sum", filename);
+    let links = release_data
+        .get("assets")
+        .and_then(|a| a.get("links"))
+        .and_then(|l| l.as_array());
+
+    if let Some(links) = links {
+        for link in links {
+            let name = link.get("name").and_then(|n| n.as_str()).unwrap_or("");
+            if name == sha256sum_filename {
+                let sha256sum_url = link
+                    .get("direct_asset_url")
+                    .or_else(|| link.get("url"))
+                    .and_then(|u| u.as_str())
+                    .ok_or("No URL for .sha256sum link")?;
+
+                println!("[verify_gitlab_release] Found .sha256sum link: {}", sha256sum_url);
+
+                let sha256sum_content = client
+                    .get(sha256sum_url)
+                    .header("User-Agent", "klia-store-hash-verification")
+                    .send()
+                    .await
+                    .map_err(|e| format!("Failed to fetch .sha256sum: {}", e))?
+                    .text()
+                    .await
+                    .map_err(|e| format!("Failed to read .sha256sum content: {}", e))?;
+
+                // Format: "<hash>  <filename>" or "<hash> *<filename>"
+                let remote_sha256 = sha256sum_content
+                    .split_whitespace()
+                    .next()
+                    .ok_or("Could not parse .sha256sum content")?;
+
+                println!("[verify_gitlab_release] Remote SHA256: {}", remote_sha256);
+                println!("[verify_gitlab_release] Expected SHA256: {}", expected);
+
+                return if remote_sha256.to_lowercase() == expected.to_lowercase() {
+                    println!("[verify_gitlab_release] ✓ SHA256 matches!");
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "Hash mismatch: manifest SHA256 {} does not match release SHA256 {}",
+                        expected, remote_sha256
+                    ))
+                };
+            }
+        }
+    }
+
+    // No .sha256sum companion found — release exists but we can't verify the hash
+    Err(format!(
+        "Could not verify: No {}.sha256sum found in GitLab release assets",
+        filename
+    ))
 }
 
 #[tauri::command]
@@ -2694,8 +2811,8 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
         println!("[verify_app_hash] Source is an archive from release");
 
         // Extract release info from URL (e.g., https://github.com/owner/repo/releases/download/v1.2.2/file.tar.gz)
-        if let Some((owner, repo, release_tag, filename, is_generated_archive)) = extract_release_info(&url) {
-            println!("[verify_app_hash] Detected release: {}/{} @ {}", owner, repo, release_tag);
+        if let Some((owner_or_domain, repo_or_path, release_tag, filename, is_generated_archive, platform)) = extract_release_info(&url) {
+            println!("[verify_app_hash] Detected release: {}/{} @ {} ({})", owner_or_domain, repo_or_path, release_tag, platform);
             println!("[verify_app_hash] File: {}", filename);
             println!("[verify_app_hash] Is auto-generated archive: {}", is_generated_archive);
 
@@ -2707,29 +2824,49 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                 println!("[verify_app_hash] ⚠ No SHA256 in manifest");
             }
 
-            // For auto-generated archives (from /archive/refs/tags/), GitHub doesn't provide
-            // SHA256 digest in the API. We only verify the release exists.
-            // For manually uploaded assets, we verify both existence and SHA256.
-            let release_verified = if is_generated_archive {
-                // Just verify the release tag exists, skip SHA256 verification
-                verify_github_release(
-                    &client,
-                    &owner,
-                    &repo,
-                    &release_tag,
-                    None,
-                    None,
-                ).await
+            let release_verified = if platform == "gitlab" {
+                if is_generated_archive {
+                    // GitLab auto-generated archives: just verify the release exists
+                    verify_gitlab_release(
+                        &client,
+                        &owner_or_domain,
+                        &repo_or_path,
+                        &release_tag,
+                        &filename,
+                        None,
+                    ).await
+                } else {
+                    // GitLab manually uploaded asset: verify via companion .sha256sum link
+                    verify_gitlab_release(
+                        &client,
+                        &owner_or_domain,
+                        &repo_or_path,
+                        &release_tag,
+                        &filename,
+                        manifest_sha256,
+                    ).await
+                }
             } else {
-                // Verify release exists and SHA256 matches
-                verify_github_release(
-                    &client,
-                    &owner,
-                    &repo,
-                    &release_tag,
-                    Some(&filename),
-                    manifest_sha256,
-                ).await
+                // GitHub
+                if is_generated_archive {
+                    verify_github_release(
+                        &client,
+                        &owner_or_domain,
+                        &repo_or_path,
+                        &release_tag,
+                        None,
+                        None,
+                    ).await
+                } else {
+                    verify_github_release(
+                        &client,
+                        &owner_or_domain,
+                        &repo_or_path,
+                        &release_tag,
+                        Some(&filename),
+                        manifest_sha256,
+                    ).await
+                }
             };
 
             return Ok(VerificationResult {
@@ -2741,11 +2878,14 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                     verified: release_verified.is_ok(),
                     remote_commit: Some(release_tag.clone()),
                     error: if is_generated_archive {
-                        Some("SHA256 cannot be verified for auto-generated archives from GitHub. The release exists but the archive is generated on-demand and GitHub does not provide a digest for these.".to_string())
+                        Some(format!(
+                            "SHA256 cannot be verified for auto-generated archives from {}. The release exists but the archive is generated on-demand.",
+                            platform
+                        ))
                     } else {
                         release_verified.err()
                     },
-                    platform: "github".to_string(),
+                    platform: platform.clone(),
                     is_sha256_unverifiable: is_generated_archive,
                 }],
                 error: if is_generated_archive {
