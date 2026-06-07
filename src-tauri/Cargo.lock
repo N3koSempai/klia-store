@@ -2092,7 +2092,7 @@ dependencies = [
 
 [[package]]
 name = "klia-store"
-version = "2.10.0"
+version = "2.10.2"
 dependencies = [
  "once_cell",
  "regex",

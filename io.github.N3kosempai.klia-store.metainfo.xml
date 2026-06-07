@@ -38,23 +38,10 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.10.1" date="2026-06-02">
+    <release version="2.10.2" date="2026-06-07">
       <description>
-        <p>Klia Store 2.10 — Accessibility First</p>
-        <p>
-          This release marks a major milestone in making Klia Store welcoming to everyone,
-          regardless of how they interact with their computer.
-        </p>
-        <ul>
-          <li>Full keyboard navigation across the entire app — browse, install, and manage apps without ever touching the mouse.</li>
-          <li>Screen reader support throughout — every button, card, and status message is now properly announced by tools like Orca.</li>
-          <li>Three color vision modes: Deuteranopia, Protanopia, and Tritanopia — the entire interface adapts its palette so nothing gets lost in translation.</li>
-          <li>High contrast mode for users who need sharper text and stronger visual boundaries.</li>
-          <li>Reduced motion option for users sensitive to animations — the app becomes completely still on request.</li>
-          <li>A new Settings panel in the main toolbar lets you change any of these preferences at any time, not just during first setup.</li>
-          <li>Accessibility preferences are remembered across sessions — set it once, and Klia Store stays the way you need it.</li>
-          <li>All interface colors now respond to your chosen accessibility mode — nothing is left hardcoded.</li>
-        </ul>
+        <p>SHA256 verification now works correctly for GitLab apps that upload their release archives manually.</p>
+        <p>Fixed a scroll issue in the installation terminal where an invisible element was causing extra blank space at the bottom of the page.</p>
       </description>
     </release>
   </releases>
