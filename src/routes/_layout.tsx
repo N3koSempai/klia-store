@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { LocalFlatpakInstallModal } from "../components/LocalFlatpakInstallModal";
 import TitleBar from "../components/TitleBar";
 import { useAppInitialization } from "../hooks/useAppInitialization";
+import { useGitHubUpdates } from "../hooks/useGitHubUpdates";
 import { useInstalledApps } from "../hooks/useInstalledApps";
 import { Welcome } from "../pages/welcome/Welcome";
 
@@ -22,6 +23,8 @@ function LayoutComponent() {
 
 	// Load installed apps on startup (non-blocking)
 	useInstalledApps();
+	// Check GitHub-sourced app updates independently from Flathub
+	useGitHubUpdates();
 
 	// Listen for open-local-flatpak events emitted by Tauri when the app
 	// is launched with a .flatpak or .flatpakref file as argument.

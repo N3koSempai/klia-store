@@ -1969,6 +1969,98 @@ async fn download_flatpak_release(github_repo: String, app_id: String) -> Result
         .ok_or_else(|| "Invalid path".to_string())
 }
 
+#[derive(Serialize)]
+struct GitHubUpdateInfo {
+    app_id: String,
+    latest_version: String,
+    installed_version: String,
+    has_update: bool,
+    github_repo: String,
+}
+
+/// Checks for updates for apps installed from GitHub releases (not Flathub).
+/// Completely separate from get_available_updates which only handles Flathub remotes.
+#[tauri::command]
+async fn check_github_updates(
+    app: tauri::AppHandle,
+    // List of (app_id, github_repo) pairs to check, e.g. [["io.github.N3kosempai.klia-kompress", "N3koSempai/klia-kompress"]]
+    apps: Vec<(String, String)>,
+) -> Result<Vec<GitHubUpdateInfo>, String> {
+    let shell = app.shell();
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    let client = reqwest::Client::builder()
+        .user_agent("klia-store")
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+
+    let mut results = Vec::new();
+
+    for (app_id, github_repo) in apps {
+        // Get installed version via flatpak info
+        let output = if is_flatpak {
+            shell
+                .command("flatpak-spawn")
+                .args(["--host", "flatpak", "info", "--show-version", &app_id])
+                .output()
+                .await
+        } else {
+            shell
+                .command("flatpak")
+                .args(["info", "--show-version", &app_id])
+                .output()
+                .await
+        };
+
+        let installed_version = match output {
+            Ok(o) if o.status.success() => {
+                String::from_utf8_lossy(&o.stdout).trim().to_string()
+            }
+            _ => {
+                // App not installed, skip
+                continue;
+            }
+        };
+
+        // Get latest release tag from GitHub API
+        let api_url = format!(
+            "https://api.github.com/repos/{}/releases/latest",
+            github_repo
+        );
+
+        let latest_version = match client.get(&api_url).send().await {
+            Ok(resp) => match resp.text().await {
+                Ok(text) => {
+                    let json: serde_json::Value = serde_json::from_str(&text)
+                        .unwrap_or(serde_json::Value::Null);
+                    json["tag_name"]
+                        .as_str()
+                        .map(|v| v.trim_start_matches('v').to_string())
+                        .unwrap_or_default()
+                }
+                Err(_) => continue,
+            },
+            Err(_) => continue,
+        };
+
+        if latest_version.is_empty() {
+            continue;
+        }
+
+        let has_update = latest_version != installed_version;
+
+        results.push(GitHubUpdateInfo {
+            app_id,
+            latest_version,
+            installed_version,
+            has_update,
+            github_repo,
+        });
+    }
+
+    Ok(results)
+}
+
 #[tauri::command]
 async fn inspect_local_flatpak(
     app: tauri::AppHandle,
@@ -3584,6 +3676,7 @@ pub fn run() {
             uninstall_extension,
             start_flatpak_interactive,
             download_flatpak_release,
+            check_github_updates,
             inspect_local_flatpak,
             install_local_flatpak,
             send_to_pty,

@@ -7,8 +7,8 @@ export const OFF_FLATHUB_APPS: Record<string, CategoryApp> = {
 	"io.github.N3kosempai.klia-kompress": {
 		app_id: "io.github.N3kosempai.klia-kompress",
 		name: "Klia Kompress",
-		summary: "A modern, intuitive file compression tool for Linux. Create and extract archives with ease.",
-		description: "Klia Kompress is a powerful yet easy-to-use file compression and archive management application. Part of the Klia Software Suite.",
+		summary: "Desktop image compression and conversion tool built for privacy, speed, and quality.",
+		description: "Klia Kompress is a desktop image compression and conversion tool built for privacy, speed, and quality. Everything runs locally on your machine — no uploads, no cloud, no servers.",
 		id: "io.github.N3kosempai.klia-kompress",
 		type: "desktop-application",
 		translations: {},

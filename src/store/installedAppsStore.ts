@@ -45,6 +45,7 @@ interface InstalledAppsStore {
 	setInstalledAppsInfo: (apps: InstalledAppInfo[]) => void;
 	setInstalledExtensions: (extensions: InstalledExtensionInfo[]) => void;
 	setAvailableUpdates: (updates: UpdateAvailableInfo[]) => void;
+	mergeAvailableUpdates: (updates: UpdateAvailableInfo[]) => void;
 	setIsLoadingUpdates: (isLoading: boolean) => void;
 	setInstalledRuntimes: (runtimes: string[]) => void;
 	isAppInstalled: (appId: string) => boolean;
@@ -114,6 +115,18 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 				availableUpdates: updatesMap,
 				updateCount: updates.length,
 				isLoadingUpdates: false,
+			};
+		}),
+
+	mergeAvailableUpdates: (updates: UpdateAvailableInfo[]) =>
+		set((state) => {
+			const merged = { ...state.availableUpdates };
+			for (const update of updates) {
+				merged[update.appId] = update;
+			}
+			return {
+				availableUpdates: merged,
+				updateCount: Object.keys(merged).length,
 			};
 		}),
 
