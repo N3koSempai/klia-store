@@ -1855,6 +1855,442 @@ async fn start_flatpak_interactive(
     Ok(())
 }
 
+#[derive(serde::Serialize)]
+struct LocalFlatpakInfo {
+    app_id: String,
+    name: String,
+    branch: String,
+    runtime: String,
+    sdk: String,
+    command: String,
+    file_path: String,
+    file_size_bytes: u64,
+    permissions: LocalFlatpakPermissions,
+    dependencies: Vec<LocalFlatpakDep>,
+    already_installed: bool,
+}
+
+#[derive(serde::Serialize)]
+struct LocalFlatpakPermissions {
+    network: bool,
+    ipc: bool,
+    x11: bool,
+    wayland: bool,
+    pulseaudio: bool,
+    dri: bool,
+    filesystems: Vec<String>,
+    session_bus: Vec<String>,
+    system_bus: Vec<String>,
+    devices: Vec<String>,
+    sockets: Vec<String>,
+}
+
+#[derive(serde::Serialize)]
+struct LocalFlatpakDep {
+    id: String,
+    size: String,
+}
+
+#[tauri::command]
+async fn download_flatpak_release(github_repo: String, app_id: String) -> Result<String, String> {
+    // Resolve latest release from GitHub API
+    let api_url = format!("https://api.github.com/repos/{}/releases/latest", github_repo);
+
+    let client = reqwest::Client::builder()
+        .user_agent("klia-store")
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+
+    let release: serde_json::Value = {
+        let text = client
+            .get(&api_url)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to fetch release info: {}", e))?
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read release response: {}", e))?;
+        serde_json::from_str(&text).map_err(|e| format!("Failed to parse release JSON: {}", e))?
+    };
+
+    // Find the first .flatpak asset
+    let flatpak_url = release["assets"]
+        .as_array()
+        .and_then(|assets| {
+            assets.iter().find(|a| {
+                a["name"]
+                    .as_str()
+                    .map(|n| n.ends_with(".flatpak"))
+                    .unwrap_or(false)
+            })
+        })
+        .and_then(|a| a["browser_download_url"].as_str())
+        .ok_or_else(|| format!("No .flatpak asset found in latest release of {}", github_repo))?
+        .to_string();
+
+    let filename = flatpak_url
+        .split('/')
+        .last()
+        .filter(|s| !s.is_empty())
+        .unwrap_or("app.flatpak");
+
+    let dest = std::env::temp_dir().join(filename);
+
+    eprintln!(
+        "[download_flatpak_release] Downloading {} for {}",
+        flatpak_url, app_id
+    );
+
+    let response = client
+        .get(&flatpak_url)
+        .send()
+        .await
+        .map_err(|e| format!("Download failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("HTTP {}: {}", response.status(), flatpak_url));
+    }
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    fs::write(&dest, &bytes).map_err(|e| format!("Failed to write file: {}", e))?;
+
+    eprintln!(
+        "[download_flatpak_release] Saved {} ({} bytes)",
+        filename,
+        bytes.len()
+    );
+
+    dest.to_str()
+        .map(String::from)
+        .ok_or_else(|| "Invalid path".to_string())
+}
+
+#[tauri::command]
+async fn inspect_local_flatpak(
+    app: tauri::AppHandle,
+    file_path: String,
+) -> Result<LocalFlatpakInfo, String> {
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    // Get file size
+    let file_size_bytes = fs::metadata(&file_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    // Run flatpak install --no-deploy with echo n piped to stdin to get package info without installing
+    let cmd_str = if is_flatpak {
+        format!(
+            "LANG=C echo n | flatpak-spawn --host flatpak install --no-deploy --user {:?} 2>&1",
+            file_path
+        )
+    } else {
+        format!(
+            "LANG=C echo n | flatpak install --no-deploy --user {:?} 2>&1",
+            file_path
+        )
+    };
+
+    let shell = app.shell();
+    let output = shell
+        .command("sh")
+        .args(["-c", &cmd_str])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run flatpak: {}", e))?;
+
+    let raw = String::from_utf8_lossy(&output.stdout).to_string();
+
+    // Also read metadata directly from the binary bundle (available in all cases)
+    // The bundle embeds a plain-text [Application] block right after the "flatpak\0" magic
+    let metadata_block = fs::read(&file_path)
+        .ok()
+        .and_then(|bytes| {
+            let text = String::from_utf8_lossy(&bytes).into_owned();
+            // Find [Application] section
+            let start = text.find("[Application]")?;
+            // Find end: first occurrence of two+ consecutive NUL bytes after start
+            let section = &text[start..];
+            // Grab up to 2000 chars which is more than enough for the metadata ini
+            Some(section.chars().take(2000).collect::<String>())
+        })
+        .unwrap_or_default();
+
+    // Parse metadata fields
+    let get_meta = |key: &str| -> String {
+        metadata_block
+            .lines()
+            .find(|l| l.starts_with(&format!("{}=", key)))
+            .and_then(|l| l.splitn(2, '=').nth(1))
+            .unwrap_or("")
+            .trim()
+            .to_string()
+    };
+
+    let app_id = get_meta("name");
+    let runtime_full = get_meta("runtime");
+    let sdk_full = get_meta("sdk");
+    let command = get_meta("command");
+
+    // Parse branch from the ref line in the binary (app/id/arch/branch)
+    let branch = {
+        let bytes = fs::read(&file_path).unwrap_or_default();
+        let text = String::from_utf8_lossy(&bytes).into_owned();
+        text.lines()
+            .find(|l| l.starts_with(&format!("app/{}/", app_id)))
+            .and_then(|l| l.splitn(4, '/').nth(3))
+            .unwrap_or("master")
+            .trim_matches('\0')
+            .to_string()
+    };
+
+    // Parse context permissions from metadata
+    let get_context_list = |section_key: &str| -> Vec<String> {
+        metadata_block
+            .lines()
+            .find(|l| l.starts_with(&format!("{}=", section_key)))
+            .and_then(|l| l.splitn(2, '=').nth(1))
+            .map(|v| {
+                v.split(';')
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(String::from)
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+
+    let shared = get_context_list("shared");
+    let sockets = get_context_list("sockets");
+    let devices_list = get_context_list("devices");
+    let filesystems = get_context_list("filesystems");
+
+    // Parse session/system bus policies
+    let parse_bus_policies = |section_header: &str| -> Vec<String> {
+        let mut in_section = false;
+        let mut policies = Vec::new();
+        for line in metadata_block.lines() {
+            if line.trim() == section_header {
+                in_section = true;
+                continue;
+            }
+            if in_section {
+                if line.starts_with('[') {
+                    break;
+                }
+                let trimmed = line.trim();
+                if !trimmed.is_empty() {
+                    policies.push(trimmed.to_string());
+                }
+            }
+        }
+        policies
+    };
+
+    let session_bus = parse_bus_policies("[Session Bus Policy]");
+    let system_bus = parse_bus_policies("[System Bus Policy]");
+
+    let permissions = LocalFlatpakPermissions {
+        network: shared.contains(&"network".to_string()),
+        ipc: shared.contains(&"ipc".to_string()),
+        x11: sockets.contains(&"x11".to_string()),
+        wayland: sockets.contains(&"wayland".to_string()),
+        pulseaudio: sockets.contains(&"pulseaudio".to_string()),
+        dri: devices_list.contains(&"dri".to_string()),
+        filesystems,
+        session_bus,
+        system_bus,
+        devices: devices_list,
+        sockets,
+    };
+
+    // Parse dependencies from flatpak install --no-deploy output
+    // Lines look like: "  1.  org.gnome.Platform  49  u  flathub  < 408 MB"
+    let dependencies: Vec<LocalFlatpakDep> = raw
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            // Skip the app itself (marked with 'i' = install from bundle)
+            if trimmed.is_empty() || trimmed.starts_with("io.github") && trimmed.contains(" i ") {
+                return None;
+            }
+            // Dependency lines start with a number followed by dot
+            let parts: Vec<&str> = trimmed.splitn(2, '.').collect();
+            if parts.len() < 2 || parts[0].trim().parse::<u32>().is_err() {
+                return None;
+            }
+            let rest = parts[1].trim();
+            // Extract ID (first whitespace-delimited token)
+            let mut tokens = rest.split_whitespace();
+            let dep_id = tokens.next()?.to_string();
+            // Skip app's own bundle entry (0 bytes, marked 'i')
+            if rest.contains(" i ") && rest.contains("0 bytes") {
+                return None;
+            }
+            // Find size: last token that looks like a size
+            let rest_tokens: Vec<&str> = rest.split_whitespace().collect();
+            let size = rest_tokens
+                .windows(2)
+                .rev()
+                .find(|w| {
+                    w[1] == "MB"
+                        || w[1] == "GB"
+                        || w[1] == "kB"
+                        || w[1] == "bytes"
+                })
+                .map(|w| format!("{} {}", w[0].trim_start_matches('<').trim(), w[1]))
+                .unwrap_or_else(|| "Unknown".to_string());
+
+            Some(LocalFlatpakDep { id: dep_id, size })
+        })
+        .collect();
+
+    // Check if already installed
+    let check_cmd = if is_flatpak {
+        format!(
+            "flatpak-spawn --host flatpak info {} 2>/dev/null",
+            app_id
+        )
+    } else {
+        format!("flatpak info {} 2>/dev/null", app_id)
+    };
+    let already_installed = shell
+        .command("sh")
+        .args(["-c", &check_cmd])
+        .output()
+        .await
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    let name = if app_id.is_empty() {
+        std::path::Path::new(&file_path)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Unknown")
+            .to_string()
+    } else {
+        app_id.clone()
+    };
+
+    Ok(LocalFlatpakInfo {
+        name,
+        app_id,
+        branch,
+        runtime: runtime_full,
+        sdk: sdk_full,
+        command,
+        file_path: file_path.clone(),
+        file_size_bytes,
+        permissions,
+        dependencies,
+        already_installed,
+    })
+}
+
+#[tauri::command]
+async fn install_local_flatpak(
+    app: tauri::AppHandle,
+    processes: State<'_, ProcessMap>,
+    file_path: String,
+) -> Result<(), String> {
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+
+    let cmd_str = if is_flatpak {
+        format!(
+            "LANG=C script -q /dev/null -c \"flatpak-spawn --host flatpak install -y --user {:?}\"",
+            file_path
+        )
+    } else {
+        format!(
+            "LANG=C script -q /dev/null -c \"flatpak install -y --user {:?}\"",
+            file_path
+        )
+    };
+
+    let process_key = format!("local::{}", file_path);
+
+    let mut child = Command::new("sh")
+        .args(["-c", &cmd_str])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn process: {}", e))?;
+
+    let stdin = child.stdin.take().ok_or("Failed to get stdin")?;
+    let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
+    let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
+
+    {
+        let mut map = processes.lock().unwrap();
+        map.insert(process_key.clone(), PtyProcess { child, stdin });
+    }
+
+    let app_clone = app.clone();
+    let key_clone = process_key.clone();
+    std::thread::spawn(move || {
+        use std::io::Read;
+        let mut buffer = [0u8; 1024];
+        let mut reader = stdout;
+        loop {
+            match reader.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let chunk = String::from_utf8_lossy(&buffer[..n]).to_string();
+                    for line in chunk.split('\n') {
+                        if !line.is_empty() {
+                            let _ = app_clone.emit("pty-output", (key_clone.clone(), line.to_string()));
+                        }
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+    });
+
+    let app_clone2 = app.clone();
+    let key_clone2 = process_key.clone();
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                let _ = app_clone2.emit("pty-error", (key_clone2.clone(), line));
+            }
+        }
+    });
+
+    let app_clone3 = app.clone();
+    let key_clone3 = process_key.clone();
+    let processes_clone = processes.inner().clone();
+    std::thread::spawn(move || {
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            let mut map = processes_clone.lock().unwrap();
+            if let Some(pty_process) = map.get_mut(&key_clone3) {
+                match pty_process.child.try_wait() {
+                    Ok(Some(_status)) => {
+                        let _ = app_clone3.emit("pty-terminated", key_clone3.clone());
+                        map.remove(&key_clone3);
+                        break;
+                    }
+                    Ok(None) => {}
+                    Err(_) => {
+                        map.remove(&key_clone3);
+                        break;
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+    });
+
+    Ok(())
+}
+
 // Send input to a running PTY process
 #[tauri::command]
 async fn send_to_pty(
@@ -3100,6 +3536,23 @@ fn find_main_module(modules: &[serde_yaml::Value], app_id: &str) -> Option<Flatp
 pub fn run() {
     tauri::Builder::default()
         .manage(ProcessMap::default())
+        .setup(|app| {
+            // If the app was opened with a .flatpak or .flatpakref file as argument,
+            // emit an event so the frontend can show the local install dialog.
+            let args: Vec<String> = std::env::args().collect();
+            if let Some(file_path) = args.get(1) {
+                let fp = file_path.clone();
+                if fp.ends_with(".flatpak") || fp.ends_with(".flatpakref") {
+                    let handle = app.handle().clone();
+                    // Delay slightly so the frontend has time to mount listeners
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_millis(800));
+                        let _ = handle.emit("open-local-flatpak", fp);
+                    });
+                }
+            }
+            Ok(())
+        })
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
@@ -3130,6 +3583,9 @@ pub fn run() {
             install_extension,
             uninstall_extension,
             start_flatpak_interactive,
+            download_flatpak_release,
+            inspect_local_flatpak,
+            install_local_flatpak,
             send_to_pty,
             kill_pty_process,
             check_pty_process,

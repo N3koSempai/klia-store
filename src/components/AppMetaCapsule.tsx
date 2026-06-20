@@ -27,10 +27,10 @@ export const AppMetaCapsule = ({
 
 	// Parse and normalize license format
 	const parseLicense = (licenseStr: string): { text: string; url?: string } => {
-		// Handle LicenseRef-proprietary=URL format
-		const proprietaryMatch = licenseStr.match(/LicenseRef-proprietary=(.+)/);
-		if (proprietaryMatch) {
-			return { text: "Proprietary", url: proprietaryMatch[1] };
+		// Handle LicenseRef-proprietary and LicenseRef-proprietary=URL
+		if (licenseStr.startsWith("LicenseRef-proprietary")) {
+			const urlMatch = licenseStr.match(/LicenseRef-proprietary=(.+)/);
+			return { text: "Proprietary", url: urlMatch?.[1] };
 		}
 
 		// Normalize common licenses

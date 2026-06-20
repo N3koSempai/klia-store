@@ -1,9 +1,10 @@
 [Desktop Entry]
 Name=Klia Store
 Comment=Flatpak application store
-Exec=klia-store
+Exec=klia-store %f
 Icon=io.github.N3kosempai.klia-store
 Type=Application
 Categories=System;
 Terminal=false
 StartupNotify=true
+MimeType=application/vnd.flatpak;application/vnd.flatpak.ref;

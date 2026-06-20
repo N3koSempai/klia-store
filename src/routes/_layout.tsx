@@ -1,7 +1,9 @@
 import { Box } from "@mui/material";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LocalFlatpakInstallModal } from "../components/LocalFlatpakInstallModal";
 import TitleBar from "../components/TitleBar";
 import { useAppInitialization } from "../hooks/useAppInitialization";
 import { useInstalledApps } from "../hooks/useInstalledApps";
@@ -15,10 +17,25 @@ function LayoutComponent() {
 	const { t } = useTranslation();
 	const { isFirstLaunch, isInitializing, error } = useAppInitialization();
 	const [showWelcome, setShowWelcome] = useState(true);
+	const [localFlatpakFile, setLocalFlatpakFile] = useState<string | null>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 	// Load installed apps on startup (non-blocking)
 	useInstalledApps();
+
+	// Listen for open-local-flatpak events emitted by Tauri when the app
+	// is launched with a .flatpak or .flatpakref file as argument.
+	useEffect(() => {
+		let unlisten: (() => void) | undefined;
+		listen<string>("open-local-flatpak", (event) => {
+			setLocalFlatpakFile(event.payload);
+		}).then((fn) => {
+			unlisten = fn;
+		});
+		return () => {
+			unlisten?.();
+		};
+	}, []);
 
 	const handleWelcomeComplete = () => {
 		setShowWelcome(false);
@@ -115,6 +132,10 @@ function LayoutComponent() {
 			>
 				<Outlet />
 			</Box>
+			<LocalFlatpakInstallModal
+				filePath={localFlatpakFile}
+				onClose={() => setLocalFlatpakFile(null)}
+			/>
 		</>
 	);
 }

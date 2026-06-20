@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import kliaAnimation from "../../assets/animations/klia.svg";
+import { OFF_FLATHUB_APPS } from "../../data/offFlathubApps";
 import { apiService } from "../../services/api";
 import type { CategoryApp } from "../../types";
 
@@ -37,6 +38,10 @@ export const Route = createFileRoute("/_layout/app/$appId")({
 		searchResults: search.searchResults as CategoryApp[] | undefined,
 	}),
 	loader: async ({ params }) => {
+		const offFlathub = OFF_FLATHUB_APPS[params.appId];
+		if (offFlathub) {
+			return { app: offFlathub };
+		}
 		const app = await apiService.getCategoryApp(params.appId);
 		if (!app) {
 			throw new Error(`App not found: ${params.appId}`);

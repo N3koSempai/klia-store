@@ -1,13 +1,11 @@
 import { alpha, Box, ButtonBase, Card, Chip, Skeleton, Typography,
 	useTheme
 } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import hetairosLogo from "../../../assets/internalPromo/hentairos_logo.png";
 import { CachedImage } from "../../../components/CachedImage";
+import { OFF_FLATHUB_APPS } from "../../../data/offFlathubApps";
 import { useAppOfTheDay } from "../../../hooks/useAppOfTheDay";
-import { apiService } from "../../../services/api";
 import type { CategoryApp } from "../../../types";
 
 interface FeaturedSectionProps {
@@ -23,35 +21,23 @@ interface PromotedAppCardData {
 	categoryApp?: CategoryApp;
 }
 
-// Set to null to disable promoted app
-const PROMOTED_APP_ID = "io.github.N3kosempai.hetairos-ai";
+const KLIA_KOMPRESS_APP_ID = "io.github.N3kosempai.klia-kompress";
+const kliaKompressData = OFF_FLATHUB_APPS[KLIA_KOMPRESS_APP_ID];
+
+const KLIA_KOMPRESS_PROMO: PromotedAppCardData = {
+	appId: KLIA_KOMPRESS_APP_ID,
+	name: kliaKompressData.name,
+	summary: kliaKompressData.summary,
+	icon: kliaKompressData.icon,
+	categoryApp: kliaKompressData,
+};
 
 export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const { t } = useTranslation();
 	const theme = useTheme();
 	const { data: appOfTheDay, isLoading, error } = useAppOfTheDay();
 
-	// Fetch promoted app with React Query (cached)
-	const { data: promotedApp } = useQuery({
-		queryKey: ["promotedApp", PROMOTED_APP_ID],
-		queryFn: async () => {
-			if (!PROMOTED_APP_ID) return null;
-
-			const categoryApp = await apiService.getCategoryApp(PROMOTED_APP_ID);
-			if (!categoryApp) return null;
-
-			return {
-				appId: PROMOTED_APP_ID,
-				name: categoryApp.name,
-				summary: categoryApp.summary,
-				icon: hetairosLogo,
-				categoryApp: categoryApp,
-			} as PromotedAppCardData;
-		},
-		enabled: !!PROMOTED_APP_ID,
-		staleTime: Infinity, // Never refetch, keep in cache
-		gcTime: Infinity, // Never garbage collect
-	});
+	const promotedApp = KLIA_KOMPRESS_PROMO;
 
 	// Carousel state - includes backend app and optional promoted app
 	const [activeSlide, setActiveSlide] = useState(0);

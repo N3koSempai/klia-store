@@ -46,15 +46,16 @@ interface AppDetailsProps {
 export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const { t } = useTranslation();
 
-	// Convert CategoryApp to AppStream for hooks that need it
+	// Convert CategoryApp to AppStream for hooks that need it.
+	// Pre-loaded screenshots/urls (set for off-Flathub apps) skip the Flathub fetch.
 	const appStream: AppStream = {
 		id: app.app_id,
 		name: app.name,
 		summary: app.summary,
 		description: app.description,
 		icon: app.icon,
-		screenshots: undefined,
-		urls: undefined,
+		screenshots: app.screenshots,
+		urls: app.urls,
 	};
 
 	const {
@@ -165,8 +166,11 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 			(event) => {
 				const [appId, line] = event.payload;
 
-				// Only process if this is our app AND we're installing (using ref for current value)
-				if (appId === app.app_id && isInstallingRef.current) {
+				// Accept both the standard app_id key and the local install key (local::<filePath>)
+				const isOurProcess =
+					(appId === app.app_id || appId === installSessionId.current) &&
+					isInstallingRef.current;
+				if (isOurProcess) {
 					// Split by \r to handle multiple updates in a single emission
 					const parts = line.split("\r");
 
@@ -224,14 +228,20 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
 		const unlistenPtyError = listen<[string, string]>("pty-error", (event) => {
 			const [appId, line] = event.payload;
-			if (appId === app.app_id && isInstallingRef.current) {
+			const isOurProcess =
+				(appId === app.app_id || appId === installSessionId.current) &&
+				isInstallingRef.current;
+			if (isOurProcess) {
 				console.log("[AppDetails] PTY error during install:", line);
 				setInstallOutput((prev) => [...prev, `Error: ${line}`]);
 			}
 		});
 
 		const unlistenPtyTerminated = listen<string>("pty-terminated", (event) => {
-			if (event.payload === app.app_id && isInstallingRef.current) {
+			const isOurProcess =
+				event.payload === app.app_id ||
+				event.payload === installSessionId.current;
+			if (isOurProcess && isInstallingRef.current) {
 				console.log("[AppDetails] PTY terminated during install");
 				installSessionId.current = null;
 
@@ -360,14 +370,52 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		}, 1000);
 	};
 
+	// GitHub repo (owner/repo) for apps not on Flathub — always resolves latest release
+	const GITHUB_RELEASE_REPOS: Record<string, string> = {
+		"io.github.N3kosempai.klia-kompress": "N3koSempai/klia-kompress",
+	};
+
 	const startInstallation = async () => {
 		clearCountdown();
 		setVerificationResult(null);
 		isInstallingRef.current = true;
 		setIsInstalling(true);
 		setInstallStatus("installing");
-		setInstallOutput([t("appDetails.preparingInstallation"), ""]);
 
+		const githubRepo = GITHUB_RELEASE_REPOS[app.app_id];
+
+		if (githubRepo) {
+			// Resolve latest release from GitHub API then install locally
+			setInstallOutput(["Fetching latest release from GitHub…", ""]);
+			try {
+				const tmpPath = await invoke<string>("download_flatpak_release", {
+					githubRepo,
+					appId: app.app_id,
+				});
+				setInstallOutput((prev) => [...prev, `Downloaded to ${tmpPath}`, "", "Installing…", ""]);
+
+				await invoke("kill_pty_process", { appId: app.app_id }).catch(() => {});
+				await new Promise((resolve) => setTimeout(resolve, 100));
+
+				// install_local_flatpak uses processKey "local::<filePath>" for pty events
+				const processKey = `local::${tmpPath}`;
+				installSessionId.current = processKey;
+				await invoke("install_local_flatpak", { filePath: tmpPath });
+			} catch (error) {
+				console.error("[AppDetails] GitHub release install error:", error);
+				setIsInstalling(false);
+				setInstallStatus("error");
+				setInstallOutput((prev) => [
+					...prev,
+					"",
+					t("appDetails.errorInvokingCommand", { error }),
+				]);
+				installSessionId.current = null;
+			}
+			return;
+		}
+
+		setInstallOutput([t("appDetails.preparingInstallation"), ""]);
 		console.log("[AppDetails] Starting installation");
 
 		try {
@@ -398,6 +446,12 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	};
 
 	const handleInstall = async () => {
+		// Apps installed from GitHub releases skip hash verification
+		if (GITHUB_RELEASE_REPOS[app.app_id]) {
+			startInstallation();
+			return;
+		}
+
 		// Start hash verification first
 		setInstallStatus("verifying");
 		setVerificationResult(null);
@@ -646,17 +700,29 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 						}}
 					>
 						{app.icon ? (
-							<CachedImage
-								appId={app.app_id}
-								imageUrl={app.icon}
-								alt={app.name}
-								variant="rounded"
-								style={{
-									width: "100%",
-									height: "100%",
-									objectFit: "cover",
-								}}
-							/>
+							app.icon.startsWith("http") ? (
+								<CachedImage
+									appId={app.app_id}
+									imageUrl={app.icon}
+									alt={app.name}
+									variant="rounded"
+									style={{
+										width: "100%",
+										height: "100%",
+										objectFit: "cover",
+									}}
+								/>
+							) : (
+								<img
+									src={app.icon}
+									alt={app.name}
+									style={{
+										width: "100%",
+										height: "100%",
+										objectFit: "contain",
+									}}
+								/>
+							)
 						) : (
 							<Typography variant="caption" color="text.secondary">
 								{t("appDetails.noIcon")}

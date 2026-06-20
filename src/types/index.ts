@@ -129,6 +129,9 @@ export interface CategoryApp {
 	trending: number;
 	installs_last_month: number;
 	isMobileFriendly: boolean;
+	// Optional pre-loaded data for apps not on Flathub
+	screenshots?: AppStream["screenshots"];
+	urls?: AppStream["urls"];
 }
 
 export interface CategoryAppsResponse {
