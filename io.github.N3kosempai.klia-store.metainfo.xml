@@ -38,6 +38,13 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.10.3" date="2026-06-20">
+      <description>
+        <p>You can now install .flatpak files directly by opening them with Klia Store. A dedicated installation dialog shows app metadata, size, and dependencies before confirming, with real-time terminal output during the process.</p>
+        <p>Added Klia Kompress — a local image compression and conversion tool — as the first app available directly from its GitHub releases, independent of Flathub.</p>
+        <p>Introduced a separate update-checking system for GitHub-sourced apps that runs in parallel with the Flathub update checker, keeping both paths fully isolated.</p>
+      </description>
+    </release>
     <release version="2.10.2" date="2026-06-07">
       <description>
         <p>SHA256 verification now works correctly for GitLab apps that upload their release archives manually.</p>
