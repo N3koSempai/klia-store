@@ -1,3 +1,4 @@
+mod backup;
 mod donations;
 
 use once_cell::sync::Lazy;
@@ -3686,7 +3687,12 @@ pub fn run() {
             get_app_permissions_batch,
             verify_app_hash,
             donations::verify_btc_donation,
-            donations::verify_usdt_eth_donation
+            donations::verify_usdt_eth_donation,
+            backup::get_downloads_dir,
+            backup::create_backup,
+            backup::list_backups,
+            backup::delete_backup,
+            backup::restore_backup
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

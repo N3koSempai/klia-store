@@ -17,6 +17,8 @@ finish-args:
   - --filesystem=/var/lib/flatpak:ro
   - --filesystem=host-os:ro
   - --filesystem=host-etc:ro
+  - --filesystem=~/.var/app:create
+  - --filesystem=xdg-download
   - --talk-name=org.freedesktop.Flatpak
   - --system-talk-name=org.freedesktop.Flatpak
 build-options:

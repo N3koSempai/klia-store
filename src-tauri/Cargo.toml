@@ -31,6 +31,9 @@ tauri-plugin-dialog = "=2.5.0"
 tauri-plugin-fs = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
+tar = "0.4"
+zstd = "0.13"
+chrono = { version = "0.4", features = ["serde"] }
 
 [profile.release]
 panic = "abort"

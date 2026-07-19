@@ -1,3 +1,4 @@
+import BackupOutlinedIcon from "@mui/icons-material/BackupOutlined";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
@@ -19,10 +20,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
 import { AboutModal } from "../../components/AboutModal";
-import { SettingsModal } from "../../components/SettingsModal";
 import { AppSearchBar } from "../../components/AppSearchBar";
 import { CachedImage } from "../../components/CachedImage";
 import { NotificationMenu } from "../../components/NotificationMenu";
+import { SettingsModal } from "../../components/SettingsModal";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { CategoryApp } from "../../types";
@@ -39,6 +40,7 @@ interface HomeProps {
 	onCategorySelect: (categoryId: string) => void;
 	onMyAppsClick: () => void;
 	onAnalyticsClick: () => void;
+	onBackupsClick: () => void;
 	initialSearchQuery?: string;
 	initialSearchResults?: CategoryApp[];
 }
@@ -48,6 +50,7 @@ export const Home = ({
 	onCategorySelect,
 	onMyAppsClick,
 	onAnalyticsClick,
+	onBackupsClick,
 	initialSearchQuery = "",
 	initialSearchResults = [],
 }: HomeProps) => {
@@ -164,6 +167,20 @@ export const Home = ({
 						}}
 					>
 						<BarChartIcon />
+					</IconButton>
+
+					<IconButton
+						aria-label={t("backups.title")}
+						onClick={onBackupsClick}
+						sx={{
+							color: "text.secondary",
+							"&:hover": {
+								color: "primary.main",
+								bgcolor: alpha(theme.palette.primary.main, 0.1),
+							},
+						}}
+					>
+						<BackupOutlinedIcon />
 					</IconButton>
 
 					<IconButton
