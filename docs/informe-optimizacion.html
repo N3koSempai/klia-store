@@ -1,0 +1,803 @@
+<title>klia-store — Informe de optimización</title>
+<style>
+@font-face {
+  font-family: "Fraunces";
+  src: local("Georgia");
+}
+
+:root{
+  --bg: #FAF9F6;
+  --paper: #FFFFFF;
+  --ink: #1E2321;
+  --ink-soft: #4A524D;
+  --line: #DCDED8;
+  --accent: #2F6B4F;
+  --accent-soft: #E7F0EA;
+  --amber: #9A6B1E;
+  --amber-soft: #F6ECD8;
+  --red: #A23B2E;
+  --red-soft: #F7E7E3;
+  --blue: #2E5C8A;
+  --blue-soft: #E6EEF6;
+  --mono: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*{ box-sizing: border-box; }
+
+body{
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.55;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 56px 28px 120px;
+}
+
+h1,h2,h3{ text-wrap: balance; font-weight: 700; letter-spacing: -0.01em; }
+
+header.doc-header{
+  border-bottom: 3px solid var(--ink);
+  padding-bottom: 20px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.doc-header .kicker{
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.doc-header h1{
+  font-size: 32px;
+  margin: 0;
+}
+
+.doc-header .meta{
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: right;
+  line-height: 1.7;
+}
+
+.summary-bar{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  margin: 28px 0 44px;
+}
+
+.stat{
+  background: var(--paper);
+  padding: 16px 18px;
+}
+
+.stat .n{
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat .l{
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+}
+
+.stat.crit .n{ color: var(--red); }
+.stat.warn .n{ color: var(--amber); }
+.stat.good .n{ color: var(--accent); }
+
+section{ margin-bottom: 52px; }
+
+section > h2{
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 10px;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+section > h2 .num{
+  font-family: var(--mono);
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.intro{
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  max-width: 70ch;
+  margin: 14px 0 22px;
+}
+
+.finding{
+  border: 1px solid var(--line);
+  background: var(--paper);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.finding-head{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #FBFBF9;
+}
+
+.sev{
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.sev.alta{ background: var(--red-soft); color: var(--red); }
+.sev.media{ background: var(--amber-soft); color: var(--amber); }
+.sev.baja{ background: var(--blue-soft); color: var(--blue); }
+.sev.info{ background: var(--accent-soft); color: var(--accent); }
+
+.finding-head h3{
+  font-size: 15.5px;
+  margin: 0;
+  flex: 1;
+}
+
+.finding-head .file{
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+.finding-body{ padding: 16px 18px; }
+
+.finding-body p{ margin: 0 0 10px; font-size: 14px; }
+.finding-body p:last-child{ margin-bottom: 0; }
+
+.finding-body .label{
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+  margin-top: 12px;
+}
+.finding-body .label:first-child{ margin-top: 0; }
+
+code, pre, .code{
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+pre{
+  background: #F4F3EE;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 0;
+}
+
+p code, li code{
+  background: #F0EFE9;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12.5px;
+}
+
+.table-wrap{ overflow-x: auto; border: 1px solid var(--line); }
+
+table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  background: var(--paper);
+}
+
+th{
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  background: #F4F3EE;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+td{
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+tr:last-child td{ border-bottom: none; }
+
+td.mono, th.mono{ font-family: var(--mono); font-size: 12px; }
+
+.pill{
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pill.alta{ background: var(--red-soft); color: var(--red); }
+.pill.media{ background: var(--amber-soft); color: var(--amber); }
+.pill.baja{ background: var(--blue-soft); color: var(--blue); }
+
+.note{
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: var(--ink);
+  margin: 16px 0;
+}
+.note.warn{ border-color: var(--amber); background: var(--amber-soft); }
+.note strong{ font-weight: 700; }
+
+.arch-diagram{
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 22px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--ink-soft);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.two-col{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 720px){
+  .two-col{ grid-template-columns: 1fr; }
+  .summary-bar{ grid-template-columns: repeat(2, 1fr); }
+}
+
+.compare-box{
+  border: 1px solid var(--line);
+  padding: 14px 16px;
+}
+.compare-box h4{
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.compare-box.before h4{ color: var(--red); }
+.compare-box.after h4{ color: var(--accent); }
+
+footer{
+  margin-top: 60px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+</style>
+
+<header class="doc-header">
+  <div>
+    <div class="kicker">Auditoría técnica · klia-store</div>
+    <h1>Informe de optimización</h1>
+  </div>
+  <div class="meta">
+    rama: feat/backups<br>
+    stack: Tauri 2 + React 19 + Rust<br>
+    25 jul 2026
+  </div>
+</header>
+
+<div class="intro">
+  Revisión de <code>src/</code> y <code>src-tauri/</code> enfocada en cinco ejes: llamadas de red redundantes,
+  arquitectura de componentes, técnicas de rendimiento, estrategia arquitectónica de fondo, y dependencias
+  externas reemplazables por código propio. 19 hallazgos, ordenados por impacto dentro de cada sección.
+</div>
+
+<div class="summary-bar">
+  <div class="stat crit"><div class="n">3</div><div class="l">hallazgos de severidad alta</div></div>
+  <div class="stat warn"><div class="n">9</div><div class="l">severidad media</div></div>
+  <div class="stat good"><div class="n">7</div><div class="l">severidad baja / sugerencias</div></div>
+  <div class="stat"><div class="n">~34</div><div class="l">fan-in de <code style="font-size:15px">ApiClient.get</code></div></div>
+</div>
+
+<section id="red">
+  <h2><span class="num">01</span> Reducción de llamadas de red</h2>
+  <div class="intro">Casos donde se puede reutilizar un dato ya obtenido en vez de volver a golpear un servidor.</div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev alta">Alta</span>
+      <h3>Dos hooks distintos piden las stars del mismo repo a la API de GitHub</h3>
+      <span class="file">useGitHubStars.ts / useRepoStats.ts</span>
+    </div>
+    <div class="finding-body">
+      <p><code>useGitHubStars</code> y <code>useRepoStats</code> hacen esencialmente lo mismo: extraen owner/repo de una URL,
+      llaman a <code>api.github.com/repos/{owner}/{repo}</code>, y cachean el resultado en <code>sessionStorage</code> con la
+      misma duración (1h). <code>useRepoStats</code> es un superset (también soporta GitLab y GitLab-GNOME).</p>
+      <div class="label">Verificado en el grafo de código</div>
+      <p><code>useGitHubStars</code> no tiene ningún import en <code>src/</code> — es código muerto que sigue disparando
+      llamadas si algo lo vuelve a usar, y duplica lógica de parseo de URL y caché que ya vive en <code>useRepoStats</code>.</p>
+      <div class="label">Acción</div>
+      <p>Eliminar <code>useGitHubStars.ts</code>. Extraer el fetch a GitHub/GitLab de <code>useRepoStats</code> a un servicio
+      compartido (<code>services/repoStats.ts</code>) para no repetir la lógica de caché de sessionStorage.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev alta">Alta</span>
+      <h3>React Query sin <code>staleTime</code>: refetch en cada montaje de página</h3>
+      <span class="file">router.tsx · useCategoryApps.ts · useDeveloperApps.ts</span>
+    </div>
+    <div class="finding-body">
+      <p><code>router.tsx</code> crea <code>new QueryClient()</code> sin <code>defaultOptions</code>. Con el default de
+      React Query (<code>staleTime: 0</code>), cualquier <code>useQuery</code> sin <code>staleTime</code> propio se
+      considera obsoleto de inmediato y vuelve a pedir datos al servidor cada vez que el componente se monta —
+      incluso si el usuario solo está navegando entre una categoría y volviendo atrás.</p>
+      <div class="label">Afectados directamente</div>
+      <p><code>useCategoryApps</code> y <code>useDeveloperApps</code> no definen <code>staleTime</code>: cada visita a
+      <code>/category/:id</code> o <code>/developer/:id</code> repite la búsqueda en Algolia/Meilisearch aunque los
+      datos no hayan cambiado en meses.</p>
+      <div class="label">Acción</div>
+      <pre>export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60_000,   // 5 min por defecto
+      gcTime: 30 * 60_000,
+    },
+  },
+});</pre>
+      <p>Los hooks que ya tienen caché SQLite propia (<code>useAppOfTheDay</code>, <code>useCategories</code>, etc.)
+      no se ven afectados porque controlan <code>enabled</code> manualmente.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev media">Media</span>
+      <h3>N+1: <code>getCategoryApp</code> se llama una vez por app para reconstruir "app del día" y "de la semana"</h3>
+      <span class="file">useAppOfTheDay.ts · useAppsOfTheWeek.ts</span>
+    </div>
+    <div class="finding-body">
+      <p><code>apiService.getAppOfTheDay()</code> devuelve solo un <code>app_id</code>; el hook hace un segundo POST a
+      <code>/search</code> (<code>getCategoryApp</code>) para completar nombre/ícono/descripción. En
+      <code>useAppsOfTheWeek</code> esto se repite <strong>una vez por cada app de la semana</strong> dentro de un
+      <code>Promise.all</code> — típicamente 5-7 requests POST adicionales en cada refresh diario.</p>
+      <div class="label">Acción</div>
+      <p>Si el backend de búsqueda soporta <code>filters</code> por <code>app_id</code> con múltiples valores (OR),
+      agrupar todos los <code>app_id</code> de la semana en una sola llamada a <code>/search</code> en vez de N llamadas
+      individuales — el mismo patrón que ya usa <code>getDeveloperApps</code> con <code>filterType: "developer_name"</code>.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev media">Media</span>
+      <h3><code>useAppScreenshots</code> sondea hasta 10 claves de caché en serie de forma optimista</h3>
+      <span class="file">useAppScreenshots.ts</span>
+    </div>
+    <div class="finding-body">
+      <p>Genera 10 claves (<code>{appId}:::1</code> … <code>:::10</code>) y las resuelve con <code>Promise.all</code>,
+      pero corta en el primer hueco. Si una app solo tiene 3 screenshots cacheados, igual se disparan 10 invocaciones
+      IPC a Rust (<code>get_cached_image_info</code>) en paralelo — 7 de ellas garantizado que fallan.</p>
+      <div class="label">Acción</div>
+      <p>El <code>AppStream</code> ya trae <code>screenshots.length</code> antes de cachear; guardar ese conteo en la
+      fila de la tabla de caché (o en el nombre de archivo) evita adivinar cuántas claves probar.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev baja">Baja</span>
+      <h3>Deduplicación de requests solo cubre GET/POST idénticos en vuelo simultáneo</h3>
+      <span class="file">apiClient.ts</span>
+    </div>
+    <div class="finding-body">
+      <p>Buena señal: <code>ApiClient.request</code> ya deduplica llamadas concurrentes idénticas vía
+      <code>pendingRequests</code>. Lo que falta es una capa de <em>caché temporal en memoria</em> (TTL corto, ej. 30s)
+      para respuestas ya resueltas — hoy dos componentes que piden lo mismo con 200ms de diferencia (no simultáneos)
+      generan dos llamadas HTTP reales.</p>
+      <div class="label">Acción</div>
+      <p>Ya que <code>ApiClient</code> es la única puerta de salida (fan-in 34), es el lugar correcto para un cache-aside
+      con TTL corto en vez de resolverlo hook por hook.</p>
+    </div>
+  </div>
+</section>
+
+<section id="arquitectura-componentes">
+  <h2><span class="num">02</span> Arquitectura de componentes</h2>
+  <div class="intro">Patrones repetidos que conviene consolidar en una sola instancia/abstracción.</div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev media">Media</span>
+      <h3>Seis modales con estructura y controles duplicados</h3>
+      <span class="file">AboutModal · DonationModal · ReleaseNotesModal · UpdateAllModal · LocalFlatpakInstallModal · SettingsModal</span>
+    </div>
+    <div class="finding-body">
+      <p>6 componentes de <code>src/components</code> (de 6.120 líneas totales) implementan su propio
+      <code>Dialog</code> de MUI con header, botón de cierre, y padding, en vez de compartir un <code>BaseModal</code>.
+      Esto no afecta llamadas de red, pero sí duplica lógica de accesibilidad (foco, <code>onClose</code>, Escape) y
+      hace que un cambio de estilo (ej. radio de borde, transición) haya que aplicarlo 6 veces.</p>
+      <div class="label">Acción</div>
+      <p>Extraer un <code>&lt;AppModal title actions&gt;</code> que envuelva <code>Dialog</code> + <code>DialogTitle</code>
+      + botón de cierre, y que los 6 modales existentes solo aporten el contenido.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev media">Media</span>
+      <h3>Lógica de fetch+caché+retry de imagen duplicada entre <code>ImageCacheManager</code> y <code>CachedImage</code></h3>
+      <span class="file">imageCache.ts · CachedImage.tsx</span>
+    </div>
+    <div class="finding-body">
+      <p><code>ImageCacheManager</code> ya es un singleton correcto (cola con prioridad, 6 descargas concurrentes,
+      backoff exponencial). Pero <code>CachedImage.tsx</code> mantiene <em>su propio</em> <code>failedImagesCache</code> y
+      <code>loadedImagesCache</code> a nivel de módulo, además de repetir la detección de "error temporal" (mismas 4
+      substrings que ya están en <code>imageCache.ts</code>) y su propio retry con <code>retryCount</code>.</p>
+      <div class="label">Acción</div>
+      <p>Mover <code>isTemporaryError</code> a un export compartido; considerar que los dos mapas de caché en memoria
+      vivan en un solo lugar (el manager) en vez de estar partidos entre el hook/componente y el singleton.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev baja">Baja</span>
+      <h3>Buen uso de singleton en <code>DBCacheManager</code> e <code>ImageCacheManager</code></h3>
+      <span class="file">dbCache.ts · imageCache.ts</span>
+    </div>
+    <div class="finding-body">
+      <p>A diferencia del hallazgo anterior, esto ya está bien resuelto: ambos son <code>getInstance()</code> con
+      inicialización perezosa y memoizada (<code>initPromise</code>), evitando abrir la conexión SQLite o releer el
+      directorio de caché más de una vez. Es el patrón a replicar cuando se consolide algo similar en el frontend.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev baja">Baja</span>
+      <h3><code>AppDetails.tsx</code> concentra demasiadas responsabilidades (1.508 líneas)</h3>
+      <span class="file">pages/appDetails/AppDetails.tsx</span>
+    </div>
+    <div class="finding-body">
+      <p>15 <code>useState</code>/<code>useEffect</code> en un solo componente: instalación, verificación de hash,
+      countdown, dependencias, popover, screenshots. Es manejable hoy, pero cada nueva feature (como backups) tiende a
+      añadirse aquí en vez de a un hook dedicado.</p>
+      <div class="label">Acción</div>
+      <p>Extraer el flujo de instalación/verificación (<code>startInstallation</code>, <code>handleForceContinue</code>,
+      <code>clearCountdown</code> — ya aparecen como cluster propio en el grafo de llamadas) a un hook
+      <code>useAppInstallFlow</code>, siguiendo el mismo patrón que ya usan <code>useUpdateApp</code> / <code>useUninstallApp</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="velocidad">
+  <h2><span class="num">03</span> Rendimiento</h2>
+  <div class="intro">Mejoras de velocidad percibida o real mediante mejores técnicas, sin tocar arquitectura.</div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev media">Media</span>
+      <h3><code>cachePermissionsBatch</code> inserta en SQLite de a uno, en un loop <code>await</code></h3>
+      <span class="file">dbCache.ts:496-504</span>
+    </div>
+    <div class="finding-body">
+      <p>El comentario en el código dice "no transaction to avoid locks", pero el resultado es N round-trips
+      secuenciales a SQLite (uno por app) en vez de una sola transacción — que en SQLite es tanto más rápida como más
+      segura ante corte a mitad de escritura (deja el batch parcialmente escrito).</p>
+      <div class="label">Acción</div>
+      <p>Envolver el loop en <code>BEGIN</code>/<code>COMMIT</code> explícito (el plugin <code>tauri-plugin-sql</code>
+      soporta <code>execute</code> secuencial dentro de una transacción); con WAL mode los locks no deberían ser un
+      problema real para escritura desde un solo proceso.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev media">Media</span>
+      <h3>Doble <code>invoke</code> para resolver el path de una imagen ya descargada</h3>
+      <span class="file">imageCache.ts:downloadImage</span>
+    </div>
+    <div class="finding-body">
+      <p><code>downloadImage</code> hace <code>download_and_cache_image</code> y luego, con el filename resultante,
+      un segundo <code>invoke("get_cached_image_path")</code> para obtener el path completo. Son dos viajes IPC
+      Rust↔JS cuando el primer comando ya podría devolver el path absoluto directamente.</p>
+      <div class="label">Acción</div>
+      <p>Hacer que <code>download_and_cache_image</code> devuelva el path completo en vez del filename — cambio
+      pequeño en <code>lib.rs</code> que elimina un <code>invoke</code> por cada imagen nueva descargada.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev baja">Baja</span>
+      <h3><code>IntersectionObserver</code> se crea uno por instancia de <code>CachedImage</code></h3>
+      <span class="file">CachedImage.tsx:52-76</span>
+    </div>
+    <div class="finding-body">
+      <p>En una grilla con 50-100 tarjetas (Home, MyApps, CategoryApps) esto son 50-100 observers independientes.
+      El navegador lo tolera, pero un <code>IntersectionObserver</code> compartido con un <code>Map</code> de
+      callbacks por elemento reduce el overhead de setup/GC, especialmente notable en el <code>DataCube</code> de
+      Analytics si en algún momento usa miniaturas.</p>
+      <div class="label">Acción</div>
+      <p>Solo vale la pena si se detecta jank real al hacer scroll rápido en listas largas; no es prioritario hoy.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev baja">Baja</span>
+      <h3>Buen manejo de backoff exponencial y cancelación consistentes</h3>
+      <span class="file">apiClient.ts · imageCache.ts</span>
+    </div>
+    <div class="finding-body">
+      <p>Tanto <code>ApiClient.executeWithRetry</code> como <code>ImageCacheManager.downloadImage</code> usan el mismo
+      patrón <code>500 * 2^attempt</code> con <code>AbortController</code> propagado. Es consistente y correcto — vale
+      la pena extraerlo a un helper <code>withRetry(fn, { maxRetries, baseDelay, signal })</code> compartido, más por
+      mantenibilidad que por performance.</p>
+    </div>
+  </div>
+</section>
+
+<section id="arquitectura-ideal">
+  <h2><span class="num">04</span> Estrategia arquitectónica de fondo</h2>
+  <div class="intro">La arquitectura actual funciona, pero tiene una tensión estructural que vale la pena nombrar.</div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev info">Estructural</span>
+      <h3>Dos sistemas de caché paralelos y sin coordinación: React Query vs. SQLite manual</h3>
+      <span class="file">dbCache.ts + hooks/use*.ts + router.tsx</span>
+    </div>
+    <div class="finding-body">
+      <p>Hoy conviven dos estrategias de invalidación distintas para el mismo problema (evitar refetch innecesario):</p>
+      <div class="two-col">
+        <div class="compare-box before">
+          <h4>Patrón A — manual (mayoría de hooks)</h4>
+          <p style="font-size:13px">Cada hook (<code>useAppOfTheDay</code>, <code>useCategories</code>,
+          <code>useAppsOfTheWeek</code>) reimplementa: leer SQLite al montar → decidir <code>shouldFetch</code> →
+          <code>useQuery({ enabled: shouldFetch })</code> → escribir de vuelta a SQLite dentro del
+          <code>queryFn</code>. Son ~30 líneas de boilerplate case por caso, repetidas 3 veces casi idénticas.</p>
+        </div>
+        <div class="compare-box after">
+          <h4>Patrón B — delegado (minoría de hooks)</h4>
+          <p style="font-size:13px"><code>useCategoryApps</code> y <code>useDeveloperApps</code> confían enteramente
+          en React Query, sin tocar SQLite. Más simple, pero pierde la persistencia entre reinicios de la app que sí
+          tienen los otros.</p>
+        </div>
+      </div>
+      <div class="label">Por qué importa</div>
+      <p>La inconsistencia hace que la política de "cuánto tiempo es válido un dato" viva en tres capas distintas
+      (SQLite <code>cache_metadata</code>, <code>sessionStorage</code> para stars, y <code>staleTime</code> implícito
+      de React Query) sin una sola fuente de verdad. Cada hook nuevo tiene que decidir de nuevo cuál patrón seguir.</p>
+      <div class="label">Sugerencia</div>
+      <p>Usar el <code>persister</code> oficial de React Query
+      (<code>@tanstack/query-persist-client-core</code> con un adapter a <code>tauri-plugin-sql</code>) para unificar
+      ambas capas: React Query pasa a ser la única fuente de verdad de "¿tengo datos frescos?", y la persistencia a
+      SQLite se vuelve un detalle de implementación del persister en vez de código repetido en cada hook. Esto
+      colapsaría ~120 líneas duplicadas entre los 3 hooks afectados a una configuración central.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev info">Estructural</span>
+      <h3><code>lib.rs</code> concentra 3.699 líneas y ~35 comandos Tauri sin separar por dominio</h3>
+      <span class="file">src-tauri/src/lib.rs</span>
+    </div>
+    <div class="finding-body">
+      <p>A diferencia de <code>backup.rs</code>, <code>donations.rs</code> y <code>licensing/</code> (que ya están
+      extraídos como módulos), el archivo <code>lib.rs</code> mezcla en un mismo archivo: caché de imágenes,
+      instalación/desinstalación de Flatpak, extensiones, PTY/terminal interactiva, chequeo de updates de GitHub, y
+      registro de todos los comandos. Es el archivo con más fan-out del proyecto.</p>
+      <div class="label">Sugerencia</div>
+      <p>Aplicar el mismo patrón de módulo que ya se usó para <code>backup.rs</code>: separar en
+      <code>flatpak.rs</code> (install/uninstall/update/list), <code>image_cache.rs</code>, <code>extensions.rs</code>
+      y <code>pty.rs</code>, dejando <code>lib.rs</code> solo con el <code>Builder</code> de Tauri y el
+      <code>generate_handler!</code>. Reduce el fan-out del hotspot y hace que cambios en, por ejemplo, la terminal
+      PTY no obliguen a re-revisar el archivo completo de 3.700 líneas.</p>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-head">
+      <span class="sev info">Estructural</span>
+      <h3>El estado de "apps instaladas" se deriva invocando al CLI de Flatpak en cada hook que lo necesita</h3>
+      <span class="file">installedAppsStore.ts · useInstalledApps.ts · useAvailableUpdates.ts · useGitHubUpdates.ts</span>
+    </div>
+    <div class="finding-body">
+      <p>Existe un store de Zustand (<code>installedAppsStore</code>) que centraliza el estado, lo cual es correcto.
+      Pero varios hooks (<code>useAvailableUpdates</code>, <code>useGitHubUpdates</code>) parecen re-derivar/mezclar
+      resultados por su cuenta invocando comandos Rust (<code>get_available_updates</code>,
+      <code>check_github_updates</code>) en <code>useEffect</code> propios en vez de a través de una única acción del
+      store que orqueste "refrescar todo lo relacionado con actualizaciones".</p>
+      <div class="label">Sugerencia</div>
+      <p>Mover la orquestación de "chequear updates (Flathub + GitHub) y fusionar resultados" a una acción única del
+      store (<code>installedAppsStore.refreshUpdates()</code>), para que los componentes solo lean estado derivado y
+      nunca disparen el invoke directamente. Hoy si dos componentes montan <code>useGitHubUpdates</code> a la vez, se
+      duplica el chequeo de GitHub para las mismas apps.</p>
+    </div>
+  </div>
+</section>
+
+<section id="dependencias">
+  <h2><span class="num">05</span> Dependencias externas reemplazables por código propio</h2>
+  <div class="intro">Casos donde una librería aporta menos de lo que cuesta en peso de bundle o superficie de API frente a una implementación propia acotada al caso de uso real.</div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Dependencia</th>
+          <th>Uso real detectado</th>
+          <th class="mono">Impacto</th>
+          <th>Sugerencia</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>uuid</code> <span style="color:var(--ink-soft)">(^13.0.0)</span></td>
+          <td>Generación de IDs simples en cliente</td>
+          <td><span class="pill baja">Bajo</span></td>
+          <td>El entorno de Tauri corre sobre WebView2/WebKit modernos: <code>crypto.randomUUID()</code> es nativo del
+          navegador (Baseline desde 2022) y elimina la dependencia por completo, cero código propio necesario.</td>
+        </tr>
+        <tr>
+          <td><code>qrcode.react</code> + <code>react-qr-code</code></td>
+          <td>Dos librerías de QR distintas instaladas a la vez, presumiblemente para <code>DonationModal</code></td>
+          <td><span class="pill media">Medio</span></td>
+          <td>Aunque no es "reemplazo por código propio", esto es duplicación directa de dependencias: elegir una sola
+          (<code>qrcode.react</code> es más mantenida) y remover la otra. Revisar antes de generalizar.</td>
+        </tr>
+        <tr>
+          <td><code>@react-three/fiber</code> + <code>@react-three/drei</code> + <code>three</code></td>
+          <td>Un solo componente, <code>DataCube.tsx</code> en Analytics</td>
+          <td><span class="pill baja">Bajo</span></td>
+          <td>~600KB+ de dependencias para una sola visualización 3D. Si <code>DataCube</code> es un cubo de bloques
+          de color relativamente simple, evaluar si una implementación con Canvas 2D + CSS 3D transforms cubre el
+          caso sin la carga de un motor WebGL completo. Si la app crece a más visualizaciones 3D, mantenerlo se
+          justifica; hoy es 3 dependencias pesadas para 1 pantalla.</td>
+        </tr>
+        <tr>
+          <td><code>use-debounce</code></td>
+          <td>Debounce de <code>AppSearchBar</code> probablemente</td>
+          <td><span class="pill baja">Bajo</span></td>
+          <td>Un debounce es ~10 líneas de <code>useEffect</code> + <code>setTimeout</code>. Reemplazar por un hook
+          propio <code>useDebouncedValue</code> evita una dependencia entera por una utilidad trivial y ya usada en
+          un único lugar.</td>
+        </tr>
+        <tr>
+          <td>Rust: <code>xxhash-rust</code>, <code>zstd</code>, <code>tar</code></td>
+          <td>Hashing y compresión en <code>backup.rs</code> / verificación de apps</td>
+          <td><span class="pill baja">Mantener</span></td>
+          <td>Estas sí están bien justificadas: implementar xxHash, zstd o el formato tar a mano sería un error de
+          ingeniería (algoritmos no triviales, con implicancias de seguridad/corrección). No se sugiere reemplazo.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>Nota general:</strong> el criterio aplicado fue "¿la librería resuelve un problema de dominio complejo
+    (compresión, criptografía, parsing) o un problema trivial (UUID, debounce) que el propio JS/Web API moderno ya
+    resuelve?". Solo se marcan como candidatas a reemplazo las del segundo grupo — no se sugiere tocar nada de MUI,
+    Zustand, TanStack Router/Query ni las libs de Tauri, que están justificadamente integradas en profundidad.
+  </div>
+</section>
+
+<section id="resumen">
+  <h2><span class="num">06</span> Prioridad sugerida</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px">#</th>
+          <th>Acción</th>
+          <th>Eje</th>
+          <th class="mono">Esfuerzo</th>
+          <th class="mono">Impacto</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">1</td>
+          <td>Eliminar <code>useGitHubStars.ts</code> (código muerto duplicado)</td>
+          <td>Red</td>
+          <td class="mono">XS</td>
+          <td><span class="pill alta">Alto</span></td>
+        </tr>
+        <tr>
+          <td class="mono">2</td>
+          <td>Agregar <code>staleTime</code>/<code>gcTime</code> por defecto al <code>QueryClient</code></td>
+          <td>Red</td>
+          <td class="mono">XS</td>
+          <td><span class="pill alta">Alto</span></td>
+        </tr>
+        <tr>
+          <td class="mono">3</td>
+          <td>Batch de <code>getCategoryApp</code> para apps de la semana (N+1 → 1 request)</td>
+          <td>Red</td>
+          <td class="mono">S</td>
+          <td><span class="pill media">Medio</span></td>
+        </tr>
+        <tr>
+          <td class="mono">4</td>
+          <td>Transacción única en <code>cachePermissionsBatch</code></td>
+          <td>Velocidad</td>
+          <td class="mono">XS</td>
+          <td><span class="pill media">Medio</span></td>
+        </tr>
+        <tr>
+          <td class="mono">5</td>
+          <td><code>crypto.randomUUID()</code> en vez de <code>uuid</code>; unificar librería de QR</td>
+          <td>Dependencias</td>
+          <td class="mono">XS</td>
+          <td><span class="pill baja">Bajo</span></td>
+        </tr>
+        <tr>
+          <td class="mono">6</td>
+          <td>Extraer <code>BaseModal</code> compartido para los 6 modales</td>
+          <td>Componentes</td>
+          <td class="mono">S</td>
+          <td><span class="pill media">Medio</span></td>
+        </tr>
+        <tr>
+          <td class="mono">7</td>
+          <td>Dividir <code>lib.rs</code> en módulos por dominio</td>
+          <td>Arquitectura</td>
+          <td class="mono">M</td>
+          <td><span class="pill media">Medio</span></td>
+        </tr>
+        <tr>
+          <td class="mono">8</td>
+          <td>Persister de React Query respaldado en SQLite (unificar las dos capas de caché)</td>
+          <td>Arquitectura</td>
+          <td class="mono">L</td>
+          <td><span class="pill alta">Alto</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  klia-store · informe generado a partir de lectura estática del código en <code>src/</code> y <code>src-tauri/</code> ·
+  sin ejecución del app ni perfilado en runtime
+</footer>

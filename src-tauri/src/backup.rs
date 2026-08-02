@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::{Emitter, Manager};
+use tauri_plugin_shell::ShellExt;
 
 /// Resolves the user's Downloads directory so backups can be saved there by
 /// default without prompting a save dialog for an automated, multi-file
@@ -34,6 +35,32 @@ fn run_flatpak(args: &[&str]) -> Result<std::process::Output, String> {
     Ok(output)
 }
 
+/// Same as `run_flatpak`, but goes through the Tauri shell plugin's async
+/// process handling instead of `std::process::Command::output()`. Long-running
+/// subcommands (`install`, `build-bundle`) can leave `flatpak-spawn --host`
+/// holding stdout/stderr pipes open past the point the operation actually
+/// finished, which makes `std::process::Command::output()` block forever —
+/// the shell plugin reads output via events instead and doesn't have that
+/// failure mode. Quick read-only queries (`info`, `list`, `override --show`)
+/// keep using the sync `run_flatpak` since they haven't shown this issue.
+async fn run_flatpak_async(
+    app: &tauri::AppHandle,
+    args: &[&str],
+) -> Result<tauri_plugin_shell::process::Output, String> {
+    let shell = app.shell();
+    let output = if is_running_in_flatpak() {
+        let mut full_args = vec!["--host", "flatpak"];
+        full_args.extend_from_slice(args);
+        shell.command("flatpak-spawn").args(&full_args).output()
+    } else {
+        shell.command("flatpak").args(args).output()
+    }
+    .await
+    .map_err(|e| format!("Failed to execute flatpak: {}", e))?;
+
+    Ok(output)
+}
+
 fn home_dir() -> Result<PathBuf, String> {
     std::env::var("HOME")
         .map(PathBuf::from)
@@ -60,6 +87,7 @@ pub struct BackupManifest {
     pub app_id: String,
     pub name: String,
     pub version: String,
+    pub branch: String,
     pub runtime: Option<RuntimeRef>,
     pub runtime_bundle: Option<String>, // relative path to the runtime bundle, e.g. "../runtimes/<file>.flatpak"
     pub permissions: Vec<String>,
@@ -103,13 +131,41 @@ pub struct BackupSessionSummary {
     pub apps: Vec<BackupAppSummary>,
 }
 
-/// Looks up an installed app's display name and version via `flatpak list`
-/// with explicit `--columns`, the same mechanism `get_installed_flatpaks` in
-/// lib.rs relies on. Unlike `flatpak info`'s free-text output (whose field
-/// labels like "Versión:"/"Version:" are localized and whose `--show-version`
-/// flag doesn't exist before Flatpak 1.15), `--columns` output is stable
-/// across locales and older Flatpak versions (e.g. 1.14.x, common on
-/// Debian/Ubuntu LTS).
+/// Lists every installed app's display name and version in a single
+/// `flatpak list` call, with explicit `--columns` (the same mechanism
+/// `get_installed_flatpaks` in lib.rs relies on — stable across locales and
+/// older Flatpak versions, unlike `flatpak info`'s localized free-text
+/// output). Backing up N apps only needs to enumerate the installed-apps
+/// list once instead of once per app, since the full list doesn't change
+/// mid-backup.
+fn list_installed_apps_map() -> Result<std::collections::HashMap<String, (String, String)>, String>
+{
+    let output = run_flatpak(&["list", "--app", "--columns=application,name,version"])?;
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to list installed apps: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut map = std::collections::HashMap::new();
+    for line in stdout.lines() {
+        let parts: Vec<&str> = line.split('\t').collect();
+        if parts.len() >= 3 {
+            let app_id = parts[0].trim().to_string();
+            let name = parts[1].trim().to_string();
+            let version = parts[2].trim().to_string();
+            let name = if name.is_empty() { app_id.clone() } else { name };
+            map.insert(app_id, (name, version));
+        }
+    }
+    Ok(map)
+}
+
+/// Looks up a single installed app's display name and version via `flatpak
+/// list`. Still used outside the backup-creation batch path (e.g. restore's
+/// already-installed check), where only one app's info is needed at a time.
 fn get_installed_app_info(app_id: &str) -> Result<(String, String), String> {
     let output = run_flatpak(&["list", "--app", "--columns=application,name,version"])?;
     if !output.status.success() {
@@ -268,7 +324,7 @@ fn extract_tar_zst_to_dir(src_file: &Path, dest_dir: &Path) -> Result<(), String
 }
 
 fn compress_dir_to_tar_zst(src_dir: &Path, dest_file: &Path) -> Result<(), String> {
-    compress_dir_to_tar_zst_with_progress(src_dir, dest_file, None)
+    compress_dir_to_tar_zst_with_progress(src_dir, ".", dest_file, None)
 }
 
 fn dir_size(path: &Path) -> u64 {
@@ -298,6 +354,7 @@ fn dir_size(path: &Path) -> u64 {
 /// would otherwise show no feedback at all while it happens.
 fn compress_dir_to_tar_zst_with_progress(
     src_dir: &Path,
+    root_name: &str,
     dest_file: &Path,
     app: Option<&tauri::AppHandle>,
 ) -> Result<(), String> {
@@ -332,7 +389,7 @@ fn compress_dir_to_tar_zst_with_progress(
             .auto_finish();
         let mut tar_builder = tar::Builder::new(encoder);
         tar_builder
-            .append_dir_all(".", src_dir)
+            .append_dir_all(root_name, src_dir)
             .map_err(|e| format!("Failed to archive data directory: {}", e))?;
         tar_builder
             .finish()
@@ -353,12 +410,13 @@ fn compress_dir_to_tar_zst_with_progress(
 /// `exported_runtimes`). Writes directly to its final destination — no
 /// copy-then-delete — so a runtime shared by several apps in one backup is
 /// built with `build-bundle --runtime` exactly once.
-fn export_runtime_once(
+async fn export_runtime_once(
+    app: &tauri::AppHandle,
     session_dir: &Path,
     repo_path: &Path,
     rt: &RuntimeRef,
     exported_runtimes: &mut std::collections::HashSet<String>,
-    emit_progress: &dyn Fn(&str),
+    emit_progress: &(dyn Fn(&str) + Sync),
 ) -> Result<String, String> {
     let runtime_filename = format!("{}.flatpak", rt.file_stem());
 
@@ -372,16 +430,22 @@ fn export_runtime_once(
     let runtime_bundle_path = runtimes_dir.join(&runtime_filename);
 
     emit_progress(&format!("Exportando runtime {} (compartido)...", rt.id));
-    let runtime_full_ref = format!("{}/{}/{}", rt.id, rt.arch, rt.branch);
-    let output = run_flatpak(&[
-        "build-bundle",
-        "--runtime",
-        repo_path.to_str().ok_or("Invalid repo path")?,
-        runtime_bundle_path
-            .to_str()
-            .ok_or("Invalid runtime bundle path")?,
-        &runtime_full_ref,
-    ])?;
+    let arch_flag = format!("--arch={}", rt.arch);
+    let output = run_flatpak_async(
+        app,
+        &[
+            "build-bundle",
+            "--runtime",
+            &arch_flag,
+            repo_path.to_str().ok_or("Invalid repo path")?,
+            runtime_bundle_path
+                .to_str()
+                .ok_or("Invalid runtime bundle path")?,
+            &rt.id,
+            &rt.branch,
+        ],
+    )
+    .await?;
     if !output.status.success() {
         return Err(format!(
             "flatpak build-bundle --runtime failed: {}",
@@ -393,21 +457,79 @@ fn export_runtime_once(
     Ok(runtime_filename)
 }
 
-fn backup_single_app(
+/// Mutable state shared across every app processed within one `create_backup`
+/// call — grouped into a single struct so it can be threaded through
+/// `backup_single_app` as one argument instead of three, and so it reads as
+/// "everything this batch has learned/exported so far" rather than a loose
+/// handful of unrelated maps.
+struct BackupSessionState {
+    installed_apps: std::collections::HashMap<String, (String, String)>,
+    runtime_cache: std::collections::HashMap<String, RuntimeRef>,
+    exported_runtimes: std::collections::HashSet<String>,
+}
+
+async fn backup_single_app(
+    app: &tauri::AppHandle,
     session_dir: &Path,
     repo_path: &Path,
     req: &BackupAppRequest,
-    exported_runtimes: &mut std::collections::HashSet<String>,
-    emit_progress: &dyn Fn(&str),
+    state: &mut BackupSessionState,
+    emit_progress: &(dyn Fn(&str) + Sync),
 ) -> Result<BackupManifest, String> {
     let app_id = &req.app_id;
 
     emit_progress(&format!("Verificando instalación de {}...", app_id));
-    let (name, version) = get_installed_app_info(app_id)?;
-    let branch = get_installed_app_branch(app_id)?;
-    let permissions = get_override_permissions(app_id);
-    let runtime = get_runtime_ref(app_id);
-    let flathub_commit = get_flathub_commit(app_id);
+    let (name, version) = state
+        .installed_apps
+        .get(app_id)
+        .cloned()
+        .ok_or_else(|| format!("App {} is not installed", app_id))?;
+
+    // `branch`, `permissions` and `flathub_commit` are independent read-only
+    // `flatpak`/`flatpak-spawn` invocations — each spawns its own subprocess,
+    // so running them concurrently instead of one after another cuts the
+    // latency of this step roughly to that of the slowest single call instead
+    // of the sum of all of them. `get_runtime_ref` is resolved separately
+    // below so its result can be shared via `runtime_cache` across apps.
+    let app_id_owned = app_id.clone();
+    let branch_task =
+        tokio::task::spawn_blocking(move || get_installed_app_branch(&app_id_owned));
+    let app_id_owned = app_id.clone();
+    let permissions_task =
+        tokio::task::spawn_blocking(move || get_override_permissions(&app_id_owned));
+    let app_id_owned = app_id.clone();
+    let flathub_commit_task =
+        tokio::task::spawn_blocking(move || get_flathub_commit(&app_id_owned));
+    let app_id_owned = app_id.clone();
+    let runtime_ref_task = tokio::task::spawn_blocking(move || get_runtime_ref(&app_id_owned));
+
+    let branch = branch_task
+        .await
+        .map_err(|e| format!("Task join error: {}", e))??;
+    let permissions = permissions_task
+        .await
+        .map_err(|e| format!("Task join error: {}", e))?;
+    let flathub_commit = flathub_commit_task
+        .await
+        .map_err(|e| format!("Task join error: {}", e))?;
+    let fresh_runtime = runtime_ref_task
+        .await
+        .map_err(|e| format!("Task join error: {}", e))?;
+
+    // Two apps sharing the same runtime (e.g. two GNOME apps on the same
+    // Platform version) would otherwise repeat the `--show-runtime` +
+    // `--show-commit` pair per app for an answer that's already known.
+    let runtime = match fresh_runtime {
+        Some(rt) => {
+            let cache_key = rt.file_stem();
+            let cached = state
+                .runtime_cache
+                .entry(cache_key)
+                .or_insert_with(|| rt.clone());
+            Some(cached.clone())
+        }
+        None => None,
+    };
 
     let app_dir = session_dir.join(app_id);
     fs::create_dir_all(&app_dir)
@@ -416,15 +538,25 @@ fn backup_single_app(
     // 1. Export the app bundle (build-bundle exports one ref per invocation).
     //    The branch must be passed explicitly: build-bundle defaults to
     //    "master" when omitted, which fails for apps installed on "stable".
-    emit_progress(&format!("Exportando bundle de {}...", app_id));
+    //    This is the slow, unavoidable step — it re-packs the app's full
+    //    OSTree commit — so the progress line says explicitly that it can
+    //    take a while instead of leaving the user staring at silence.
+    emit_progress(&format!(
+        "Exportando bundle de {} (puede tardar varios minutos según el tamaño de la app)...",
+        app_id
+    ));
     let bundle_path = app_dir.join(format!("{}.flatpak", app_id));
-    let output = run_flatpak(&[
-        "build-bundle",
-        repo_path.to_str().ok_or("Invalid repo path")?,
-        bundle_path.to_str().ok_or("Invalid bundle path")?,
-        app_id,
-        &branch,
-    ])?;
+    let output = run_flatpak_async(
+        app,
+        &[
+            "build-bundle",
+            repo_path.to_str().ok_or("Invalid repo path")?,
+            bundle_path.to_str().ok_or("Invalid bundle path")?,
+            app_id,
+            &branch,
+        ],
+    )
+    .await?;
     if !output.status.success() {
         return Err(format!(
             "flatpak build-bundle failed for {}: {}",
@@ -450,8 +582,15 @@ fn backup_single_app(
     let mut runtime_bundle_rel: Option<String> = None;
     if req.include_runtime {
         if let Some(rt) = &runtime {
-            let runtime_filename =
-                export_runtime_once(session_dir, repo_path, rt, exported_runtimes, emit_progress)?;
+            let runtime_filename = export_runtime_once(
+                app,
+                session_dir,
+                repo_path,
+                rt,
+                &mut state.exported_runtimes,
+                emit_progress,
+            )
+            .await?;
             runtime_bundle_rel = Some(format!("../runtimes/{}", runtime_filename));
         }
     }
@@ -460,6 +599,7 @@ fn backup_single_app(
         app_id: app_id.clone(),
         name,
         version,
+        branch: branch.clone(),
         runtime,
         runtime_bundle: runtime_bundle_rel,
         permissions,
@@ -506,44 +646,65 @@ pub async fn create_backup(
 
     let repo_path = user_repo_path()?;
 
-    let mut exported_runtimes = std::collections::HashSet::new();
-    let mut manifests = Vec::with_capacity(apps.len());
-    for (index, req) in apps.iter().enumerate() {
-        emit_progress(&format!(
-            "[{}/{}] {}",
-            index + 1,
-            apps.len(),
-            req.app_id
-        ));
-        let manifest = backup_single_app(
-            &session_dir,
-            &repo_path,
-            req,
-            &mut exported_runtimes,
-            &emit_progress,
-        )?;
-        manifests.push(manifest);
+    // Everything from here on must go through this block so that a failure
+    // partway through (a build-bundle failing on app 3 of 5, disk full while
+    // compressing, etc.) still reaches the staging cleanup below instead of
+    // leaking a multi-GB temp directory (exported bundles + data archives)
+    // every time a backup fails partway through.
+    let backup_result: Result<BackupSession, String> = async {
+        // Enumerated once for the whole session instead of once per app —
+        // `flatpak list` returns every installed app regardless of which one
+        // you filter for, so re-running it per app in a multi-app backup was
+        // pure repeated work for an answer already in hand.
+        let mut state = BackupSessionState {
+            installed_apps: list_installed_apps_map()?,
+            runtime_cache: std::collections::HashMap::new(),
+            exported_runtimes: std::collections::HashSet::new(),
+        };
+        let mut manifests = Vec::with_capacity(apps.len());
+        for (index, req) in apps.iter().enumerate() {
+            emit_progress(&format!(
+                "[{}/{}] {}",
+                index + 1,
+                apps.len(),
+                req.app_id
+            ));
+            let manifest = backup_single_app(
+                &app,
+                &session_dir,
+                &repo_path,
+                req,
+                &mut state,
+                &emit_progress,
+            )
+            .await?;
+            manifests.push(manifest);
+        }
+
+        let session = BackupSession {
+            session_id: session_id.clone(),
+            created_at: chrono::Utc::now().to_rfc3339(),
+            apps: manifests,
+        };
+
+        let session_manifest_path = session_dir.join("session.json");
+        let session_json = serde_json::to_string_pretty(&session)
+            .map_err(|e| format!("Failed to serialize session: {}", e))?;
+        fs::write(&session_manifest_path, session_json)
+            .map_err(|e| format!("Failed to write session manifest: {}", e))?;
+
+        emit_progress("Comprimiendo respaldo...");
+        fs::create_dir_all(&dest_root)
+            .map_err(|e| format!("Failed to create destination directory: {}", e))?;
+        let archive_path = dest_root.join(format!("{}.klia-backup.tar.zst", session_id));
+        compress_dir_to_tar_zst_with_progress(&session_dir, &session_id, &archive_path, Some(&app))?;
+
+        Ok(session)
     }
-
-    let session = BackupSession {
-        session_id: session_id.clone(),
-        created_at: chrono::Utc::now().to_rfc3339(),
-        apps: manifests,
-    };
-
-    let session_manifest_path = session_dir.join("session.json");
-    let session_json = serde_json::to_string_pretty(&session)
-        .map_err(|e| format!("Failed to serialize session: {}", e))?;
-    fs::write(&session_manifest_path, session_json)
-        .map_err(|e| format!("Failed to write session manifest: {}", e))?;
-
-    emit_progress("Comprimiendo respaldo...");
-    fs::create_dir_all(&dest_root)
-        .map_err(|e| format!("Failed to create destination directory: {}", e))?;
-    let archive_path = dest_root.join(format!("{}.klia-backup.tar.zst", session_id));
-    compress_dir_to_tar_zst_with_progress(&session_dir, &archive_path, Some(&app))?;
+    .await;
 
     let _ = fs::remove_dir_all(&staging_root);
+    let session = backup_result?;
 
     emit_progress("Respaldo completado.");
     Ok(session)
@@ -656,10 +817,11 @@ pub async fn delete_backup(archive_path: String) -> Result<(), String> {
     Ok(())
 }
 
-fn restore_single_app(
+async fn restore_single_app(
+    app: &tauri::AppHandle,
     session_dir: &Path,
     manifest: &BackupManifest,
-    emit_progress: &dyn Fn(&str),
+    emit_progress: &(dyn Fn(&str) + Sync),
 ) -> Result<(), String> {
     let app_dir = session_dir.join(&manifest.app_id);
 
@@ -672,14 +834,18 @@ fn restore_single_app(
                 let runtime_bundle_path = app_dir.join(rel_bundle);
                 if runtime_bundle_path.exists() {
                     emit_progress("Instalando runtime desde bundle local...");
-                    let output = run_flatpak(&[
-                        "install",
-                        "-y",
-                        "--user",
-                        runtime_bundle_path
-                            .to_str()
-                            .ok_or("Invalid runtime bundle path")?,
-                    ])?;
+                    let output = run_flatpak_async(
+                        app,
+                        &[
+                            "install",
+                            "-y",
+                            "--user",
+                            runtime_bundle_path
+                                .to_str()
+                                .ok_or("Invalid runtime bundle path")?,
+                        ],
+                    )
+                    .await?;
                     output.status.success()
                 } else {
                     false
@@ -694,12 +860,14 @@ fn restore_single_app(
                     "runtime/{}/{}/{}",
                     runtime.id, runtime.arch, runtime.branch
                 );
-                let output = run_flatpak(&[
-                    "install", "-y", "--user", "flathub", &runtime_full_ref,
-                ])?;
+                let output = run_flatpak_async(
+                    app,
+                    &["install", "-y", "--user", "flathub", &runtime_full_ref],
+                )
+                .await?;
                 if !output.status.success() {
                     return Err(format!(
-                        "No se pudo resolver el runtime {} (no instalado, sin bundle local, y falló la instalación desde Flathub): {}",
+                        "[runtime] No se pudo resolver {} (no instalado, sin bundle local, y falló la instalación desde Flathub) — la app no fue instalada: {}",
                         runtime.id,
                         String::from_utf8_lossy(&output.stderr)
                     ));
@@ -708,40 +876,109 @@ fn restore_single_app(
         }
     }
 
-    // 2. Install the app bundle (local, no network required).
-    emit_progress(&format!("Instalando {}...", manifest.app_id));
-    let bundle_path = app_dir.join(format!("{}.flatpak", manifest.app_id));
-    if !bundle_path.exists() {
-        return Err(format!(
-            "Bundle de la app no encontrado en {}",
-            bundle_path.display()
+    // 2. Install the app bundle (local, no network required) — but skip the
+    // install entirely if this exact version *and* branch are already
+    // installed, since `flatpak install` on an already-installed ref can
+    // prompt interactively (e.g. to confirm a downgrade/reinstall) and hang
+    // with no TTY attached. Branch must match too — the same version string
+    // can exist on both "stable" and "beta", and skipping based on version
+    // alone would silently leave the wrong branch's build in place while
+    // still reapplying this backup's permissions/data onto it.
+    let already_installed = get_installed_app_info(&manifest.app_id)
+        .map(|(_, version)| version == manifest.version)
+        .unwrap_or(false)
+        && get_installed_app_branch(&manifest.app_id)
+            .map(|branch| branch == manifest.branch)
+            .unwrap_or(false);
+
+    if already_installed {
+        emit_progress(&format!(
+            "{} ya está instalado en la versión {} ({}), se omite la instalación.",
+            manifest.app_id, manifest.version, manifest.branch
         ));
-    }
-    let output = run_flatpak(&[
-        "install",
-        "-y",
-        "--user",
-        bundle_path.to_str().ok_or("Invalid bundle path")?,
-    ])?;
-    if !output.status.success() {
-        return Err(format!(
-            "flatpak install failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
+    } else {
+        emit_progress(&format!("Instalando {}...", manifest.app_id));
+        let bundle_path = app_dir.join(format!("{}.flatpak", manifest.app_id));
+        if !bundle_path.exists() {
+            return Err(format!(
+                "[app] Bundle de la app no encontrado en {} — la app no fue instalada",
+                bundle_path.display()
+            ));
+        }
+        let output = run_flatpak_async(
+            app,
+            &[
+                "install",
+                "-y",
+                "--user",
+                bundle_path.to_str().ok_or("Invalid bundle path")?,
+            ],
+        )
+        .await?;
+        if !output.status.success() {
+            return Err(format!(
+                "[app] flatpak install falló, la app no quedó instalada: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
     }
 
-    // 3. Reapply permissions captured at backup time.
+    // 3. Reapply permissions captured at backup time. A failure here leaves
+    // the app installed with default permissions rather than the ones it had
+    // at backup time — surfaced explicitly since silently continuing would
+    // hide a security-relevant gap (e.g. filesystem access not restored).
     if !manifest.permissions.is_empty() {
         emit_progress("Restaurando permisos...");
-        apply_override_permissions(&manifest.app_id, &manifest.permissions)?;
+        apply_override_permissions(&manifest.app_id, &manifest.permissions).map_err(|e| {
+            format!(
+                "[permisos] La app quedó instalada pero con permisos por defecto (no los del respaldo): {}",
+                e
+            )
+        })?;
     }
 
-    // 4. Restore user data if it was included in the backup.
+    // 4. Restore user data if it was included in the backup. Any existing data
+    // at the destination is moved aside first rather than extracted over —
+    // e.g. the app was reinstalled and used briefly before restoring — and is
+    // only discarded once extraction has actually succeeded, so a failed or
+    // partial extraction (corrupt archive, disk full) can't destroy data that
+    // wasn't part of this backup in the first place.
     let data_archive = app_dir.join("data.tar.zst");
     if manifest.includes_data && data_archive.exists() {
         emit_progress("Restaurando datos de la aplicación...");
         let data_dir = home_dir()?.join(".var/app").join(&manifest.app_id);
-        extract_tar_zst_to_dir(&data_archive, &data_dir)?;
+
+        let backup_aside = data_dir.with_extension("klia-restore-bak");
+        let _ = fs::remove_dir_all(&backup_aside);
+        let had_existing_data = data_dir.exists();
+        if had_existing_data {
+            fs::rename(&data_dir, &backup_aside).map_err(|e| {
+                format!(
+                    "[datos] La app quedó instalada pero no se pudieron restaurar los datos: {}",
+                    e
+                )
+            })?;
+        }
+
+        match extract_tar_zst_to_dir(&data_archive, &data_dir) {
+            Ok(()) => {
+                if had_existing_data {
+                    let _ = fs::remove_dir_all(&backup_aside);
+                }
+            }
+            Err(e) => {
+                // Extraction failed partway through — discard whatever was
+                // partially written and put the original data back.
+                let _ = fs::remove_dir_all(&data_dir);
+                if had_existing_data {
+                    let _ = fs::rename(&backup_aside, &data_dir);
+                }
+                return Err(format!(
+                    "[datos] La app quedó instalada pero los datos del respaldo no se pudieron restaurar (se conservaron los datos previos): {}",
+                    e
+                ));
+            }
+        }
     }
 
     Ok(())
@@ -773,7 +1010,7 @@ pub async fn restore_backup(
     ));
     extract_tar_zst_to_dir(&archive, &staging_root)?;
 
-    let restore_result = (|| -> Result<(), String> {
+    let restore_result: Result<(), String> = async {
         // The archive contains a single top-level folder named after the
         // session id (e.g. "20260718-120000/"), holding session.json and
         // one subfolder per app.
@@ -804,14 +1041,38 @@ pub async fn restore_backup(
             return Err("No apps selected to restore".to_string());
         }
 
+        // Each app is restored independently: one app failing (bad bundle,
+        // network hiccup resolving a runtime from Flathub, etc.) shouldn't
+        // block the rest of the batch from restoring. Failures are collected
+        // and reported together at the end instead of aborting on the first one.
         let total = manifests_to_restore.len();
+        let mut failures: Vec<(String, String)> = Vec::new();
         for (index, manifest) in manifests_to_restore.iter().enumerate() {
             emit_progress(&format!("[{}/{}] {}", index + 1, total, manifest.app_id));
-            restore_single_app(&session_dir, manifest, &emit_progress)?;
+            if let Err(e) = restore_single_app(&app, &session_dir, manifest, &emit_progress).await
+            {
+                emit_progress(&format!("✗ {} falló: {}", manifest.app_id, e));
+                failures.push((manifest.app_id.clone(), e));
+            }
+        }
+
+        if !failures.is_empty() {
+            let detail = failures
+                .iter()
+                .map(|(app_id, e)| format!("{}: {}", app_id, e))
+                .collect::<Vec<_>>()
+                .join("; ");
+            return Err(format!(
+                "{}/{} apps no se pudieron restaurar — {}",
+                failures.len(),
+                total,
+                detail
+            ));
         }
 
         Ok(())
-    })();
+    }
+    .await;
 
     let _ = fs::remove_dir_all(&staging_root);
     restore_result?;

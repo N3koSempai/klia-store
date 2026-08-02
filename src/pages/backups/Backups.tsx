@@ -1,8 +1,9 @@
 import {
 	ArrowBack,
 	Backup as BackupIcon,
+	CloudUpload,
 	Delete,
-	InsertDriveFile,
+	FolderZip,
 	Restore,
 	SettingsBackupRestore,
 } from "@mui/icons-material";
@@ -13,9 +14,12 @@ import {
 	Button,
 	Checkbox,
 	Chip,
+	CircularProgress,
 	Container,
 	Dialog,
+	DialogActions,
 	DialogContent,
+	DialogTitle,
 	IconButton,
 	InputAdornment,
 	LinearProgress,
@@ -31,10 +35,33 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Terminal } from "../../components/Terminal";
+import type { ProgressStage } from "../../hooks/useBackups";
 import { useBackups } from "../../hooks/useBackups";
+import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { BackupAppRequest } from "../../types";
+import { checkAvailableUpdates } from "../../utils/updateChecker";
+
+interface InstalledAppRust {
+	app_id: string;
+	name: string;
+	version: string;
+	summary?: string;
+	developer?: string;
+}
+
+interface InstalledExtensionRust {
+	extension_id: string;
+	name: string;
+	version: string;
+	parent_app_id: string;
+}
+
+interface InstalledPackagesResponse {
+	apps: InstalledAppRust[];
+	runtimes: string[];
+	extensions: InstalledExtensionRust[];
+}
 
 interface BackupsProps {
 	onBack: () => void;
@@ -51,12 +78,70 @@ function formatBytes(bytes: number): string {
 	return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 }
 
+// Replaces the old raw console-log view: instead of a scrolling terminal of
+// every backend message, only the current stage is shown — a spinner, the
+// latest action as a single line that swaps in place, and (when the backend
+// reports [i/total]) which app of the batch is being processed. Matches the
+// "one big step, not a log" pattern of installer-style progress UIs.
+function StageIndicator({
+	stage,
+	fallback,
+}: {
+	stage: ProgressStage;
+	fallback: string;
+}) {
+	const { t } = useTranslation();
+	return (
+		<Stack direction="row" alignItems="flex-start" spacing={2} sx={{ py: 1 }}>
+			<CircularProgress
+				size={28}
+				thickness={4}
+				sx={{ mt: "2px", flexShrink: 0 }}
+			/>
+			<Box sx={{ minWidth: 0, flex: 1 }}>
+				{stage.stepTotal !== null && (
+					<Typography
+						variant="overline"
+						color="primary"
+						sx={{ display: "block", lineHeight: 1.4, fontWeight: 700 }}
+					>
+						{t("backups.stepCount", {
+							index: stage.stepIndex,
+							total: stage.stepTotal,
+						})}
+					</Typography>
+				)}
+				<Typography
+					variant="body2"
+					sx={{
+						fontWeight: 600,
+						lineHeight: 1.5,
+						wordBreak: "break-word",
+						overflowWrap: "anywhere",
+					}}
+				>
+					{stage.message || fallback}
+				</Typography>
+			</Box>
+		</Stack>
+	);
+}
+
 export const Backups = ({ onBack }: BackupsProps) => {
 	const { t } = useTranslation();
 	const theme = useTheme();
 
 	const installedApps = useInstalledAppsStore(
 		(state) => state.installedAppsInfo,
+	);
+	const setInstalledAppsInfo = useInstalledAppsStore(
+		(state) => state.setInstalledAppsInfo,
+	);
+	const setInstalledExtensions = useInstalledAppsStore(
+		(state) => state.setInstalledExtensions,
+	);
+	const setAvailableUpdates = useInstalledAppsStore(
+		(state) => state.setAvailableUpdates,
 	);
 
 	const [activeTab, setActiveTab] = useState<"backup" | "restore">("backup");
@@ -80,6 +165,8 @@ export const Backups = ({ onBack }: BackupsProps) => {
 		null,
 	);
 	const [isDragOver, setIsDragOver] = useState(false);
+	const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+	const [restoreSucceeded, setRestoreSucceeded] = useState(false);
 
 	const {
 		backups,
@@ -87,12 +174,14 @@ export const Backups = ({ onBack }: BackupsProps) => {
 		reloadBackups,
 		isCreatingBackup,
 		createProgress,
+		createStage,
 		compressProgress,
 		createBackup,
 		clearCreateBackup,
 		restoringArchivePath,
 		isRestoringBackup,
 		restoreProgress,
+		restoreStage,
 		restoreBackup,
 		clearRestoreBackup,
 		deleteBackup,
@@ -189,6 +278,7 @@ export const Backups = ({ onBack }: BackupsProps) => {
 	const handleCreateBackup = useCallback(async () => {
 		if (!downloadsDir || selectedAppIds.size === 0) return;
 		setCreateDialogOpen(true);
+		setLastBackupPath(null);
 		const apps: BackupAppRequest[] = Array.from(selectedAppIds).map(
 			(appId) => ({
 				app_id: appId,
@@ -210,6 +300,44 @@ export const Backups = ({ onBack }: BackupsProps) => {
 		clearCreateBackup();
 	}, [clearCreateBackup]);
 
+	// After restoring (or backing up, which can also change what's installed
+	// if a runtime got pulled in), the installed-apps store is stale — reload
+	// it the same way MyApps does after install/uninstall, so AppDetail stops
+	// showing "Install" for an app that was just restored.
+	const reloadInstalledApps = useCallback(async () => {
+		try {
+			const response = await invoke<InstalledPackagesResponse>(
+				"get_installed_flatpaks",
+			);
+
+			const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
+				(app) => ({
+					instanceId: `${app.app_id}-${app.version}`,
+					appId: app.app_id,
+					name: app.name,
+					version: app.version,
+					summary: app.summary,
+					developer: app.developer,
+				}),
+			);
+
+			const installedExtensionsInfo = response.extensions.map((ext) => ({
+				extensionId: ext.extension_id,
+				name: ext.name,
+				version: ext.version,
+				parentAppId: ext.parent_app_id,
+			}));
+
+			setInstalledAppsInfo(installedAppsInfo);
+			setInstalledExtensions(installedExtensionsInfo);
+
+			const updates = await checkAvailableUpdates();
+			setAvailableUpdates(updates);
+		} catch (error) {
+			console.error("Error reloading installed apps:", error);
+		}
+	}, [setInstalledAppsInfo, setInstalledExtensions, setAvailableUpdates]);
+
 	const handlePickRestoreSource = useCallback(async () => {
 		const selected = await open({
 			multiple: false,
@@ -222,24 +350,40 @@ export const Backups = ({ onBack }: BackupsProps) => {
 
 	const handleRestore = useCallback(
 		async (archivePath: string) => {
-			await restoreBackup(archivePath);
+			setRestoreSucceeded(false);
+			const succeeded = await restoreBackup(archivePath);
+			setRestoreSucceeded(succeeded);
 		},
 		[restoreBackup],
 	);
 
 	const handleCloseRestoreDialog = useCallback(async () => {
 		clearRestoreBackup();
+		setRestoreSucceeded(false);
 		if (restoreSourcePath) {
 			await reloadBackups(restoreSourcePath);
 		}
-	}, [clearRestoreBackup, restoreSourcePath, reloadBackups]);
+		await reloadInstalledApps();
+	}, [
+		clearRestoreBackup,
+		restoreSourcePath,
+		reloadBackups,
+		reloadInstalledApps,
+	]);
 
-	const handleDelete = useCallback(
-		async (archivePath: string) => {
-			await deleteBackup(archivePath);
-		},
-		[deleteBackup],
-	);
+	const handleRequestDelete = useCallback((archivePath: string) => {
+		setDeleteTarget(archivePath);
+	}, []);
+
+	const handleConfirmDelete = useCallback(async () => {
+		if (!deleteTarget) return;
+		await deleteBackup(deleteTarget);
+		setDeleteTarget(null);
+	}, [deleteTarget, deleteBackup]);
+
+	const handleCancelDelete = useCallback(() => {
+		setDeleteTarget(null);
+	}, []);
 
 	return (
 		<Box
@@ -530,147 +674,197 @@ export const Backups = ({ onBack }: BackupsProps) => {
 							flex: 1,
 							minHeight: 0,
 						}}
-						onDragOver={(e) => {
-							e.preventDefault();
-							setIsDragOver(true);
-						}}
-						onDragLeave={() => setIsDragOver(false)}
 					>
-						{/* Source picker: restoring usually happens on a different machine,
-						    so the backup file must be picked explicitly (dialog or drag&drop) */}
-						<Stack
-							direction={{ xs: "column", sm: "row" }}
-							alignItems={{ xs: "stretch", sm: "center" }}
-							justifyContent="space-between"
-							spacing={2}
-							sx={{
-								p: 2,
-								mb: 2,
-								borderRadius: 2,
-								border: `1px dashed ${
-									isDragOver
-										? theme.palette.primary.main
-										: theme.palette.divider
-								}`,
-								bgcolor: isDragOver
-									? alpha(theme.palette.primary.main, 0.06)
-									: "background.paper",
-								flexShrink: 0,
-								transition: "all 0.15s",
-							}}
-						>
-							<Box sx={{ minWidth: 0 }}>
-								<Typography variant="body2" sx={{ fontWeight: 600 }}>
-									{t("backups.sourceFile")}
-								</Typography>
-								<Typography
-									variant="caption"
-									color="text.secondary"
-									noWrap
-									sx={{ display: "block" }}
-								>
-									{restoreSourcePath ?? t("backups.sourceFileHint")}
-								</Typography>
-							</Box>
-							<Button
-								variant="outlined"
-								startIcon={<InsertDriveFile />}
-								onClick={handlePickRestoreSource}
-								sx={{ textTransform: "none", whiteSpace: "nowrap" }}
+						{!restoreSourcePath || backups.length === 0 ? (
+							// Hero: nothing picked yet (or the picked file turned out to
+							// have no valid backup session inside it) — the whole tab is
+							// one big drop target plus a button to browse manually.
+							<Box
+								onDragOver={(e) => {
+									e.preventDefault();
+									setIsDragOver(true);
+								}}
+								onDragLeave={() => setIsDragOver(false)}
+								sx={{
+									flex: 1,
+									minHeight: 0,
+									display: "flex",
+									flexDirection: "column",
+									alignItems: "center",
+									justifyContent: "center",
+									textAlign: "center",
+									gap: 2,
+									p: 4,
+									borderRadius: 3,
+									border: `2px dashed ${
+										isDragOver
+											? theme.palette.primary.main
+											: theme.palette.divider
+									}`,
+									bgcolor: isDragOver
+										? alpha(theme.palette.primary.main, 0.06)
+										: "background.paper",
+									transition: "all 0.15s",
+								}}
 							>
-								{t("backups.chooseFile")}
-							</Button>
-						</Stack>
-
-						<Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-							{!restoreSourcePath ? (
-								<Box sx={{ textAlign: "center", py: 8 }}>
-									<Typography variant="body2" color="text.secondary">
-										{t("backups.sourceFileHint")}
-									</Typography>
-								</Box>
-							) : isLoadingBackups ? (
-								<Typography
-									variant="body2"
-									color="text.secondary"
-									sx={{ py: 4 }}
+								<Box
+									sx={{
+										width: 72,
+										height: 72,
+										borderRadius: "50%",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										bgcolor: alpha(theme.palette.primary.main, 0.1),
+										color: "primary.main",
+									}}
 								>
-									{t("backups.loading")}
-								</Typography>
-							) : backups.length === 0 ? (
-								<Box sx={{ textAlign: "center", py: 8 }}>
+									<CloudUpload sx={{ fontSize: 36 }} />
+								</Box>
+								<Box>
+									<Typography variant="h6" sx={{ fontWeight: 700 }}>
+										{isDragOver
+											? t("backups.dropHeroActive")
+											: t("backups.dropHeroTitle")}
+									</Typography>
 									<Typography variant="body2" color="text.secondary">
-										{t("backups.noBackups")}
+										{t("backups.dropHeroSubtitle")}
 									</Typography>
 								</Box>
-							) : (
-								<Stack spacing={1.5}>
-									{backups.map((session) => (
-										<Box
-											key={session.archive_path}
-											sx={{
-												p: 2,
-												borderRadius: 2,
-												border: `1px solid ${theme.palette.divider}`,
-												bgcolor: "background.paper",
-											}}
-										>
-											<Stack
-												direction="row"
-												alignItems="flex-start"
-												justifyContent="space-between"
-												spacing={2}
-											>
-												<Box sx={{ minWidth: 0 }}>
-													<Typography variant="body1" sx={{ fontWeight: 700 }}>
-														{new Date(session.created_at).toLocaleString()}
-													</Typography>
-													<Typography variant="caption" color="text.secondary">
-														{t("backups.appsCount", {
-															count: session.apps.length,
-														})}{" "}
-														· {formatBytes(session.size_bytes)}
-													</Typography>
-												</Box>
-												<Stack direction="row" spacing={1} flexShrink={0}>
-													<Button
-														size="small"
-														variant="outlined"
-														startIcon={<Restore />}
-														onClick={() => handleRestore(session.archive_path)}
-													>
-														{t("backups.restore")}
-													</Button>
-													<IconButton
-														size="small"
-														color="error"
-														onClick={() => handleDelete(session.archive_path)}
-													>
-														<Delete fontSize="small" />
-													</IconButton>
-												</Stack>
-											</Stack>
-
-											<Stack
-												direction="row"
-												flexWrap="wrap"
-												gap={0.75}
-												sx={{ mt: 1.5 }}
-											>
-												{session.apps.map((appSummary) => (
-													<Chip
-														key={appSummary.app_id}
-														size="small"
-														label={`${appSummary.name} ${appSummary.version}`}
-														variant="outlined"
-													/>
-												))}
-											</Stack>
-										</Box>
-									))}
+								<Button
+									variant="contained"
+									startIcon={<FolderZip />}
+									onClick={handlePickRestoreSource}
+									sx={{
+										textTransform: "none",
+										fontWeight: 600,
+										borderRadius: 2,
+									}}
+								>
+									{t("backups.dropHeroBrowse")}
+								</Button>
+								{restoreSourcePath &&
+									!isLoadingBackups &&
+									backups.length === 0 && (
+										<Typography variant="caption" color="error">
+											{t("backups.invalidBackupFile")}
+										</Typography>
+									)}
+								{isLoadingBackups && (
+									<Typography variant="caption" color="text.secondary">
+										{t("backups.loading")}
+									</Typography>
+								)}
+							</Box>
+						) : (
+							// Flip: a valid backup file was picked — show its contents and
+							// the restore action instead of the drop hero.
+							<Box
+								sx={{
+									flex: 1,
+									minHeight: 0,
+									display: "flex",
+									flexDirection: "column",
+									gap: 2,
+								}}
+							>
+								<Stack
+									direction="row"
+									alignItems="center"
+									justifyContent="space-between"
+									sx={{ flexShrink: 0 }}
+								>
+									<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+										{t("backups.backupDetailsTitle")}
+									</Typography>
+									<Button
+										size="small"
+										onClick={() => setRestoreSourcePath(null)}
+										sx={{ textTransform: "none" }}
+									>
+										{t("backups.chooseAnother")}
+									</Button>
 								</Stack>
-							)}
-						</Box>
+
+								<Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+									<Stack spacing={1.5}>
+										{backups.map((session) => (
+											<Box
+												key={session.archive_path}
+												sx={{
+													p: 2,
+													borderRadius: 2,
+													border: `1px solid ${theme.palette.divider}`,
+													bgcolor: "background.paper",
+												}}
+											>
+												<Stack
+													direction="row"
+													alignItems="flex-start"
+													justifyContent="space-between"
+													spacing={2}
+												>
+													<Box sx={{ minWidth: 0 }}>
+														<Typography
+															variant="body1"
+															sx={{ fontWeight: 700 }}
+														>
+															{new Date(session.created_at).toLocaleString()}
+														</Typography>
+														<Typography
+															variant="caption"
+															color="text.secondary"
+														>
+															{t("backups.appsCount", {
+																count: session.apps.length,
+															})}{" "}
+															· {formatBytes(session.size_bytes)}
+														</Typography>
+													</Box>
+													<Stack direction="row" spacing={1} flexShrink={0}>
+														<Button
+															size="small"
+															variant="contained"
+															startIcon={<Restore />}
+															onClick={() =>
+																handleRestore(session.archive_path)
+															}
+														>
+															{t("backups.restore")}
+														</Button>
+														<IconButton
+															size="small"
+															color="error"
+															onClick={() =>
+																handleRequestDelete(session.archive_path)
+															}
+														>
+															<Delete fontSize="small" />
+														</IconButton>
+													</Stack>
+												</Stack>
+
+												<Stack
+													direction="row"
+													flexWrap="wrap"
+													gap={0.75}
+													sx={{ mt: 1.5 }}
+												>
+													{session.apps.map((appSummary) => (
+														<Chip
+															key={appSummary.app_id}
+															size="small"
+															label={`${appSummary.name} ${appSummary.version}`}
+															variant="outlined"
+														/>
+													))}
+												</Stack>
+											</Box>
+										))}
+									</Stack>
+								</Box>
+							</Box>
+						)}
 					</Box>
 				)}
 
@@ -678,40 +872,131 @@ export const Backups = ({ onBack }: BackupsProps) => {
 				<Dialog
 					open={createDialogOpen}
 					onClose={!isCreatingBackup ? handleCloseCreateDialog : undefined}
-					maxWidth="md"
+					maxWidth="sm"
 					fullWidth
 				>
-					<DialogContent>
-						<Typography variant="h6" gutterBottom>
-							{t("backups.creatingBackup")}
-						</Typography>
-						<Terminal output={createProgress} isRunning={isCreatingBackup} />
-						{isCreatingBackup && compressProgress && (
-							<Box sx={{ mt: 2 }}>
-								<LinearProgress
-									variant="indeterminate"
-									sx={{ borderRadius: 1, height: 6 }}
+					<DialogContent
+						sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+					>
+						<Typography variant="h6">{t("backups.creatingBackup")}</Typography>
+
+						{isCreatingBackup && (
+							<Box
+								sx={{
+									display: "flex",
+									flexDirection: "column",
+									gap: 2,
+									minHeight: 140,
+								}}
+							>
+								<StageIndicator
+									stage={createStage}
+									fallback={t("backups.preparing")}
 								/>
-								<Typography
-									variant="caption"
-									color="text.secondary"
-									sx={{ display: "block", mt: 0.75 }}
-								>
-									{t("backups.compressing", {
-										written: formatBytes(compressProgress.written),
-										total: formatBytes(compressProgress.sourceSize),
-									})}
-								</Typography>
+								<Box>
+									<LinearProgress
+										variant={
+											createStage.stepTotal ? "determinate" : "indeterminate"
+										}
+										value={
+											createStage.stepTotal
+												? ((createStage.stepIndex ?? 0) /
+														createStage.stepTotal) *
+													100
+												: undefined
+										}
+										sx={{ borderRadius: 1, height: 6 }}
+									/>
+									<Typography
+										variant="caption"
+										color="text.secondary"
+										sx={{ display: "block", mt: 1 }}
+									>
+										{compressProgress
+											? t("backups.compressing", {
+													written: formatBytes(compressProgress.written),
+													total: formatBytes(compressProgress.sourceSize),
+												})
+											: t("backups.mayTakeAWhile")}
+									</Typography>
+								</Box>
 							</Box>
 						)}
+
 						{!isCreatingBackup && (
-							<Box
-								sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 2 }}
-							>
-								{lastBackupPath && (
-									<Typography variant="body2" color="text.secondary">
-										{t("backups.savedTo", { path: lastBackupPath })}
-									</Typography>
+							<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+								{lastBackupPath ? (
+									<Stack
+										direction="row"
+										alignItems="flex-start"
+										spacing={1.5}
+										sx={{
+											p: 2,
+											borderRadius: 2,
+											bgcolor: alpha(theme.palette.success.main, 0.12),
+											border: "1px solid",
+											borderColor: alpha(theme.palette.success.main, 0.3),
+										}}
+									>
+										<BackupIcon
+											color="success"
+											sx={{ mt: "2px", flexShrink: 0 }}
+										/>
+										<Box sx={{ minWidth: 0 }}>
+											<Typography variant="body2" sx={{ fontWeight: 700 }}>
+												{t("backups.completed")}
+											</Typography>
+											<Typography
+												variant="body2"
+												color="text.secondary"
+												sx={{
+													mt: 0.25,
+													wordBreak: "break-word",
+													overflowWrap: "anywhere",
+												}}
+											>
+												{t("backups.savedTo", { path: lastBackupPath })}
+											</Typography>
+										</Box>
+									</Stack>
+								) : (
+									<Stack
+										direction="row"
+										alignItems="flex-start"
+										spacing={1.5}
+										sx={{
+											p: 2,
+											borderRadius: 2,
+											bgcolor: alpha(theme.palette.error.main, 0.12),
+											border: "1px solid",
+											borderColor: alpha(theme.palette.error.main, 0.3),
+										}}
+									>
+										<BackupIcon
+											color="error"
+											sx={{ mt: "2px", flexShrink: 0 }}
+										/>
+										<Box sx={{ minWidth: 0 }}>
+											<Typography variant="body2" sx={{ fontWeight: 700 }}>
+												{t("backups.failed")}
+											</Typography>
+											<Typography
+												variant="body2"
+												color="text.secondary"
+												sx={{
+													mt: 0.25,
+													maxHeight: 120,
+													overflowY: "auto",
+													wordBreak: "break-word",
+													overflowWrap: "anywhere",
+													fontFamily: "monospace",
+													fontSize: "0.75rem",
+												}}
+											>
+												{createProgress[createProgress.length - 1]}
+											</Typography>
+										</Box>
+									</Stack>
 								)}
 								<Box sx={{ display: "flex", justifyContent: "flex-end" }}>
 									<Button variant="contained" onClick={handleCloseCreateDialog}>
@@ -727,22 +1012,142 @@ export const Backups = ({ onBack }: BackupsProps) => {
 				<Dialog
 					open={restoringArchivePath !== null}
 					onClose={!isRestoringBackup ? handleCloseRestoreDialog : undefined}
-					maxWidth="md"
+					maxWidth="sm"
 					fullWidth
 				>
-					<DialogContent>
-						<Typography variant="h6" gutterBottom>
-							{t("backups.restoringBackup")}
-						</Typography>
-						<Terminal output={restoreProgress} isRunning={isRestoringBackup} />
+					<DialogContent
+						sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+					>
+						<Typography variant="h6">{t("backups.restoringBackup")}</Typography>
+
+						{isRestoringBackup && (
+							<Box
+								sx={{
+									display: "flex",
+									flexDirection: "column",
+									gap: 2,
+									minHeight: 140,
+								}}
+							>
+								<StageIndicator
+									stage={restoreStage}
+									fallback={t("backups.preparing")}
+								/>
+								<Box>
+									<LinearProgress
+										variant={
+											restoreStage.stepTotal ? "determinate" : "indeterminate"
+										}
+										value={
+											restoreStage.stepTotal
+												? ((restoreStage.stepIndex ?? 0) /
+														restoreStage.stepTotal) *
+													100
+												: undefined
+										}
+										sx={{ borderRadius: 1, height: 6 }}
+									/>
+									<Typography
+										variant="caption"
+										color="text.secondary"
+										sx={{ display: "block", mt: 1 }}
+									>
+										{t("backups.mayTakeAWhile")}
+									</Typography>
+								</Box>
+							</Box>
+						)}
+
 						{!isRestoringBackup && (
-							<Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
-								<Button variant="contained" onClick={handleCloseRestoreDialog}>
-									{t("myApps.closeButton")}
-								</Button>
+							<Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+								{restoreSucceeded ? (
+									<Stack
+										direction="row"
+										alignItems="flex-start"
+										spacing={1.5}
+										sx={{
+											p: 2,
+											borderRadius: 2,
+											bgcolor: alpha(theme.palette.success.main, 0.12),
+											border: "1px solid",
+											borderColor: alpha(theme.palette.success.main, 0.3),
+										}}
+									>
+										<Restore
+											color="success"
+											sx={{ mt: "2px", flexShrink: 0 }}
+										/>
+										<Typography variant="body2" sx={{ fontWeight: 700 }}>
+											{t("backups.completed")}
+										</Typography>
+									</Stack>
+								) : (
+									<Stack
+										direction="row"
+										alignItems="flex-start"
+										spacing={1.5}
+										sx={{
+											p: 2,
+											borderRadius: 2,
+											bgcolor: alpha(theme.palette.error.main, 0.12),
+											border: "1px solid",
+											borderColor: alpha(theme.palette.error.main, 0.3),
+										}}
+									>
+										<Restore color="error" sx={{ mt: "2px", flexShrink: 0 }} />
+										<Box sx={{ minWidth: 0 }}>
+											<Typography variant="body2" sx={{ fontWeight: 700 }}>
+												{t("backups.failed")}
+											</Typography>
+											<Typography
+												variant="body2"
+												color="text.secondary"
+												sx={{
+													mt: 0.25,
+													maxHeight: 120,
+													overflowY: "auto",
+													wordBreak: "break-word",
+													overflowWrap: "anywhere",
+													fontFamily: "monospace",
+													fontSize: "0.75rem",
+												}}
+											>
+												{restoreProgress[restoreProgress.length - 1]}
+											</Typography>
+										</Box>
+									</Stack>
+								)}
+								<Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+									<Button
+										variant="contained"
+										onClick={handleCloseRestoreDialog}
+									>
+										{t("myApps.closeButton")}
+									</Button>
+								</Box>
 							</Box>
 						)}
 					</DialogContent>
+				</Dialog>
+
+				{/* Delete backup confirmation */}
+				<Dialog open={deleteTarget !== null} onClose={handleCancelDelete}>
+					<DialogTitle>{t("backups.deleteConfirmTitle")}</DialogTitle>
+					<DialogContent>
+						<Typography variant="body2" color="text.secondary">
+							{t("backups.deleteConfirmBody")}
+						</Typography>
+					</DialogContent>
+					<DialogActions sx={{ px: 3, pb: 2 }}>
+						<Button onClick={handleCancelDelete}>{t("common.cancel")}</Button>
+						<Button
+							variant="contained"
+							color="error"
+							onClick={handleConfirmDelete}
+						>
+							{t("backups.deleteConfirmAction")}
+						</Button>
+					</DialogActions>
 				</Dialog>
 			</Container>
 		</Box>

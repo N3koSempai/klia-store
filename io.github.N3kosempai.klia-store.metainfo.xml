@@ -38,6 +38,13 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.11.0" date="2026-08-02">
+      <description>
+        <p>Backups have arrived. Pick any installed app, choose whether to include its data and runtime, and Klia Store packs everything into a single portable archive you can restore later — on this machine or a new one. No terminal commands, no guesswork.</p>
+        <p>You can now support Klia Store directly from the app: after a successful install, an optional "watch an ad to support" button opens a short ad in your browser. It's entirely optional and takes a few seconds — a small way to help keep the project going if you feel like it.</p>
+        <p>Fixed an issue where creating a backup with the runtime included could silently fail without producing an archive, and the progress dialog now clearly shows when something goes wrong instead of looking stuck.</p>
+      </description>
+    </release>
     <release version="2.10.3" date="2026-06-20">
       <description>
         <p>You can now install .flatpak files directly by opening them with Klia Store. A dedicated installation dialog shows app metadata, size, and dependencies before confirming, with real-time terminal output during the process.</p>

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
 	BackupAppRequest,
 	BackupSession,
@@ -12,12 +12,45 @@ interface CompressProgress {
 	sourceSize: number;
 }
 
+// Backend progress lines are either a per-app marker ("[2/3] app.id") or a
+// free-form stage description ("Exportando bundle de app.id..."). The stage
+// view only needs the latest one of each kind rather than the full scroll —
+// parsed out here so the UI can show "step 2 of 3" plus the current action
+// as two separate, always-current lines instead of a growing log.
+const STEP_MARKER = /^\[(\d+)\/(\d+)\]\s*(.*)$/;
+
+export interface ProgressStage {
+	message: string;
+	stepIndex: number | null;
+	stepTotal: number | null;
+}
+
+function deriveStage(lines: string[]): ProgressStage {
+	let stepIndex: number | null = null;
+	let stepTotal: number | null = null;
+	let message = "";
+
+	for (const line of lines) {
+		const match = line.match(STEP_MARKER);
+		if (match) {
+			stepIndex = Number(match[1]);
+			stepTotal = Number(match[2]);
+			message = match[3];
+		} else {
+			message = line;
+		}
+	}
+
+	return { message, stepIndex, stepTotal };
+}
+
 interface UseBackupsReturn {
 	backups: BackupSessionSummary[];
 	isLoadingBackups: boolean;
 	reloadBackups: (backupsPath: string) => Promise<void>;
 	isCreatingBackup: boolean;
 	createProgress: string[];
+	createStage: ProgressStage;
 	compressProgress: CompressProgress | null;
 	createBackup: (
 		destDir: string,
@@ -27,6 +60,7 @@ interface UseBackupsReturn {
 	restoringArchivePath: string | null;
 	isRestoringBackup: boolean;
 	restoreProgress: string[];
+	restoreStage: ProgressStage;
 	restoreBackup: (archivePath: string, appIds?: string[]) => Promise<boolean>;
 	clearRestoreBackup: () => void;
 	deleteBackup: (archivePath: string) => Promise<boolean>;
@@ -155,18 +189,29 @@ export function useBackups(): UseBackupsReturn {
 		}
 	}, []);
 
+	const createStage = useMemo(
+		() => deriveStage(createProgress),
+		[createProgress],
+	);
+	const restoreStage = useMemo(
+		() => deriveStage(restoreProgress),
+		[restoreProgress],
+	);
+
 	return {
 		backups,
 		isLoadingBackups,
 		reloadBackups,
 		isCreatingBackup,
 		createProgress,
+		createStage,
 		compressProgress,
 		createBackup,
 		clearCreateBackup,
 		restoringArchivePath,
 		isRestoringBackup,
 		restoreProgress,
+		restoreStage,
 		restoreBackup,
 		clearRestoreBackup,
 		deleteBackup,

@@ -5,6 +5,7 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Delete,
+	VolunteerActivism,
 } from "@mui/icons-material";
 import {
 	Box,
@@ -19,6 +20,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
@@ -42,6 +44,9 @@ interface AppDetailsProps {
 	app: CategoryApp;
 	onBack: () => void;
 }
+
+const SUPPORT_AD_URL =
+	"https://www.effectivecpmnetwork.com/k60ttz75nr?key=dea9d180eb8382488214b9d41b884753";
 
 export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const { t } = useTranslation();
@@ -623,6 +628,14 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const handleAccept = () => {
 		setInstallStatus("idle");
 		setInstallOutput([]);
+	};
+
+	const handleWatchAd = async () => {
+		try {
+			await openUrl(SUPPORT_AD_URL);
+		} catch (error) {
+			console.error("Error opening support ad:", error);
+		}
 	};
 
 	const handleLaunchApp = async () => {
@@ -1302,6 +1315,40 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 								{t("appDetails.accept")}
 							</Button>
 						</Box>
+
+						{/* Apoyo a Klia Store viendo un anuncio */}
+						{installStatus === "success" && (
+							<Box
+								sx={{
+									display: "flex",
+									flexDirection: "column",
+									alignItems: "center",
+									gap: 1,
+									mt: 2,
+									pt: 3,
+									borderTop: "1px solid",
+									borderColor: "divider",
+									width: "100%",
+									maxWidth: 400,
+								}}
+							>
+								<Typography
+									variant="body2"
+									color="text.secondary"
+									textAlign="center"
+								>
+									{t("appDetails.supportKliaStoreDescription")}
+								</Typography>
+								<Button
+									variant="text"
+									startIcon={<VolunteerActivism />}
+									onClick={handleWatchAd}
+									sx={{ px: 3 }}
+								>
+									{t("appDetails.watchAd")}
+								</Button>
+							</Box>
+						)}
 					</Box>
 				) : (
 					<>
