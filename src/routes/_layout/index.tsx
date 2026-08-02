@@ -46,12 +46,17 @@ function HomeRoute() {
 		navigate({ to: "/analytics" });
 	};
 
+	const handleBackupsClick = () => {
+		navigate({ to: "/backups" });
+	};
+
 	return (
 		<Home
 			onAppSelect={handleAppSelect}
 			onCategorySelect={handleCategorySelect}
 			onMyAppsClick={handleMyAppsClick}
 			onAnalyticsClick={handleAnalyticsClick}
+			onBackupsClick={handleBackupsClick}
 			initialSearchQuery={searchQuery}
 			initialSearchResults={searchResults}
 		/>

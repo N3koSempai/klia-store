@@ -161,3 +161,50 @@ export interface SearchResponse {
 	facetDistribution?: Record<string, Record<string, number>>;
 	facetStats?: Record<string, Record<string, number>>;
 }
+
+export interface BackupRuntimeRef {
+	id: string;
+	arch: string;
+	branch: string;
+	commit?: string | null;
+}
+
+export interface BackupManifest {
+	app_id: string;
+	name: string;
+	version: string;
+	runtime?: BackupRuntimeRef | null;
+	runtime_bundle?: string | null;
+	permissions: string[];
+	includes_data: boolean;
+	includes_runtime: boolean;
+	flathub_commit?: string | null;
+}
+
+export interface BackupSession {
+	session_id: string;
+	created_at: string;
+	apps: BackupManifest[];
+}
+
+export interface BackupAppRequest {
+	app_id: string;
+	include_data: boolean;
+	include_runtime: boolean;
+}
+
+export interface BackupAppSummary {
+	app_id: string;
+	name: string;
+	version: string;
+	includes_data: boolean;
+	includes_runtime: boolean;
+}
+
+export interface BackupSessionSummary {
+	session_id: string;
+	created_at: string;
+	archive_path: string;
+	size_bytes: number;
+	apps: BackupAppSummary[];
+}
