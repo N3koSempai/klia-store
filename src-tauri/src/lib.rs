@@ -104,6 +104,46 @@ fn build_flatpak_dependency_check_cmd(is_flatpak: bool, app_id: &str) -> String 
     }
 }
 
+// Flatpak app/extension IDs follow reverse-DNS notation (e.g. org.mozilla.firefox).
+// Validating against this before interpolating into a shell string closes the
+// command-injection vector without needing to escape shell metacharacters.
+static APP_ID_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9][A-Za-z0-9_-]*)+$").unwrap()
+});
+
+fn is_valid_app_id(app_id: &str) -> bool {
+    APP_ID_REGEX.is_match(app_id)
+}
+
+// User-supplied file paths (e.g. from a file picker) can contain shell
+// metacharacters that aren't safe to interpolate into a `sh -c` string, and
+// Rust's `{:?}` Debug formatting is NOT a shell escape. Instead of trying to
+// escape the original path, copy the bundle to a temp file with a
+// app-generated safe name and operate on that path in shell commands.
+fn stage_flatpak_bundle_safely(file_path: &str) -> Result<std::path::PathBuf, String> {
+    let source = std::path::Path::new(file_path);
+    if !source.is_file() {
+        return Err("Selected file does not exist".to_string());
+    }
+
+    let safe_name = format!("klia-store-local-{}.flatpak", uuid_like_token());
+    let staged_path = std::env::temp_dir().join(safe_name);
+    fs::copy(source, &staged_path).map_err(|e| format!("Failed to stage bundle: {}", e))?;
+    Ok(staged_path)
+}
+
+// Small dependency-free random token generator (hex-encoded), good enough for
+// a temp filename — doesn't need cryptographic guarantees, just low collision
+// probability within a single run.
+fn uuid_like_token() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    format!("{:x}-{:x}", nanos, std::process::id())
+}
+
 // Helper function to parse size string from flatpak list output
 // Format examples: "715,3 MB", "1,2 GB", "16,9 MB", "2,5 kB"
 fn parse_size_string(size_str: &str) -> Option<u64> {
@@ -932,6 +972,9 @@ async fn get_install_dependencies(
     app: tauri::AppHandle,
     app_id: String,
 ) -> Result<Vec<Dependency>, String> {
+    if !is_valid_app_id(&app_id) {
+        return Err(format!("Invalid app id: {}", app_id));
+    }
     let shell = app.shell();
 
     // Detect if we're running inside a flatpak
@@ -1745,6 +1788,9 @@ async fn start_flatpak_interactive(
     processes: State<'_, ProcessMap>,
     app_id: String,
 ) -> Result<(), String> {
+    if !is_valid_app_id(&app_id) {
+        return Err(format!("Invalid app id: {}", app_id));
+    }
     eprintln!(
         "[start_flatpak_interactive] Starting for app_id: {}",
         app_id
@@ -2074,16 +2120,22 @@ async fn inspect_local_flatpak(
         .map(|m| m.len())
         .unwrap_or(0);
 
+    // The original file name/path is user-controlled (file picker) and unsafe
+    // to interpolate into a shell string. Stage it under an app-generated safe
+    // name so shell metacharacters in the original path can never reach `sh -c`.
+    let staged_path = stage_flatpak_bundle_safely(&file_path)?;
+    let staged_path_str = staged_path.to_string_lossy().into_owned();
+
     // Run flatpak install --no-deploy with echo n piped to stdin to get package info without installing
     let cmd_str = if is_flatpak {
         format!(
-            "LANG=C echo n | flatpak-spawn --host flatpak install --no-deploy --user {:?} 2>&1",
-            file_path
+            "LANG=C echo n | flatpak-spawn --host flatpak install --no-deploy --user {} 2>&1",
+            staged_path_str
         )
     } else {
         format!(
-            "LANG=C echo n | flatpak install --no-deploy --user {:?} 2>&1",
-            file_path
+            "LANG=C echo n | flatpak install --no-deploy --user {} 2>&1",
+            staged_path_str
         )
     };
 
@@ -2094,6 +2146,7 @@ async fn inspect_local_flatpak(
         .output()
         .await
         .map_err(|e| format!("Failed to run flatpak: {}", e))?;
+    let _ = fs::remove_file(&staged_path);
 
     let raw = String::from_utf8_lossy(&output.stdout).to_string();
 
@@ -2241,22 +2294,23 @@ async fn inspect_local_flatpak(
         })
         .collect();
 
-    // Check if already installed
-    let check_cmd = if is_flatpak {
-        format!(
-            "flatpak-spawn --host flatpak info {} 2>/dev/null",
-            app_id
-        )
+    // Check if already installed. app_id here comes from parsing the bundle's
+    // own metadata block, not a raw shell string, so pass it as a separate
+    // argument instead of interpolating it into a command string.
+    let already_installed = if !app_id.is_empty() && is_valid_app_id(&app_id) {
+        let result = if is_flatpak {
+            shell
+                .command("flatpak-spawn")
+                .args(["--host", "flatpak", "info", &app_id])
+                .output()
+                .await
+        } else {
+            shell.command("flatpak").args(["info", &app_id]).output().await
+        };
+        result.map(|o| o.status.success()).unwrap_or(false)
     } else {
-        format!("flatpak info {} 2>/dev/null", app_id)
+        false
     };
-    let already_installed = shell
-        .command("sh")
-        .args(["-c", &check_cmd])
-        .output()
-        .await
-        .map(|o| o.status.success())
-        .unwrap_or(false);
 
     let name = if app_id.is_empty() {
         std::path::Path::new(&file_path)
@@ -2291,15 +2345,21 @@ async fn install_local_flatpak(
 ) -> Result<(), String> {
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
+    // The original file name/path is user-controlled (file picker) and unsafe
+    // to interpolate into a shell string (Rust's `{:?}` Debug formatting is not
+    // a shell escape). Stage the bundle under an app-generated safe name first.
+    let staged_path = stage_flatpak_bundle_safely(&file_path)?;
+    let staged_path_str = staged_path.to_string_lossy().into_owned();
+
     let cmd_str = if is_flatpak {
         format!(
-            "LANG=C script -q /dev/null -c \"flatpak-spawn --host flatpak install -y --user {:?}\"",
-            file_path
+            "LANG=C script -q /dev/null -c \"flatpak-spawn --host flatpak install -y --user {}\"",
+            staged_path_str
         )
     } else {
         format!(
-            "LANG=C script -q /dev/null -c \"flatpak install -y --user {:?}\"",
-            file_path
+            "LANG=C script -q /dev/null -c \"flatpak install -y --user {}\"",
+            staged_path_str
         )
     };
 
@@ -2358,6 +2418,7 @@ async fn install_local_flatpak(
     let app_clone3 = app.clone();
     let key_clone3 = process_key.clone();
     let processes_clone = processes.inner().clone();
+    let staged_path_cleanup = staged_path.clone();
     std::thread::spawn(move || {
         loop {
             std::thread::sleep(std::time::Duration::from_millis(500));
@@ -2367,15 +2428,18 @@ async fn install_local_flatpak(
                     Ok(Some(_status)) => {
                         let _ = app_clone3.emit("pty-terminated", key_clone3.clone());
                         map.remove(&key_clone3);
+                        let _ = fs::remove_file(&staged_path_cleanup);
                         break;
                     }
                     Ok(None) => {}
                     Err(_) => {
                         map.remove(&key_clone3);
+                        let _ = fs::remove_file(&staged_path_cleanup);
                         break;
                     }
                 }
             } else {
+                let _ = fs::remove_file(&staged_path_cleanup);
                 break;
             }
         }
