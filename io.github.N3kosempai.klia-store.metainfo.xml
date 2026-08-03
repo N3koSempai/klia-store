@@ -38,7 +38,7 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.11.0" date="2026-08-02">
+    <release version="2.11.1" date="2026-08-02">
       <description>
         <p>Backups have arrived. Pick any installed app, choose whether to include its data and runtime, and Klia Store packs everything into a single portable archive you can restore later — on this machine or a new one. No terminal commands, no guesswork.</p>
         <p>You can now support Klia Store directly from the app: after a successful install, an optional "watch an ad to support" button opens a short ad in your browser. It's entirely optional and takes a few seconds — a small way to help keep the project going if you feel like it.</p>
