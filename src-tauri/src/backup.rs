@@ -67,6 +67,20 @@ fn home_dir() -> Result<PathBuf, String> {
         .map_err(|_| "HOME environment variable not set".to_string())
 }
 
+/// Base directory for backup/restore staging. `std::env::temp_dir()` (`/tmp`)
+/// lives inside klia-store's own sandbox and is invisible to the `flatpak`
+/// process spawned on the host via `flatpak-spawn --host`, which makes
+/// `build-bundle`/`install` fail with `opendir: No such file or directory` on
+/// paths that are perfectly real from klia-store's point of view. `~/.var/app`
+/// is bind-mounted to the real host path by `--filesystem=~/.var/app:create`,
+/// so staging there keeps the directory visible on both sides.
+fn staging_base_dir() -> Result<PathBuf, String> {
+    match std::env::var("FLATPAK_ID") {
+        Ok(id) => Ok(home_dir()?.join(".var/app").join(id).join("cache")),
+        Err(_) => Ok(std::env::temp_dir()),
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RuntimeRef {
     pub id: String,
@@ -639,7 +653,7 @@ pub async fn create_backup(
     let dest_root = PathBuf::from(&dest_dir);
     let session_id = chrono::Utc::now().format("%Y%m%d-%H%M%S").to_string();
 
-    let staging_root = std::env::temp_dir().join(format!("klia-store-backup-{}", session_id));
+    let staging_root = staging_base_dir()?.join(format!("klia-store-backup-{}", session_id));
     let session_dir = staging_root.join(&session_id);
     fs::create_dir_all(&session_dir)
         .map_err(|e| format!("Failed to create staging directory: {}", e))?;
@@ -1004,7 +1018,7 @@ pub async fn restore_backup(
     }
 
     emit_progress("Extrayendo respaldo...");
-    let staging_root = std::env::temp_dir().join(format!(
+    let staging_root = staging_base_dir()?.join(format!(
         "klia-store-restore-{}",
         chrono::Utc::now().timestamp_millis()
     ));
