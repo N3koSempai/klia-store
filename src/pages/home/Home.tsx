@@ -18,7 +18,6 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { v4 as uuidv4 } from "uuid";
 import { AboutModal } from "../../components/AboutModal";
 import { AppSearchBar } from "../../components/AppSearchBar";
 import { CachedImage } from "../../components/CachedImage";
@@ -237,8 +236,8 @@ export const Home = ({
 							}}
 						>
 							{isSearching
-								? Array.from(new Array(12)).map(() => (
-										<Box key={uuidv4()}>
+								? Array.from(new Array(12)).map((_, index) => (
+										<Box key={`skeleton-${index}`}>
 											<Card
 												sx={{
 													bgcolor: "background.paper",

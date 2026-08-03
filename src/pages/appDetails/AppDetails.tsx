@@ -23,7 +23,6 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { v4 as uuidv4 } from "uuid";
 import errorAnim from "../../assets/animations/Error.lottie";
 // Import animations to ensure they are correctly bundled
 import successAnim from "../../assets/animations/success.lottie";
@@ -75,7 +74,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
 	// Generate stable UUIDs for screenshots
 	const screenshotIds = useMemo(
-		() => screenshots?.map(() => uuidv4()) || [],
+		() => screenshots?.map(() => crypto.randomUUID()) || [],
 		[screenshots],
 	);
 	const [isInstalling, setIsInstalling] = useState(false);
@@ -1487,7 +1486,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 										>
 											{screenshots.map((_, index) => (
 												<ButtonBase
-													key={uuidv4()}
+													key={screenshotIds[index]}
 													onClick={() => setCurrentImageIndex(index)}
 													aria-label={t("appDetails.screenshotN", { number: index + 1 })}
 													aria-pressed={index === currentImageIndex}

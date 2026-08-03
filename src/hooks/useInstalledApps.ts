@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
-import { v4 as uuidv4 } from "uuid";
 import type { InstalledAppInfo } from "../store/installedAppsStore";
 import { useInstalledAppsStore } from "../store/installedAppsStore";
 import { checkAvailableUpdates } from "../utils/updateChecker";
@@ -47,7 +46,7 @@ export const useInstalledApps = () => {
 				// Permissions will be loaded on-demand when needed (e.g., in Analytics page)
 				const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
 					(app) => ({
-						instanceId: uuidv4(),
+						instanceId: crypto.randomUUID(),
 						appId: app.app_id,
 						name: app.name,
 						version: app.version,

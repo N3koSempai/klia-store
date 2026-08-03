@@ -2,7 +2,6 @@ import { alpha, Box, Grid, Paper, Skeleton, Typography,
 	useTheme
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { v4 as uuidv4 } from "uuid";
 import { useCategories } from "../../../hooks/useCategories";
 
 interface CategoriesSectionProps {
@@ -33,8 +32,8 @@ export const CategoriesSection = ({
 
 			<Grid container spacing={2}>
 				{isLoading
-					? Array.from(new Array(10)).map((_) => (
-							<Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={uuidv4()}>
+					? Array.from(new Array(10)).map((_, index) => (
+							<Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={`skeleton-${index}`}>
 								<Paper
 									sx={{
 										p: 2,

@@ -10,7 +10,6 @@ import {
 } from "@mui/material";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../components/CachedImage";
 import { useDeveloperApps } from "../../hooks/useDeveloperApps";
 import { apiService } from "../../services/api";
@@ -226,8 +225,8 @@ export const DeveloperProfile = ({
 					}}
 				>
 					{showLoading
-						? Array.from(new Array(8)).map(() => (
-								<Box key={uuidv4()}>
+						? Array.from(new Array(8)).map((_, index) => (
+								<Box key={`skeleton-${index}`}>
 									<Card
 										sx={{
 											bgcolor: "#161B22",

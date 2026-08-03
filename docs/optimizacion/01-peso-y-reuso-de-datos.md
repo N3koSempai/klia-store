@@ -4,30 +4,27 @@ Auditoría de `src/` y `src-tauri/` enfocada en: tamaño del bundle final, asset
 
 ---
 
-## Peso muerto para eliminar (bajo esfuerzo, impacto inmediato)
+## ✅ Peso muerto — resuelto
 
 ### `react-qr-code` — dependencia completa sin un solo import
-Solo se usa `qrcode.react` (`src/components/DonationModal.tsx:22`, `QRCodeSVG`). `react-qr-code` no aparece en ningún import de `src/`.
-**Acción:** eliminar `react-qr-code` de `package.json`.
+Eliminada de `package.json`. Se mantiene `qrcode.react`, único usado (`DonationModal.tsx`).
 
 ### `@tanstack/react-virtual` — instalada, cero usos en todo `src/`
-`grep -rln "react-virtual" src` no arroja resultados. Listas como `src/pages/myApps/MyApps.tsx:557` o `src/pages/backups/Backups.tsx:573` renderizan todos los nodos sin virtualizar.
-**Acción:** si las listas son pequeñas (decenas de ítems), eliminar la dependencia. Si se prevén catálogos grandes, aplicar `useVirtualizer` en `SearchResults.tsx:106` y `CategoryApps.tsx:151`, que son los candidatos reales.
+Evaluado y descartado deliberadamente: ya hubo un intento previo de usar esta librería en el proyecto y no funcionó bien para el caso real — se optó por una solución propia. Esa solución ya existe y cubre el problema de fondo (evitar cargar/renderizar de más en listas grandes): `CachedImage.tsx` usa `IntersectionObserver` para no disparar la carga de imágenes fuera de viewport, que es el costo real en listas de apps con miniaturas. Virtualizar el DOM completo encima de eso no aportaba valor adicional.
+**Acción:** dependencia eliminada de `package.json`.
 
 ### `src/hooks/useGitHubStars.ts` — 75 líneas de código muerto
-No se importa desde ningún componente. Duplica lógica ya cubierta por `useRepoStats.ts` (que sí se usa y además soporta GitHub + GitLab + GitLab GNOME).
-**Acción:** eliminar el archivo completo.
+Eliminado. Duplicaba lógica ya cubierta por `useRepoStats.ts`.
 
 ### Assets huérfanos sin ninguna referencia — 1.4MB+ sin usar
-- `src/assets/internalPromo/banner.png` (836K) — sin referencias en `src/`.
-- `src/assets/internalPromo/hentairos_logo.png` (564K) — sin referencias en `src/`.
-- `src/assets/kliaLogo.png` (200K) — no se importa en ningún `.ts/.tsx`.
-
-**Acción:** eliminar los tres, o confirmar si se cargan dinámicamente desde Rust/config (no ocurre en `src/`).
+Eliminados: `src/assets/internalPromo/banner.png` (836K), `src/assets/internalPromo/hentairos_logo.png` (564K), `src/assets/kliaLogo.png` (200K).
 
 ### `uuid` como dependencia
-De 8 usos totales, 7 son solo `key={uuidv4()}` en skeletons de carga (`SearchResults.tsx:68`, `CategoryApps.tsx:92`, `Home.tsx:241`, `CategoriesSection.tsx:37`, `AppsOfTheDaySection.tsx:100`, `DeveloperProfile.tsx:230`, `AppDetails.tsx:1490`) — esto además es un antipatrón funcional (genera key nueva en cada render, ver informe de rendimiento). El único uso legítimo es `instanceId: uuidv4()` en `src/hooks/useInstalledApps.ts:50`.
-**Acción:** sustituir por `crypto.randomUUID()` nativo (soportado en el WebView de Tauri) y eliminar la dependencia por completo.
+Eliminada. El único uso legítimo (`instanceId` en `useInstalledApps.ts`) pasó a `crypto.randomUUID()` nativo. Los 7 usos de `key={uuidv4()}` en skeletons de carga se corrigieron:
+- 6 casos (listas de skeleton de longitud fija, sin reordenamiento ni estado por ítem) → `key={\`skeleton-${index}\`}`.
+- 1 caso real de datos (indicadores de paginación de screenshots en `AppDetails.tsx`) → reusa el array `screenshotIds`, ya memoizado con `crypto.randomUUID()` por screenshot, en vez de un índice suelto o una key regenerada en cada render.
+
+Verificado con `tsc --noEmit` y `npm run build` — build limpio. `npm audit` bajó de 7 a 6 vulnerabilidades (todas transitivas de devDependencies, preexistentes y no relacionadas a este cambio).
 
 ---
 
@@ -110,14 +107,14 @@ No hay `rollup-plugin-visualizer` ni `vite-plugin-compression`/`vite-plugin-imag
 
 ## Resumen de acciones priorizadas
 
-| # | Acción | Esfuerzo | Impacto |
-|---|---|---|---|
-| 1 | Eliminar `react-qr-code`, `useGitHubStars.ts`, assets huérfanos (1.4MB+) | XS | Alto |
-| 2 | Eliminar `uuid`, sustituir por `crypto.randomUUID()` | S | Medio |
-| 3 | Decidir `@tanstack/react-virtual`: usar o eliminar | S | Medio |
-| 4 | `useMemo` en `appStream`; selectores de Zustand en `Home.tsx`/`AppDetails.tsx` | S | Medio |
-| 5 | Extraer función de hash de imagen (4 duplicados) + adoptar `get_cached_image_info` | S | Medio |
-| 6 | Helper `run_flatpak_async`-equivalente en `lib.rs` (12+ duplicados) | M | Medio |
-| 7 | `once_cell::Lazy` en regex de `extract_release_info` | XS | Bajo |
-| 8 | `flatpak list` una sola vez en `restore_backup` | S | Bajo-Medio |
-| 9 | Fuente a WOFF2 | XS | Bajo |
+| # | Acción | Esfuerzo | Impacto | Estado |
+|---|---|---|---|---|
+| 1 | Eliminar `react-qr-code`, `useGitHubStars.ts`, assets huérfanos (1.4MB+) | XS | Alto | ✅ Resuelto |
+| 2 | Eliminar `uuid`, sustituir por `crypto.randomUUID()` | S | Medio | ✅ Resuelto |
+| 3 | Decidir `@tanstack/react-virtual`: usar o eliminar | S | Medio | ✅ Resuelto (eliminada) |
+| 4 | `useMemo` en `appStream`; selectores de Zustand en `Home.tsx`/`AppDetails.tsx` | S | Medio | Pendiente |
+| 5 | Extraer función de hash de imagen (4 duplicados) + adoptar `get_cached_image_info` | S | Medio | Pendiente |
+| 6 | Helper `run_flatpak_async`-equivalente en `lib.rs` (12+ duplicados) | M | Medio | Pendiente |
+| 7 | `once_cell::Lazy` en regex de `extract_release_info` | XS | Bajo | Pendiente |
+| 8 | `flatpak list` una sola vez en `restore_backup` | S | Bajo-Medio | Pendiente |
+| 9 | Fuente a WOFF2 | XS | Bajo | Pendiente |
