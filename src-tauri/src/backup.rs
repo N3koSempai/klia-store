@@ -177,34 +177,6 @@ fn list_installed_apps_map() -> Result<std::collections::HashMap<String, (String
     Ok(map)
 }
 
-/// Looks up a single installed app's display name and version via `flatpak
-/// list`. Still used outside the backup-creation batch path (e.g. restore's
-/// already-installed check), where only one app's info is needed at a time.
-fn get_installed_app_info(app_id: &str) -> Result<(String, String), String> {
-    let output = run_flatpak(&["list", "--app", "--columns=application,name,version"])?;
-    if !output.status.success() {
-        return Err(format!(
-            "Failed to list installed apps: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    for line in stdout.lines() {
-        let parts: Vec<&str> = line.split('\t').collect();
-        if parts.len() >= 3 && parts[0].trim() == app_id {
-            let name = parts[1].trim().to_string();
-            let version = parts[2].trim().to_string();
-            return Ok((
-                if name.is_empty() { app_id.to_string() } else { name },
-                version,
-            ));
-        }
-    }
-
-    Err(format!("App {} is not installed", app_id))
-}
-
 /// Looks up the branch an app is installed on (e.g. "stable", "23.08"), via
 /// `flatpak info --show-ref` (format: `app/<id>/<arch>/<branch>`). Needed
 /// because `flatpak build-bundle` defaults its branch argument to "master"
@@ -835,6 +807,7 @@ async fn restore_single_app(
     app: &tauri::AppHandle,
     session_dir: &Path,
     manifest: &BackupManifest,
+    installed_apps: &std::collections::HashMap<String, (String, String)>,
     emit_progress: &(dyn Fn(&str) + Sync),
 ) -> Result<(), String> {
     let app_dir = session_dir.join(&manifest.app_id);
@@ -898,8 +871,9 @@ async fn restore_single_app(
     // can exist on both "stable" and "beta", and skipping based on version
     // alone would silently leave the wrong branch's build in place while
     // still reapplying this backup's permissions/data onto it.
-    let already_installed = get_installed_app_info(&manifest.app_id)
-        .map(|(_, version)| version == manifest.version)
+    let already_installed = installed_apps
+        .get(&manifest.app_id)
+        .map(|(_, version)| version == &manifest.version)
         .unwrap_or(false)
         && get_installed_app_branch(&manifest.app_id)
             .map(|branch| branch == manifest.branch)
@@ -1061,9 +1035,20 @@ pub async fn restore_backup(
         // and reported together at the end instead of aborting on the first one.
         let total = manifests_to_restore.len();
         let mut failures: Vec<(String, String)> = Vec::new();
+        // Snapshot once: each manifest's app_id is only looked up a single time
+        // across the whole loop, so a stale entry for an app installed earlier
+        // in this same batch is never consulted again.
+        let installed_apps = list_installed_apps_map()?;
         for (index, manifest) in manifests_to_restore.iter().enumerate() {
             emit_progress(&format!("[{}/{}] {}", index + 1, total, manifest.app_id));
-            if let Err(e) = restore_single_app(&app, &session_dir, manifest, &emit_progress).await
+            if let Err(e) = restore_single_app(
+                &app,
+                &session_dir,
+                manifest,
+                &installed_apps,
+                &emit_progress,
+            )
+            .await
             {
                 emit_progress(&format!("✗ {} falló: {}", manifest.app_id, e));
                 failures.push((manifest.app_id.clone(), e));

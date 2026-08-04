@@ -55,7 +55,7 @@ export const Home = ({
 }: HomeProps) => {
 	const { t } = useTranslation();
 	const theme = useTheme();
-	const { getUpdateCount } = useInstalledAppsStore();
+	const getUpdateCount = useInstalledAppsStore((state) => state.getUpdateCount);
 	const updateCount = getUpdateCount();
 	const [searchResults, setSearchResults] =
 		useState<CategoryApp[]>(initialSearchResults);

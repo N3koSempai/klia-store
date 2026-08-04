@@ -52,22 +52,36 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
 	// Convert CategoryApp to AppStream for hooks that need it.
 	// Pre-loaded screenshots/urls (set for off-Flathub apps) skip the Flathub fetch.
-	const appStream: AppStream = {
-		id: app.app_id,
-		name: app.name,
-		summary: app.summary,
-		description: app.description,
-		icon: app.icon,
-		screenshots: app.screenshots,
-		urls: app.urls,
-	};
+	const appStream: AppStream = useMemo(
+		() => ({
+			id: app.app_id,
+			name: app.name,
+			summary: app.summary,
+			description: app.description,
+			icon: app.icon,
+			screenshots: app.screenshots,
+			urls: app.urls,
+		}),
+		[
+			app.app_id,
+			app.name,
+			app.summary,
+			app.description,
+			app.icon,
+			app.screenshots,
+			app.urls,
+		],
+	);
 
 	const {
 		screenshots,
 		urls,
 		isLoading: isLoadingScreenshots,
 	} = useAppScreenshots(appStream);
-	const { isAppInstalled, setInstalledApp } = useInstalledAppsStore();
+	const isAppInstalled = useInstalledAppsStore((state) => state.isAppInstalled);
+	const setInstalledApp = useInstalledAppsStore(
+		(state) => state.setInstalledApp,
+	);
 	const { stars, repoUrl } = useRepoStats(app.app_id, urls);
 	const { dependencies, loading: loadingDeps } = useRuntimeCheck(app.app_id);
 	const [currentImageIndex, setCurrentImageIndex] = useState(0);

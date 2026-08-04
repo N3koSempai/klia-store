@@ -30,6 +30,27 @@ static GITLAB_SSH_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
     regex::Regex::new(r"git@(gitlab\.[^:]+):(.+?)(?:\.git)?$").unwrap()
 });
 
+// Regex used by extract_release_info, compiled once instead of per-call
+// (that function runs on every hash verification triggered from the frontend).
+static GITHUB_RELEASE_ASSET_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$")
+        .unwrap()
+});
+static GITHUB_RELEASE_ARCHIVE_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/archive/refs/tags/([^/]+)/(.+)$")
+        .unwrap()
+});
+static GITLAB_RELEASE_ASSET_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(
+        r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/releases/([^/]+)/downloads/(.+)$",
+    )
+    .unwrap()
+});
+static GITLAB_RELEASE_ARCHIVE_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/archive/([^/]+)/(.+)$")
+        .unwrap()
+});
+
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 enum GitPlatform {
@@ -113,6 +134,32 @@ static APP_ID_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
 
 fn is_valid_app_id(app_id: &str) -> bool {
     APP_ID_REGEX.is_match(app_id)
+}
+
+fn is_running_in_flatpak() -> bool {
+    std::env::var("FLATPAK_ID").is_ok()
+}
+
+/// Runs a flatpak subcommand via the Tauri shell plugin, transparently going
+/// through flatpak-spawn when klia-store itself is sandboxed. Mirrors
+/// `backup.rs::run_flatpak_async` for the simple "one shot, wait for full
+/// output" case used by most read-only commands here.
+async fn run_flatpak_async(
+    app: &tauri::AppHandle,
+    args: &[&str],
+) -> Result<tauri_plugin_shell::process::Output, String> {
+    let shell = app.shell();
+    let output = if is_running_in_flatpak() {
+        let mut full_args = vec!["--host", "flatpak"];
+        full_args.extend_from_slice(args);
+        shell.command("flatpak-spawn").args(&full_args).output()
+    } else {
+        shell.command("flatpak").args(args).output()
+    }
+    .await
+    .map_err(|e| format!("Failed to execute flatpak: {}", e))?;
+
+    Ok(output)
 }
 
 // User-supplied file paths (e.g. from a file picker) can contain shell
@@ -600,6 +647,43 @@ fn clear_old_cache(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+// Shared by every cache-image command: picks the hashing key (cacheKey takes
+// priority over the raw URL when provided and different) and the extension
+// inferred from the image URL, then returns the resulting cache filename.
+fn compute_cache_filename(cache_key: &str, image_url: &str) -> String {
+    use xxhash_rust::xxh3::xxh3_64;
+
+    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
+        cache_key
+    } else {
+        image_url
+    };
+
+    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
+        "svg"
+    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
+        "webp"
+    } else if image_url.ends_with(".jpg")
+        || image_url.ends_with(".jpeg")
+        || image_url.contains(".jpg?")
+        || image_url.contains(".jpeg?")
+    {
+        "jpg"
+    } else {
+        "png" // default
+    };
+
+    let hash = xxh3_64(key_to_hash.as_bytes());
+    format!("{:x}.{}", hash, extension)
+}
+
+fn canonical_path_string(path: &std::path::Path) -> String {
+    path.canonicalize()
+        .unwrap_or_else(|_| path.to_path_buf())
+        .to_string_lossy()
+        .to_string()
+}
+
 #[tauri::command]
 async fn download_and_cache_image(
     app: tauri::AppHandle,
@@ -615,38 +699,12 @@ async fn download_and_cache_image(
     fs::create_dir_all(&cache_images_dir)
         .map_err(|e| format!("Failed to create cacheImages directory: {}", e))?;
 
-    // Determinar extensión desde la URL (consistente con check_cached_image_exists)
-    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
-        "svg"
-    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
-        "webp"
-    } else if image_url.ends_with(".jpg")
-        || image_url.ends_with(".jpeg")
-        || image_url.contains(".jpg?")
-        || image_url.contains(".jpeg?")
-    {
-        "jpg"
-    } else {
-        "png" // default
-    };
-
-    // Generar nombre de archivo único usando xxHash3
-    // Si app_id no está vacío y es diferente de image_url, usarlo como key (caso de cacheKey)
-    // Si no, usar image_url (caso normal)
-    use xxhash_rust::xxh3::xxh3_64;
-    let key_to_hash = if !app_id.is_empty() && app_id != image_url {
-        app_id
-    } else {
-        image_url.clone()
-    };
-
-    let hash = xxh3_64(key_to_hash.as_bytes());
-    let filename = format!("{:x}.{}", hash, extension);
+    let filename = compute_cache_filename(&app_id, &image_url);
     let file_path = cache_images_dir.join(&filename);
 
     // Si el archivo ya existe, no descargar de nuevo
     if file_path.exists() {
-        return Ok(filename);
+        return Ok(canonical_path_string(&file_path));
     }
 
     // Descargar la imagen
@@ -668,7 +726,7 @@ async fn download_and_cache_image(
 
     fs::write(&file_path, &bytes).map_err(|e| format!("Error saving image: {}", e))?;
 
-    Ok(filename)
+    Ok(canonical_path_string(&file_path))
 }
 
 #[tauri::command]
@@ -679,95 +737,13 @@ fn get_cached_image_path(app: tauri::AppHandle, filename: String) -> Result<Stri
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
     let file_path = app_data_dir.join("cacheImages").join(filename);
-
-    // Usar canonicalize para obtener la ruta absoluta normalizada
-    let canonical_path = file_path
-        .canonicalize()
-        .unwrap_or_else(|_| file_path.clone());
-
-    Ok(canonical_path.to_string_lossy().to_string())
+    Ok(canonical_path_string(&file_path))
 }
 
 #[tauri::command]
 fn check_file_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
 }
-
-#[tauri::command]
-fn get_cached_image_filename(cache_key: String, image_url: String) -> String {
-    use xxhash_rust::xxh3::xxh3_64;
-    // Si hay cacheKey, usar eso; si no, usar imageUrl
-    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
-        cache_key
-    } else {
-        image_url.clone()
-    };
-
-    let hash = xxh3_64(key_to_hash.as_bytes());
-
-    // Determinar extensión basándose en la URL
-    let extension = if image_url.ends_with(".svg") {
-        "svg"
-    } else if image_url.ends_with(".webp") {
-        "webp"
-    } else if image_url.ends_with(".jpg") || image_url.ends_with(".jpeg") {
-        "jpg"
-    } else {
-        "png"
-    };
-
-    format!("{:x}.{}", hash, extension)
-}
-
-#[tauri::command]
-fn check_cached_image_exists(
-    app: tauri::AppHandle,
-    cache_key: String,
-    image_url: String,
-) -> Result<String, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-
-    let cache_images_dir = app_data_dir.join("cacheImages");
-
-    use xxhash_rust::xxh3::xxh3_64;
-
-    // Si hay cacheKey, usar eso; si no, usar imageUrl
-    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
-        cache_key
-    } else {
-        image_url.clone()
-    };
-
-    let hash = xxh3_64(key_to_hash.as_bytes());
-
-    // Determinar extensión desde la URL (que siempre tiene la URL real de la imagen)
-    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
-        "svg"
-    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
-        "webp"
-    } else if image_url.ends_with(".jpg")
-        || image_url.ends_with(".jpeg")
-        || image_url.contains(".jpg?")
-        || image_url.contains(".jpeg?")
-    {
-        "jpg"
-    } else {
-        "png" // default
-    };
-
-    let filename = format!("{:x}.{}", hash, extension);
-    let file_path = cache_images_dir.join(&filename);
-
-    if file_path.exists() {
-        Ok(filename)
-    } else {
-        Err("Image not found in cache".to_string())
-    }
-}
-
 
 #[tauri::command]
 fn get_cached_image_info(
@@ -782,43 +758,11 @@ fn get_cached_image_info(
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
     let cache_images_dir = app_data_dir.join("cacheImages");
-
-    use xxhash_rust::xxh3::xxh3_64;
-
-    // Si hay cacheKey, usar eso; si no, usar imageUrl
-    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
-        cache_key
-    } else {
-        image_url.clone()
-    };
-
-    let hash = xxh3_64(key_to_hash.as_bytes());
-
-    // Determinar extension desde la URL
-    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
-        "svg"
-    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
-        "webp"
-    } else if image_url.ends_with(".jpg")
-        || image_url.ends_with(".jpeg")
-        || image_url.contains(".jpg?")
-        || image_url.contains(".jpeg?")
-    {
-        "jpg"
-    } else {
-        "png" // default
-    };
-
-    let filename = format!("{:x}.{}", hash, extension);
+    let filename = compute_cache_filename(&cache_key, &image_url);
     let file_path = cache_images_dir.join(&filename);
 
-    // Verificar que existe y retornar la ruta absoluta
     if file_path.exists() {
-        // Usar canonicalize para obtener la ruta absoluta normalizada
-        let canonical_path = file_path
-            .canonicalize()
-            .unwrap_or_else(|_| file_path.clone());
-        Ok(canonical_path.to_string_lossy().to_string())
+        Ok(canonical_path_string(&file_path))
     } else {
         Err("Image not found in cache".to_string())
     }
@@ -828,40 +772,18 @@ fn get_cached_image_info(
 async fn get_installed_flatpaks(
     app: tauri::AppHandle,
 ) -> Result<InstalledPackagesResponse, String> {
-    let shell = app.shell();
-
-    // Detect if we're running inside a flatpak
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
     // Get everything (apps + runtimes) with options column to distinguish
     // Note: flatpak list without --system or --user gets both
     // The 'options' column contains 'runtime' for runtimes/extensions and 'current' for apps
     // The 'size' column contains the installed size in bytes
-    let output = if is_flatpak {
-        // Inside flatpak, use flatpak-spawn to execute on the host
-        shell
-            .command("flatpak-spawn")
-            .args([
-                "--host",
-                "flatpak",
-                "list",
-                "--columns=application,name,version,description,options,ref,size",
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
-    } else {
-        // Outside flatpak, use flatpak directly
-        shell
-            .command("flatpak")
-            .args([
-                "list",
-                "--columns=application,name,version,description,options,ref,size",
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak: {}", e))?
-    };
+    let output = run_flatpak_async(
+        &app,
+        &[
+            "list",
+            "--columns=application,name,version,description,options,ref,size",
+        ],
+    )
+    .await?;
 
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
@@ -1220,38 +1142,15 @@ async fn get_install_dependencies(
 
 #[tauri::command]
 async fn get_available_updates(app: tauri::AppHandle) -> Result<Vec<UpdateAvailable>, String> {
-    let shell = app.shell();
-
-    // Detect if we're running inside a flatpak
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
-    let output = if is_flatpak {
-        // Inside flatpak, use flatpak-spawn to execute on the host
-        shell
-            .command("flatpak-spawn")
-            .args([
-                "--host",
-                "flatpak",
-                "remote-ls",
-                "--updates",
-                "--columns=application,version,branch",
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
-    } else {
-        // Outside flatpak, use flatpak directly
-        shell
-            .command("flatpak")
-            .args([
-                "remote-ls",
-                "--updates",
-                "--columns=application,version,branch",
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak: {}", e))?
-    };
+    let output = run_flatpak_async(
+        &app,
+        &[
+            "remote-ls",
+            "--updates",
+            "--columns=application,version,branch",
+        ],
+    )
+    .await?;
 
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
@@ -1492,42 +1391,17 @@ async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), 
 
 #[tauri::command]
 async fn get_app_remote_metadata(app: tauri::AppHandle, app_id: String) -> Result<String, String> {
-    let shell = app.shell();
-
-    // Detect if we're running inside a flatpak
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
-    let output = if is_flatpak {
-        // Inside flatpak, use flatpak-spawn to execute on the host
-        shell
-            .command("flatpak-spawn")
-            .args([
-                "--host",
-                "flatpak",
-                "remote-info",
-                "--user",
-                "--show-metadata",
-                "flathub",
-                &app_id,
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
-    } else {
-        // Outside flatpak, use flatpak directly
-        shell
-            .command("flatpak")
-            .args([
-                "remote-info",
-                "--user",
-                "--show-metadata",
-                "flathub",
-                &app_id,
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak: {}", e))?
-    };
+    let output = run_flatpak_async(
+        &app,
+        &[
+            "remote-info",
+            "--user",
+            "--show-metadata",
+            "flathub",
+            &app_id,
+        ],
+    )
+    .await?;
 
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
@@ -1550,9 +1424,6 @@ async fn get_installable_extensions(
     app: tauri::AppHandle,
     app_id: String,
 ) -> Result<Vec<InstallableExtension>, String> {
-    let shell = app.shell();
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
     // First, get the metadata to find extension points
     let metadata = get_app_remote_metadata(app.clone(), app_id.clone()).await?;
 
@@ -1596,27 +1467,11 @@ async fn get_installable_extensions(
     for extension_point in extension_points {
         // Use flatpak search to find extensions matching the extension point
         // Note: flatpak search doesn't return version info, only application and name
-        let output = if is_flatpak {
-            shell
-                .command("flatpak-spawn")
-                .args([
-                    "--host",
-                    "flatpak",
-                    "search",
-                    "--columns=application,name",
-                    &extension_point,
-                ])
-                .output()
-                .await
-                .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
-        } else {
-            shell
-                .command("flatpak")
-                .args(["search", "--columns=application,name", &extension_point])
-                .output()
-                .await
-                .map_err(|e| format!("Failed to execute flatpak: {}", e))?
-        };
+        let output = run_flatpak_async(
+            &app,
+            &["search", "--columns=application,name", &extension_point],
+        )
+        .await?;
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -2033,9 +1888,6 @@ async fn check_github_updates(
     // List of (app_id, github_repo) pairs to check, e.g. [["io.github.N3kosempai.klia-kompress", "N3koSempai/klia-kompress"]]
     apps: Vec<(String, String)>,
 ) -> Result<Vec<GitHubUpdateInfo>, String> {
-    let shell = app.shell();
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
     let client = reqwest::Client::builder()
         .user_agent("klia-store")
         .build()
@@ -2045,19 +1897,7 @@ async fn check_github_updates(
 
     for (app_id, github_repo) in apps {
         // Get installed version via flatpak info
-        let output = if is_flatpak {
-            shell
-                .command("flatpak-spawn")
-                .args(["--host", "flatpak", "info", "--show-version", &app_id])
-                .output()
-                .await
-        } else {
-            shell
-                .command("flatpak")
-                .args(["info", "--show-version", &app_id])
-                .output()
-                .await
-        };
+        let output = run_flatpak_async(&app, &["info", "--show-version", &app_id]).await;
 
         let installed_version = match output {
             Ok(o) if o.status.success() => {
@@ -2150,20 +1990,25 @@ async fn inspect_local_flatpak(
 
     let raw = String::from_utf8_lossy(&output.stdout).to_string();
 
-    // Also read metadata directly from the binary bundle (available in all cases)
-    // The bundle embeds a plain-text [Application] block right after the "flatpak\0" magic
-    let metadata_block = fs::read(&file_path)
-        .ok()
-        .and_then(|bytes| {
-            let text = String::from_utf8_lossy(&bytes).into_owned();
-            // Find [Application] section
-            let start = text.find("[Application]")?;
-            // Find end: first occurrence of two+ consecutive NUL bytes after start
-            let section = &text[start..];
-            // Grab up to 2000 chars which is more than enough for the metadata ini
-            Some(section.chars().take(2000).collect::<String>())
-        })
+    // Read the bundle once and reuse the decoded text for both the metadata
+    // block and the branch lookup below, instead of reading the (potentially
+    // multi-hundred-MB) file from disk twice.
+    let bundle_text = fs::read(&file_path)
+        .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
         .unwrap_or_default();
+
+    // The bundle embeds a plain-text [Application] block right after the "flatpak\0" magic
+    let metadata_block = {
+        // Find [Application] section
+        bundle_text
+            .find("[Application]")
+            .map(|start| {
+                let section = &bundle_text[start..];
+                // Grab up to 2000 chars which is more than enough for the metadata ini
+                section.chars().take(2000).collect::<String>()
+            })
+            .unwrap_or_default()
+    };
 
     // Parse metadata fields
     let get_meta = |key: &str| -> String {
@@ -2182,16 +2027,13 @@ async fn inspect_local_flatpak(
     let command = get_meta("command");
 
     // Parse branch from the ref line in the binary (app/id/arch/branch)
-    let branch = {
-        let bytes = fs::read(&file_path).unwrap_or_default();
-        let text = String::from_utf8_lossy(&bytes).into_owned();
-        text.lines()
-            .find(|l| l.starts_with(&format!("app/{}/", app_id)))
-            .and_then(|l| l.splitn(4, '/').nth(3))
-            .unwrap_or("master")
-            .trim_matches('\0')
-            .to_string()
-    };
+    let branch = bundle_text
+        .lines()
+        .find(|l| l.starts_with(&format!("app/{}/", app_id)))
+        .and_then(|l| l.splitn(4, '/').nth(3))
+        .unwrap_or("master")
+        .trim_matches('\0')
+        .to_string();
 
     // Parse context permissions from metadata
     let get_context_list = |section_key: &str| -> Vec<String> {
@@ -3049,10 +2891,7 @@ async fn get_github_tag_commit(owner: &str, repo: &str, tag: &str) -> Result<Str
 fn extract_release_info(url: &str) -> Option<(String, String, String, String, bool, String)> {
     // GitHub pattern: https://github.com/owner/repo/releases/download/tag/file
     // These are manually uploaded assets and have SHA256 digest available
-    if let Some(caps) = regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$")
-        .ok()?
-        .captures(url)
-    {
+    if let Some(caps) = GITHUB_RELEASE_ASSET_REGEX.captures(url) {
         let owner = caps.get(1)?.as_str().to_string();
         let repo = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
@@ -3062,10 +2901,7 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String, bo
 
     // GitHub archive pattern: https://github.com/owner/repo/archive/refs/tags/tag/file
     // These are auto-generated tarballs and do NOT have SHA256 digest available via API
-    if let Some(caps) = regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/archive/refs/tags/([^/]+)/(.+)$")
-        .ok()?
-        .captures(url)
-    {
+    if let Some(caps) = GITHUB_RELEASE_ARCHIVE_REGEX.captures(url) {
         let owner = caps.get(1)?.as_str().to_string();
         let repo = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
@@ -3075,10 +2911,7 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String, bo
 
     // GitLab releases pattern: https://gitlab.DOMAIN/owner/repo/-/releases/tag/downloads/file
     // These are manually uploaded assets; a companion .sha256sum link may be available
-    if let Some(caps) = regex::Regex::new(r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/releases/([^/]+)/downloads/(.+)$")
-        .ok()?
-        .captures(url)
-    {
+    if let Some(caps) = GITLAB_RELEASE_ASSET_REGEX.captures(url) {
         let domain = caps.get(1)?.as_str().to_string();
         let project_path = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
@@ -3089,10 +2922,7 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String, bo
 
     // GitLab archive pattern: https://gitlab.DOMAIN/owner/repo/-/archive/tag/file
     // Auto-generated tarballs, no sha256sum companion expected
-    if let Some(caps) = regex::Regex::new(r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/archive/([^/]+)/(.+)$")
-        .ok()?
-        .captures(url)
-    {
+    if let Some(caps) = GITLAB_RELEASE_ARCHIVE_REGEX.captures(url) {
         let domain = caps.get(1)?.as_str().to_string();
         let project_path = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
@@ -3725,8 +3555,7 @@ pub fn run() {
             clear_old_cache,
             download_and_cache_image,
             get_cached_image_path,
-            get_cached_image_filename,
-            check_cached_image_exists,
+            get_cached_image_info,
             check_file_exists,
             get_installed_flatpaks,
             get_install_dependencies,
