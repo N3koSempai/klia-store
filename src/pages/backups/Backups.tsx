@@ -1,13 +1,11 @@
-import {
-	ArrowBack,
-	Backup as BackupIcon,
-	CloudUpload,
-	Delete,
-	FolderZip,
-	Restore,
-	SettingsBackupRestore,
-} from "@mui/icons-material";
+import ArrowBack from "@mui/icons-material/ArrowBack";
+import BackupIcon from "@mui/icons-material/Backup";
+import CloudUpload from "@mui/icons-material/CloudUpload";
+import Delete from "@mui/icons-material/Delete";
+import FolderZip from "@mui/icons-material/FolderZip";
+import Restore from "@mui/icons-material/Restore";
 import SearchIcon from "@mui/icons-material/Search";
+import SettingsBackupRestore from "@mui/icons-material/SettingsBackupRestore";
 import {
 	alpha,
 	Box,

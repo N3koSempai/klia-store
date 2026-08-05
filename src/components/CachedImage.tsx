@@ -1,4 +1,4 @@
-import { BrokenImage } from "@mui/icons-material";
+import BrokenImage from "@mui/icons-material/BrokenImage";
 import { Box, Skeleton } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { imageCacheManager } from "../utils/imageCache";

@@ -306,18 +306,28 @@ export class DBCacheManager {
 		// Limpiar tabla primero
 		await this.db.execute("DELETE FROM apps_of_the_week");
 
-		for (const app of apps) {
-			const dataStr = JSON.stringify({
-				isFullscreen: app.isFullscreen,
-				summary: app.summary,
-				appStream: app.appStream,
-				categoryApp: app.categoryApp,
+		if (apps.length > 0) {
+			const placeholders = apps.map(() => "(?, ?, ?, ?, ?)").join(", ");
+			const values = apps.flatMap((app) => {
+				const dataStr = JSON.stringify({
+					isFullscreen: app.isFullscreen,
+					summary: app.summary,
+					appStream: app.appStream,
+					categoryApp: app.categoryApp,
+				});
+				return [
+					app.app_id,
+					app.position,
+					app.name || null,
+					app.icon || null,
+					dataStr,
+				];
 			});
 
 			await this.db.execute(
 				`INSERT INTO apps_of_the_week (app_id, position, name, icon, data)
-         VALUES ($1, $2, $3, $4, $5)`,
-				[app.app_id, app.position, app.name || null, app.icon || null, dataStr],
+         VALUES ${placeholders}`,
+				values,
 			);
 		}
 
@@ -351,10 +361,11 @@ export class DBCacheManager {
 		// Clear table first
 		await this.db.execute("DELETE FROM categories");
 
-		for (const category of categories) {
+		if (categories.length > 0) {
+			const placeholders = categories.map(() => "(?)").join(", ");
 			await this.db.execute(
-				"INSERT INTO categories (category_name) VALUES ($1)",
-				[category],
+				`INSERT INTO categories (category_name) VALUES ${placeholders}`,
+				categories,
 			);
 		}
 
@@ -493,15 +504,20 @@ export class DBCacheManager {
 		if (entries.length === 0) return;
 
 		try {
-			// Insert each permission sequentially (no transaction to avoid locks)
-			for (const [appId, data] of entries) {
-				const permissionsStr = JSON.stringify(data.permissions);
-				await this.db.execute(
-					`INSERT OR REPLACE INTO app_permissions (app_id, version, permissions, outdated, cached_at)
-           VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)`,
-					[appId, data.version, permissionsStr],
-				);
-			}
+			const placeholders = entries
+				.map(() => "(?, ?, ?, 0, CURRENT_TIMESTAMP)")
+				.join(", ");
+			const values = entries.flatMap(([appId, data]) => [
+				appId,
+				data.version,
+				JSON.stringify(data.permissions),
+			]);
+
+			await this.db.execute(
+				`INSERT OR REPLACE INTO app_permissions (app_id, version, permissions, outdated, cached_at)
+           VALUES ${placeholders}`,
+				values,
+			);
 		} catch (error) {
 			console.error("Error caching permissions batch:", error);
 		}
@@ -528,9 +544,13 @@ export class DBCacheManager {
 		if (!this.db) throw new Error("Database not initialized");
 
 		try {
-			for (const appId of appIds) {
-				await this.markPermissionsAsOutdated(appId);
-			}
+			if (appIds.length === 0) return;
+
+			const placeholders = appIds.map(() => "?").join(", ");
+			await this.db.execute(
+				`UPDATE app_permissions SET outdated = 1 WHERE app_id IN (${placeholders})`,
+				appIds,
+			);
 		} catch (error) {
 			console.error("Error marking permissions as outdated batch:", error);
 		}

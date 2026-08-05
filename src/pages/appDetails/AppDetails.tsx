@@ -1,16 +1,9 @@
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import {
-	ArrowBack,
-	BoltRounded,
-	ChevronLeft,
-	ChevronRight,
-	Delete,
-	VolunteerActivism,
-} from "@mui/icons-material";
+import ArrowBack from "@mui/icons-material/ArrowBack";
+import BoltRounded from "@mui/icons-material/BoltRounded";
+import Delete from "@mui/icons-material/Delete";
 import {
 	Box,
 	Button,
-	ButtonBase,
 	IconButton,
 	Skeleton,
 	Tooltip,
@@ -21,23 +14,25 @@ import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import errorAnim from "../../assets/animations/Error.lottie";
-// Import animations to ensure they are correctly bundled
-import successAnim from "../../assets/animations/success.lottie";
 import { AppActionButton } from "../../components/AppActionButton";
 import { AppMetaCapsule } from "../../components/AppMetaCapsule";
 import { CachedImage } from "../../components/CachedImage";
 import { DependencyInfoPopover } from "../../components/DependencyInfoPopover";
 import { DonationModal } from "../../components/DonationModal";
 import { GitHubStarBadge } from "../../components/GitHubStarBadge";
-import { Terminal } from "../../components/Terminal";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
 import { useRepoStats } from "../../hooks/useRepoStats";
 import { useRuntimeCheck } from "../../hooks/useRuntimeCheck";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { AppStream, CategoryApp } from "../../types";
+import {
+	InstallProgressPanel,
+	type InstallStatus,
+	type VerificationResult,
+} from "./components/InstallProgressPanel";
+import { ScreenshotCarousel } from "./components/ScreenshotCarousel";
 
 interface AppDetailsProps {
 	app: CategoryApp;
@@ -84,7 +79,6 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	);
 	const { stars, repoUrl } = useRepoStats(app.app_id, urls);
 	const { dependencies, loading: loadingDeps } = useRuntimeCheck(app.app_id);
-	const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
 	// Generate stable UUIDs for screenshots
 	const screenshotIds = useMemo(
@@ -93,36 +87,14 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	);
 	const [isInstalling, setIsInstalling] = useState(false);
 	const [installOutput, setInstallOutput] = useState<string[]>([]);
-	const [installStatus, setInstallStatus] = useState<
-		| "idle"
-		| "verifying"
-		| "verificationSuccess"
-		| "verificationFailed"
-		| "verificationUnsupported"
-		| "verificationDetails"
-		| "installing"
-		| "success"
-		| "error"
-	>("idle");
+	const [installStatus, setInstallStatus] = useState<InstallStatus>("idle");
 	const [isUninstalling, setIsUninstalling] = useState(false);
 	const [showDonationModal, setShowDonationModal] = useState(false);
 	const hasCryptoDonation = !!(
 		urls?.donation && /bitcoin|ethereum/i.test(urls.donation)
 	);
-	const [verificationResult, setVerificationResult] = useState<{
-		verified: boolean;
-		sources: Array<{
-			url: string;
-			commit: string;
-			verified: boolean;
-			remote_commit?: string;
-			error?: string;
-			platform?: string;
-		}>;
-		error?: string;
-		isHashMismatch: boolean;
-		isUnsupportedPlatform: boolean;
-	} | null>(null);
+	const [verificationResult, setVerificationResult] =
+		useState<VerificationResult | null>(null);
 	const [countdown, setCountdown] = useState(5);
 	const [riskCountdown, setRiskCountdown] = useState<number | null>(null);
 	const riskCountdownIntervalRef = useRef<ReturnType<
@@ -149,8 +121,39 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	// Check if app is already installed
 	const isInstalled = isAppInstalled(app.app_id);
 
+	const clearCountdown = useCallback(() => {
+		if (countdownIntervalRef.current) {
+			clearInterval(countdownIntervalRef.current);
+			countdownIntervalRef.current = null;
+		}
+		if (riskCountdownIntervalRef.current) {
+			clearInterval(riskCountdownIntervalRef.current);
+			riskCountdownIntervalRef.current = null;
+		}
+		setCountdown(5);
+		setRiskCountdown(null);
+	}, []);
+
+	const startRiskCountdown = useCallback(() => {
+		if (riskCountdownIntervalRef.current) {
+			clearInterval(riskCountdownIntervalRef.current);
+		}
+		setRiskCountdown(5);
+		riskCountdownIntervalRef.current = setInterval(() => {
+			setRiskCountdown((prev) => {
+				if (prev === null || prev <= 1) {
+					if (riskCountdownIntervalRef.current) {
+						clearInterval(riskCountdownIntervalRef.current);
+						riskCountdownIntervalRef.current = null;
+					}
+					return null;
+				}
+				return prev - 1;
+			});
+		}, 1000);
+	}, []);
+
 	// Auto-start risk countdown when hash mismatch is detected
-	// biome-ignore lint/correctness/useExhaustiveDependencies: startRiskCountdown is not memoized; adding it would cause infinite re-runs
 	useEffect(() => {
 		if (
 			verificationResult?.isHashMismatch &&
@@ -158,10 +161,9 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		) {
 			startRiskCountdown();
 		}
-	}, [verificationResult?.isHashMismatch, installStatus]);
+	}, [verificationResult?.isHashMismatch, installStatus, startRiskCountdown]);
 
 	// Cleanup: kill PTY process and countdown when leaving the page
-	// biome-ignore lint/correctness/useExhaustiveDependencies: clearCountdown is not memoized; adding it would cause infinite re-runs
 	useEffect(() => {
 		return () => {
 			if (installSessionId.current) {
@@ -171,7 +173,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 			}
 			clearCountdown();
 		};
-	}, [app.app_id]);
+	}, [app.app_id, clearCountdown]);
 
 	// PTY events - listen only during installation
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Event listeners should only be set up once on mount
@@ -319,22 +321,6 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		return tmp.textContent || tmp.innerText || "";
 	};
 
-	const handlePrevImage = () => {
-		if (screenshots && screenshots.length > 0) {
-			setCurrentImageIndex((prev) =>
-				prev === 0 ? screenshots.length - 1 : prev - 1,
-			);
-		}
-	};
-
-	const handleNextImage = () => {
-		if (screenshots && screenshots.length > 0) {
-			setCurrentImageIndex((prev) =>
-				prev === screenshots.length - 1 ? 0 : prev + 1,
-			);
-		}
-	};
-
 	// Function to strip ANSI escape codes while preserving Unicode block characters for progress bars
 	const stripAnsi = (str: string) => {
 		return (
@@ -354,38 +340,6 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				.replace(/\u00a0/g, " ")
 			// Note: We intentionally preserve Unicode block characters (█, ▓, ▒, ░) for progress bars
 		);
-	};
-
-	const clearCountdown = () => {
-		if (countdownIntervalRef.current) {
-			clearInterval(countdownIntervalRef.current);
-			countdownIntervalRef.current = null;
-		}
-		if (riskCountdownIntervalRef.current) {
-			clearInterval(riskCountdownIntervalRef.current);
-			riskCountdownIntervalRef.current = null;
-		}
-		setCountdown(5);
-		setRiskCountdown(null);
-	};
-
-	const startRiskCountdown = () => {
-		if (riskCountdownIntervalRef.current) {
-			clearInterval(riskCountdownIntervalRef.current);
-		}
-		setRiskCountdown(5);
-		riskCountdownIntervalRef.current = setInterval(() => {
-			setRiskCountdown((prev) => {
-				if (prev === null || prev <= 1) {
-					if (riskCountdownIntervalRef.current) {
-						clearInterval(riskCountdownIntervalRef.current);
-						riskCountdownIntervalRef.current = null;
-					}
-					return null;
-				}
-				return prev - 1;
-			});
-		}, 1000);
 	};
 
 	// GitHub repo (owner/repo) for apps not on Flathub — always resolves latest release
@@ -410,7 +364,13 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 					githubRepo,
 					appId: app.app_id,
 				});
-				setInstallOutput((prev) => [...prev, `Downloaded to ${tmpPath}`, "", "Installing…", ""]);
+				setInstallOutput((prev) => [
+					...prev,
+					`Downloaded to ${tmpPath}`,
+					"",
+					"Installing…",
+					"",
+				]);
 
 				await invoke("kill_pty_process", { appId: app.app_id }).catch(() => {});
 				await new Promise((resolve) => setTimeout(resolve, 100));
@@ -695,7 +655,11 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	return (
 		<Box sx={{ p: 3 }}>
 			{/* Botón de regreso */}
-			<IconButton aria-label={t("appDetails.back")} onClick={onBack} sx={{ mb: 2 }}>
+			<IconButton
+				aria-label={t("appDetails.back")}
+				onClick={onBack}
+				sx={{ mb: 2 }}
+			>
 				<ArrowBack />
 			</IconButton>
 
@@ -892,652 +856,34 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
 			{/* Sección de Screenshots - Carrusel, Terminal o Resultado */}
 			<Box sx={{ mb: 4 }}>
-				{installStatus === "verifying" ? (
-					// Security Verification UI
-					<Box
-						sx={{
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							justifyContent: "center",
-							gap: 3,
-							p: 4,
-							minHeight: 500,
-							bgcolor: "#161B22",
-							borderRadius: 2,
-							border: "1px solid rgba(255, 255, 255, 0.1)",
-						}}
-					>
-						<Typography
-							variant="h5"
-							textAlign="center"
-							sx={{
-								color: "#C9D1D9",
-								fontWeight: 500,
-							}}
-						>
-							{t("appDetails.securityVerifyingSignatures")}
-						</Typography>
-
-						{/* Spinner */}
-						<Box
-							sx={{
-								width: 60,
-								height: 60,
-								border: "3px solid rgba(74, 134, 207, 0.3)",
-								borderTop: "3px solid #4A86CF",
-								borderRadius: "50%",
-								animation: "spin 1s linear infinite",
-								"@keyframes spin": {
-									"0%": { transform: "rotate(0deg)" },
-									"100%": { transform: "rotate(360deg)" },
-								},
-							}}
-						/>
-
-						<Typography
-							variant="body2"
-							sx={{
-								color: "#8B949E",
-								fontFamily: "'Fira Code', 'Courier New', monospace",
-							}}
-						>
-							{t("appDetails.securityCheckingSignatures")}
-						</Typography>
-					</Box>
-				) : installStatus === "verificationSuccess" ? (
-					// Verification Success with Countdown
-					<Box
-						sx={{
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							justifyContent: "center",
-							gap: 3,
-							p: 4,
-							minHeight: 500,
-							bgcolor: "#161B22",
-							borderRadius: 2,
-							border: "1px solid rgba(39, 201, 63, 0.3)",
-						}}
-					>
-						{/* Success Icon */}
-						<Box
-							sx={{
-								width: 80,
-								height: 80,
-								borderRadius: "50%",
-								bgcolor: "rgba(39, 201, 63, 0.1)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								border: "2px solid #27c93f",
-							}}
-						>
-							<Typography sx={{ color: "#27c93f", fontSize: "2rem" }}>
-								✓
-							</Typography>
-						</Box>
-
-						<Typography
-							variant="h5"
-							textAlign="center"
-							sx={{
-								color: "#27c93f",
-								fontWeight: 500,
-							}}
-						>
-							{t("appDetails.securityVerificationSuccess")}
-						</Typography>
-
-						<Typography
-							variant="body2"
-							textAlign="center"
-							sx={{
-								color: "#8B949E",
-								maxWidth: 500,
-								px: 2,
-							}}
-						>
-							{t("appDetails.securityHashVerifiedExplanation")}
-						</Typography>
-
-						<Typography
-							variant="body1"
-							textAlign="center"
-							sx={{
-								color: "#C9D1D9",
-							}}
-						>
-							{t("appDetails.securityStartingInSeconds", { countdown })}
-						</Typography>
-					</Box>
-				) : installStatus === "verificationFailed" ||
-					installStatus === "verificationUnsupported" ? (
-					// Verification Failed UI
-					<Box
-						sx={{
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							justifyContent: "center",
-							gap: 3,
-							p: 4,
-							minHeight: 500,
-							bgcolor: "#161B22",
-							borderRadius: 2,
-							border: `1px solid ${
-								verificationResult?.isUnsupportedPlatform
-									? "rgba(246, 211, 45, 0.5)"
-									: verificationResult?.isHashMismatch
-										? "rgba(255, 107, 107, 0.5)"
-										: "rgba(246, 211, 45, 0.5)"
-							}`,
-						}}
-					>
-						{/* Warning/Error Icon */}
-						<Box
-							sx={{
-								width: 80,
-								height: 80,
-								borderRadius: "50%",
-								bgcolor: verificationResult?.isUnsupportedPlatform
-									? "rgba(246, 211, 45, 0.1)"
-									: verificationResult?.isHashMismatch
-										? "rgba(255, 107, 107, 0.1)"
-										: "rgba(246, 211, 45, 0.1)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								border: `2px solid ${
-									verificationResult?.isUnsupportedPlatform
-										? "#F6D32D"
-										: verificationResult?.isHashMismatch
-											? "#FF6B6B"
-											: "#F6D32D"
-								}`,
-							}}
-						>
-							<Typography
-								sx={{
-									color: verificationResult?.isUnsupportedPlatform
-										? "#F6D32D"
-										: verificationResult?.isHashMismatch
-											? "#FF6B6B"
-											: "#F6D32D",
-									fontSize: "2rem",
-								}}
-							>
-								⚠
-							</Typography>
-						</Box>
-
-						<Typography
-							variant="h5"
-							textAlign="center"
-							sx={{
-								color: verificationResult?.isUnsupportedPlatform
-									? "#F6D32D"
-									: verificationResult?.isHashMismatch
-										? "#FF6B6B"
-										: "#F6D32D",
-								fontWeight: 500,
-							}}
-						>
-							{verificationResult?.isUnsupportedPlatform
-								? t("appDetails.securityUnsupportedPlatform")
-								: t("appDetails.securityVerificationFailed")}
-						</Typography>
-
-						<Typography
-							variant="body2"
-							textAlign="center"
-							sx={{
-								color: "#8B949E",
-								maxWidth: 500,
-								px: 2,
-								mb: 2,
-							}}
-						>
-							{t("appDetails.securityHashVerificationExplanation")}
-						</Typography>
-
-						<Typography
-							variant="body1"
-							textAlign="center"
-							sx={{
-								color: "#C9D1D9",
-								maxWidth: 600,
-							}}
-						>
-							{verificationResult?.isUnsupportedPlatform
-								? t("appDetails.securityUnsupportedPlatformMessage")
-								: verificationResult?.isHashMismatch
-									? t("appDetails.securityHashMismatch")
-									: t("appDetails.securitySourceUnavailable")}
-						</Typography>
-
-						{/* Debug info - removed, now shown in More Details */}
-
-						{/* Action Buttons */}
-						<Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-							<Button
-								variant="outlined"
-								onClick={handleShowVerificationDetails}
-								sx={{
-									px: 3,
-									borderColor: "rgba(255, 255, 255, 0.3)",
-									color: "#C9D1D9",
-									"&:hover": {
-										borderColor: "rgba(255, 255, 255, 0.5)",
-										bgcolor: "rgba(255, 255, 255, 0.05)",
-									},
-								}}
-							>
-								{t("appDetails.securityMoreDetails")}
-							</Button>
-							<Button
-								variant="contained"
-								onClick={handleForceContinue}
-								disabled={
-									verificationResult?.isHashMismatch && riskCountdown !== null
-								}
-								sx={{
-									px: 3,
-									bgcolor: verificationResult?.isUnsupportedPlatform
-										? "#F6D32D"
-										: verificationResult?.isHashMismatch
-											? "#FF6B6B"
-											: "#F6D32D",
-									color: "#0D1117",
-									fontWeight: 600,
-									"&:hover": {
-										bgcolor: verificationResult?.isUnsupportedPlatform
-											? "#f8db4e"
-											: verificationResult?.isHashMismatch
-												? "#ff8585"
-												: "#f8db4e",
-									},
-									"&.Mui-disabled": {
-										bgcolor: verificationResult?.isHashMismatch
-											? "rgba(255, 107, 107, 0.5)"
-											: "rgba(246, 211, 45, 0.5)",
-										color: "#0D1117",
-									},
-								}}
-							>
-								{verificationResult?.isHashMismatch
-									? riskCountdown !== null
-										? `${t("appDetails.securityContinueAnywayRisk")} (${riskCountdown})`
-										: t("appDetails.securityContinueAnywayRisk")
-									: t("appDetails.securityContinueAnyway")}
-							</Button>
-						</Box>
-
-						<Button
-							onClick={handleCancelVerification}
-							sx={{
-								color: "#8B949E",
-								"&:hover": {
-									color: "#C9D1D9",
-								},
-							}}
-						>
-							{t("appDetails.securityCancelInstallation")}
-						</Button>
-					</Box>
-				) : installStatus === "verificationDetails" ? (
-					<Box
-						sx={{
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							justifyContent: "center",
-							gap: 3,
-							p: 4,
-							minHeight: 500,
-							bgcolor: "#161B22",
-							borderRadius: 2,
-							border: `1px solid ${
-								verificationResult?.isUnsupportedPlatform
-									? "rgba(246, 211, 45, 0.5)"
-									: verificationResult?.isHashMismatch
-										? "rgba(255, 107, 107, 0.5)"
-										: "rgba(246, 211, 45, 0.5)"
-							}`,
-						}}
-					>
-						<Typography
-							variant="h5"
-							textAlign="center"
-							sx={{
-								color: "#C9D1D9",
-								fontWeight: 500,
-							}}
-						>
-							{t("appDetails.securityVerificationDetails") ||
-								"Verification Details"}
-						</Typography>
-
-						<Box
-							sx={{
-								width: "100%",
-								maxWidth: 600,
-								maxHeight: 300,
-								overflow: "auto",
-								bgcolor: "rgba(0,0,0,0.3)",
-								borderRadius: 1,
-								p: 2,
-								fontFamily: "'Fira Code', 'Courier New', monospace",
-								fontSize: "0.85rem",
-								color: "#8B949E",
-								whiteSpace: "pre-wrap",
-								wordBreak: "break-word",
-							}}
-						>
-							{installOutput.map((line, index) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: append-only log lines, index is stable
-								<div key={index} style={{ marginBottom: 4 }}>
-									{line}
-								</div>
-							))}
-						</Box>
-
-						<Box sx={{ display: "flex", gap: 2 }}>
-							<Button
-								variant="outlined"
-								onClick={handleDownloadLog}
-								sx={{
-									px: 3,
-									borderColor: "rgba(255, 255, 255, 0.3)",
-									color: "#C9D1D9",
-									"&:hover": {
-										borderColor: "rgba(255, 255, 255, 0.5)",
-										bgcolor: "rgba(255, 255, 255, 0.05)",
-									},
-								}}
-							>
-								{t("appDetails.saveLog") || "Save Log"}
-							</Button>
-							<Button
-								variant="contained"
-								onClick={() => {
-									setInstallOutput([]);
-									setInstallStatus("verificationFailed");
-								}}
-								sx={{
-									px: 3,
-									bgcolor: "rgba(255, 255, 255, 0.1)",
-									color: "#C9D1D9",
-									borderColor: "rgba(255, 255, 255, 0.3)",
-									border: "1px solid",
-									"&:hover": {
-										bgcolor: "rgba(255, 255, 255, 0.2)",
-									},
-								}}
-							>
-								{t("appDetails.back") || "Back"}
-							</Button>
-						</Box>
-					</Box>
-				) : installStatus === "installing" ? (
-					<>
-						<Typography variant="h6" gutterBottom textAlign="center">
-							{t("appDetails.installationInProgress")}
-						</Typography>
-						<Terminal output={installOutput} isRunning={isInstalling} />
-					</>
-				) : installStatus === "success" || installStatus === "error" ? (
-					<Box
-						sx={{
-							display: "flex",
-							flexDirection: "column",
-							alignItems: "center",
-							gap: 3,
-							p: 4,
-							minHeight: 500,
-						}}
-					>
-						{/* Animación */}
-						<Box sx={{ width: 300, height: 300 }}>
-							<DotLottieReact
-								key={installStatus}
-								src={installStatus === "success" ? successAnim : errorAnim}
-								loop={false}
-								autoplay={true}
-							/>
-						</Box>
-
-						{/* Mensaje */}
-						<Typography variant="h5" textAlign="center">
-							{installStatus === "success"
-								? t("appDetails.installationCompleted")
-								: t("appDetails.installationError")}
-						</Typography>
-
-						{/* Botones */}
-						<Box sx={{ display: "flex", gap: 2 }}>
-							<Button
-								variant="outlined"
-								onClick={handleDownloadLog}
-								sx={{ px: 3 }}
-							>
-								{t("appDetails.getLog")}
-							</Button>
-							<Button variant="contained" onClick={handleAccept} sx={{ px: 3 }}>
-								{t("appDetails.accept")}
-							</Button>
-						</Box>
-
-						{/* Apoyo a Klia Store viendo un anuncio */}
-						{installStatus === "success" && (
-							<Box
-								sx={{
-									display: "flex",
-									flexDirection: "column",
-									alignItems: "center",
-									gap: 1,
-									mt: 2,
-									pt: 3,
-									borderTop: "1px solid",
-									borderColor: "divider",
-									width: "100%",
-									maxWidth: 400,
-								}}
-							>
-								<Typography
-									variant="body2"
-									color="text.secondary"
-									textAlign="center"
-								>
-									{t("appDetails.supportKliaStoreDescription")}
-								</Typography>
-								<Button
-									variant="text"
-									startIcon={<VolunteerActivism />}
-									onClick={handleWatchAd}
-									sx={{ px: 3 }}
-								>
-									{t("appDetails.watchAd")}
-								</Button>
-							</Box>
-						)}
-					</Box>
+				{installStatus === "idle" ? (
+					<ScreenshotCarousel
+						appId={app.app_id}
+						screenshots={screenshots}
+						screenshotIds={screenshotIds}
+						isLoading={isLoadingScreenshots}
+						t={t}
+					/>
 				) : (
-					<>
-						<Typography variant="h6" gutterBottom textAlign="center">
-							{t("appDetails.screenshots")}
-						</Typography>
-						{isLoadingScreenshots ? (
-							<Box
-								sx={{
-									position: "relative",
-									width: "100%",
-									maxWidth: 900,
-									margin: "0 auto",
-								}}
-							>
-								<Skeleton
-									variant="rounded"
-									sx={{
-										width: "100%",
-										height: 500,
-									}}
-									animation="wave"
-								/>
-							</Box>
-						) : screenshots && screenshots.length > 0 ? (
-							<Box
-								sx={{
-									position: "relative",
-									width: "100%",
-									maxWidth: 900,
-									margin: "0 auto",
-								}}
-							>
-								{/* Imagen actual */}
-								<Box
-									sx={{
-										width: "100%",
-										height: 500,
-										bgcolor: "transparent",
-										borderRadius: 2,
-										overflow: "hidden",
-										position: "relative",
-									}}
-								>
-									{screenshots.map((screenshot, index) => {
-										// Buscar el tamaño más grande o el primero disponible
-										const largestSize = screenshot.sizes.reduce(
-											(prev, current) =>
-												Number.parseInt(prev.width, 10) >
-												Number.parseInt(current.width, 10)
-													? prev
-													: current,
-										);
-										return (
-											<Box
-												key={screenshotIds[index]}
-												sx={{
-													position: "absolute",
-													top: 0,
-													left: 0,
-													width: "100%",
-													height: "100%",
-													display:
-														index === currentImageIndex ? "flex" : "none",
-													alignItems: "center",
-													justifyContent: "center",
-												}}
-											>
-												<CachedImage
-													appId={app.app_id}
-													imageUrl={largestSize.src}
-													alt={`Screenshot ${index + 1}`}
-													cacheKey={`${app.app_id}:::${index + 1}`}
-													variant="rounded"
-													showErrorPlaceholder={false}
-													maxRetries={3}
-													style={{
-														width: "100%",
-														height: "100%",
-														maxWidth: "100%",
-														maxHeight: "100%",
-														objectFit: "contain",
-													}}
-												/>
-											</Box>
-										);
-									})}
-								</Box>
-
-								{/* Controles del carrusel */}
-								{screenshots.length > 1 && (
-									<>
-										<IconButton
-											aria-label={t("appDetails.prevScreenshot")}
-											onClick={handlePrevImage}
-											sx={{
-												position: "absolute",
-												left: 10,
-												top: "50%",
-												transform: "translateY(-50%)",
-												bgcolor: "rgba(0, 0, 0, 0.5)",
-												color: "white",
-												"&:hover": {
-													bgcolor: "rgba(0, 0, 0, 0.7)",
-												},
-											}}
-										>
-											<ChevronLeft />
-										</IconButton>
-										<IconButton
-											aria-label={t("appDetails.nextScreenshot")}
-											onClick={handleNextImage}
-											sx={{
-												position: "absolute",
-												right: 10,
-												top: "50%",
-												transform: "translateY(-50%)",
-												bgcolor: "rgba(0, 0, 0, 0.5)",
-												color: "white",
-												"&:hover": {
-													bgcolor: "rgba(0, 0, 0, 0.7)",
-												},
-											}}
-										>
-											<ChevronRight />
-										</IconButton>
-
-										{/* Indicadores */}
-										<Box
-											sx={{
-												display: "flex",
-												justifyContent: "center",
-												gap: 1,
-												mt: 2,
-											}}
-										>
-											{screenshots.map((_, index) => (
-												<ButtonBase
-													key={screenshotIds[index]}
-													onClick={() => setCurrentImageIndex(index)}
-													aria-label={t("appDetails.screenshotN", { number: index + 1 })}
-													aria-pressed={index === currentImageIndex}
-													sx={{
-														width: 8,
-														height: 8,
-														borderRadius: "50%",
-														bgcolor:
-															index === currentImageIndex
-																? "primary.main"
-																: "grey.600",
-														transition: "all 0.3s",
-														"&:hover": {
-															bgcolor:
-																index === currentImageIndex
-																	? "primary.main"
-																	: "grey.500",
-														},
-													}}
-												/>
-											))}
-										</Box>
-									</>
-								)}
-							</Box>
-						) : (
-							<Box
-								sx={{
-									textAlign: "center",
-									py: 4,
-									color: "text.secondary",
-								}}
-							>
-								<Typography>{t("appDetails.noScreenshots")}</Typography>
-							</Box>
-						)}
-					</>
+					<InstallProgressPanel
+						installStatus={installStatus}
+						countdown={countdown}
+						verificationResult={verificationResult}
+						riskCountdown={riskCountdown}
+						installOutput={installOutput}
+						isInstalling={isInstalling}
+						t={t}
+						onShowVerificationDetails={handleShowVerificationDetails}
+						onForceContinue={handleForceContinue}
+						onCancelVerification={handleCancelVerification}
+						onBackFromDetails={() => {
+							setInstallOutput([]);
+							setInstallStatus("verificationFailed");
+						}}
+						onDownloadLog={handleDownloadLog}
+						onAccept={handleAccept}
+						onWatchAd={handleWatchAd}
+					/>
 				)}
 			</Box>
 

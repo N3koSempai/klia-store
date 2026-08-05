@@ -12,6 +12,29 @@ use tauri::{Emitter, Manager, State};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::ShellExt;
 
+// Debug-only tracing: compiles to a no-op in release builds so verbose
+// internal logs never reach stdout/stderr (and journald under systemd).
+macro_rules! debug_println {
+    ($($arg:tt)*) => {
+        {
+            #[cfg(debug_assertions)]
+            println!($($arg)*);
+            #[cfg(not(debug_assertions))]
+            let _ = format_args!($($arg)*);
+        }
+    };
+}
+macro_rules! debug_eprintln {
+    ($($arg:tt)*) => {
+        {
+            #[cfg(debug_assertions)]
+            eprintln!($($arg)*);
+            #[cfg(not(debug_assertions))]
+            let _ = format_args!($($arg)*);
+        }
+    };
+}
+
 // Regex compilado una sola vez para extraer owner/repo
 static GITHUB_HTTPS_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
     regex::Regex::new(r"https?://github\.com/([^/]+)/([^/]+?)(?:\.git)?$").unwrap()
@@ -634,7 +657,7 @@ fn clear_old_cache(app: tauri::AppHandle) -> Result<(), String> {
     let index_path = cache_images_dir.join("index.json");
 
     if index_path.exists() {
-        println!("[Cache] Old cache system detected (index.json found). Clearing...");
+        debug_println!("[Cache] Old cache system detected (index.json found). Clearing...");
         if cache_images_dir.exists() {
             fs::remove_dir_all(&cache_images_dir)
                 .map_err(|e| format!("Failed to clear old cache directory: {}", e))?;
@@ -1646,13 +1669,13 @@ async fn start_flatpak_interactive(
     if !is_valid_app_id(&app_id) {
         return Err(format!("Invalid app id: {}", app_id));
     }
-    eprintln!(
+    debug_eprintln!(
         "[start_flatpak_interactive] Starting for app_id: {}",
         app_id
     );
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
     let cmd_str = build_flatpak_interactive_cmd(is_flatpak, &app_id);
-    eprintln!("[start_flatpak_interactive] Command: {}", cmd_str);
+    debug_eprintln!("[start_flatpak_interactive] Command: {}", cmd_str);
 
     let mut child = Command::new("sh")
         .args(["-c", &cmd_str])
@@ -1666,13 +1689,13 @@ async fn start_flatpak_interactive(
     let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
     let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
 
-    eprintln!("[start_flatpak_interactive] Process spawned successfully");
+    debug_eprintln!("[start_flatpak_interactive] Process spawned successfully");
 
     // Store the process
     {
-        let mut map = processes.lock().unwrap();
+        let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
         map.insert(app_id.clone(), PtyProcess { child, stdin });
-        eprintln!("[start_flatpak_interactive] Process stored in map");
+        debug_eprintln!("[start_flatpak_interactive] Process stored in map");
     }
 
     // Read stdout in background thread - read byte by byte to capture \r updates
@@ -1697,7 +1720,7 @@ async fn start_flatpak_interactive(
                     }
                 }
                 Err(e) => {
-                    eprintln!("[start_flatpak_interactive] Error reading stdout: {}", e);
+                    debug_eprintln!("[start_flatpak_interactive] Error reading stdout: {}", e);
                     break;
                 }
             }
@@ -1725,11 +1748,11 @@ async fn start_flatpak_interactive(
         loop {
             std::thread::sleep(std::time::Duration::from_millis(500));
 
-            let mut map = processes_clone.lock().unwrap();
+            let mut map = processes_clone.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(pty_process) = map.get_mut(&app_id_clone3) {
                 match pty_process.child.try_wait() {
                     Ok(Some(status)) => {
-                        eprintln!(
+                        debug_eprintln!(
                             "[start_flatpak_interactive] Process terminated with status: {:?}",
                             status
                         );
@@ -1742,7 +1765,7 @@ async fn start_flatpak_interactive(
                         // Still running, continue
                     }
                     Err(e) => {
-                        eprintln!("[start_flatpak_interactive] Error checking process: {}", e);
+                        debug_eprintln!("[start_flatpak_interactive] Error checking process: {}", e);
                         map.remove(&app_id_clone3);
                         break;
                     }
@@ -1838,7 +1861,7 @@ async fn download_flatpak_release(github_repo: String, app_id: String) -> Result
 
     let dest = std::env::temp_dir().join(filename);
 
-    eprintln!(
+    debug_eprintln!(
         "[download_flatpak_release] Downloading {} for {}",
         flatpak_url, app_id
     );
@@ -1860,7 +1883,7 @@ async fn download_flatpak_release(github_repo: String, app_id: String) -> Result
 
     fs::write(&dest, &bytes).map_err(|e| format!("Failed to write file: {}", e))?;
 
-    eprintln!(
+    debug_eprintln!(
         "[download_flatpak_release] Saved {} ({} bytes)",
         filename,
         bytes.len()
@@ -2220,7 +2243,7 @@ async fn install_local_flatpak(
     let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
 
     {
-        let mut map = processes.lock().unwrap();
+        let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
         map.insert(process_key.clone(), PtyProcess { child, stdin });
     }
 
@@ -2264,7 +2287,7 @@ async fn install_local_flatpak(
     std::thread::spawn(move || {
         loop {
             std::thread::sleep(std::time::Duration::from_millis(500));
-            let mut map = processes_clone.lock().unwrap();
+            let mut map = processes_clone.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(pty_process) = map.get_mut(&key_clone3) {
                 match pty_process.child.try_wait() {
                     Ok(Some(_status)) => {
@@ -2297,14 +2320,14 @@ async fn send_to_pty(
     app_id: String,
     input: String,
 ) -> Result<(), String> {
-    eprintln!(
+    debug_eprintln!(
         "[send_to_pty] Attempting to send '{}' to app_id: {}",
         input, app_id
     );
-    let mut map = processes.lock().unwrap();
+    let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
 
     if let Some(pty_process) = map.get_mut(&app_id) {
-        eprintln!("[send_to_pty] Process found, writing to stdin");
+        debug_eprintln!("[send_to_pty] Process found, writing to stdin");
         pty_process
             .stdin
             .write_all(format!("{}\n", input).as_bytes())
@@ -2313,10 +2336,10 @@ async fn send_to_pty(
             .stdin
             .flush()
             .map_err(|e| format!("Failed to flush stdin: {}", e))?;
-        eprintln!("[send_to_pty] Successfully sent input");
+        debug_eprintln!("[send_to_pty] Successfully sent input");
         Ok(())
     } else {
-        eprintln!(
+        debug_eprintln!(
             "[send_to_pty] ERROR: No process found for app_id: {}",
             app_id
         );
@@ -2331,7 +2354,7 @@ async fn kill_pty_process(
     processes: State<'_, ProcessMap>,
     app_id: String,
 ) -> Result<(), String> {
-    let mut map = processes.lock().unwrap();
+    let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
 
     if let Some(mut pty_process) = map.remove(&app_id) {
         let _ = pty_process.child.kill();
@@ -2349,7 +2372,7 @@ async fn check_pty_process(
     processes: State<'_, ProcessMap>,
     app_id: String,
 ) -> Result<bool, String> {
-    let mut map = processes.lock().unwrap();
+    let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(pty_process) = map.get_mut(&app_id) {
         match pty_process.child.try_wait() {
             Ok(Some(_)) => {
@@ -2497,7 +2520,7 @@ async fn detect_manifest_format(
         app_id
     );
 
-    println!("[detect_manifest_format] Querying GitHub API: {}", api_url);
+    debug_println!("[detect_manifest_format] Querying GitHub API: {}", api_url);
 
     let response = client
         .get(&api_url)
@@ -2512,7 +2535,7 @@ async fn detect_manifest_format(
             .text()
             .await
             .unwrap_or_else(|_| "Unknown error".to_string());
-        println!(
+        debug_println!(
             "[detect_manifest_format] GitHub API error: {} - {}",
             status, error_text
         );
@@ -2536,20 +2559,20 @@ async fn detect_manifest_format(
         for file in files {
             if let Some(name) = file.get("name").and_then(|n| n.as_str()) {
                 if name == yml_name {
-                    println!("[detect_manifest_format] Found: {}", yml_name);
+                    debug_println!("[detect_manifest_format] Found: {}", yml_name);
                     return Ok(Some(yml_name));
                 } else if name == yaml_name {
-                    println!("[detect_manifest_format] Found: {}", yaml_name);
+                    debug_println!("[detect_manifest_format] Found: {}", yaml_name);
                     return Ok(Some(yaml_name));
                 } else if name == json_name {
-                    println!("[detect_manifest_format] Found: {}", json_name);
+                    debug_println!("[detect_manifest_format] Found: {}", json_name);
                     return Ok(Some(json_name));
                 }
             }
         }
     }
 
-    println!("[detect_manifest_format] No manifest found in repo listing");
+    debug_println!("[detect_manifest_format] No manifest found in repo listing");
     Ok(None)
 }
 
@@ -2567,25 +2590,25 @@ async fn fetch_manifest_from_flathub(
                 "https://raw.githubusercontent.com/flathub/{}/master/{}",
                 app_id, manifest_name
             );
-            println!("[fetch_manifest_from_flathub] Fetching detected format: {}", url);
+            debug_println!("[fetch_manifest_from_flathub] Fetching detected format: {}", url);
 
             match client.get(&url).send().await {
                 Ok(response) => {
                     if response.status().is_success() {
                         match response.text().await {
                             Ok(content) => return Ok(content),
-                            Err(e) => println!("[fetch_manifest_from_flathub] Failed to read content: {}", e),
+                            Err(e) => debug_println!("[fetch_manifest_from_flathub] Failed to read content: {}", e),
                         }
                     }
                 }
-                Err(e) => println!("[fetch_manifest_from_flathub] Request failed: {}", e),
+                Err(e) => debug_println!("[fetch_manifest_from_flathub] Request failed: {}", e),
             }
         }
         Ok(None) => {
-            println!("[fetch_manifest_from_flathub] Detection failed, falling back to sequential attempts");
+            debug_println!("[fetch_manifest_from_flathub] Detection failed, falling back to sequential attempts");
         }
         Err(e) => {
-            println!("[detect_manifest_format] Error: {}, falling back to sequential attempts", e);
+            debug_println!("[detect_manifest_format] Error: {}, falling back to sequential attempts", e);
         }
     }
 
@@ -2602,7 +2625,7 @@ async fn fetch_manifest_from_flathub(
             app_id, manifest_name
         );
 
-        println!(
+        debug_println!(
             "[fetch_manifest_from_flathub] Trying URL: {}",
             url
         );
@@ -2612,28 +2635,28 @@ async fn fetch_manifest_from_flathub(
                 if response.status().is_success() {
                     match response.text().await {
                         Ok(content) => {
-                            println!(
+                            debug_println!(
                                 "[fetch_manifest_from_flathub] Successfully fetched manifest: {}",
                                 manifest_name
                             );
                             return Ok(content);
                         }
                         Err(e) => {
-                            println!(
+                            debug_println!(
                                 "[fetch_manifest_from_flathub] Failed to read response body: {}",
                                 e
                             );
                         }
                     }
                 } else {
-                    println!(
+                    debug_println!(
                         "[fetch_manifest_from_flathub] URL returned status: {}",
                         response.status()
                     );
                 }
             }
             Err(e) => {
-                println!("[fetch_manifest_from_flathub] Request failed: {}", e);
+                debug_println!("[fetch_manifest_from_flathub] Request failed: {}", e);
             }
         }
     }
@@ -2816,7 +2839,7 @@ async fn get_gitlab_tag_commit(
         Err(e) => {
             // Try with 'v' prefix
             if !tag.starts_with('v') {
-                println!(
+                debug_println!(
                     "[get_gitlab_tag_commit] Tag '{}' not found, trying with 'v' prefix",
                     tag
                 );
@@ -2857,7 +2880,7 @@ async fn get_tag_commit_with_fallback(
         Err(e) => {
             // Try with 'v' prefix if the tag doesn't exist and tag doesn't already start with 'v'
             if !tag.starts_with('v') {
-                println!(
+                debug_println!(
                     "[get_tag_commit] Tag '{}' not found, trying with 'v' prefix",
                     tag
                 );
@@ -2947,7 +2970,7 @@ async fn verify_github_release(
         owner, repo, tag
     );
 
-    println!("[verify_github_release] Checking release: {}", release_url);
+    debug_println!("[verify_github_release] Checking release: {}", release_url);
 
     let response = client
         .get(&release_url)
@@ -2963,7 +2986,7 @@ async fn verify_github_release(
 
     // If we need to verify SHA256, get the release data
     if let (Some(file), Some(expected)) = (filename, expected_sha256) {
-        println!("[verify_github_release] Verifying SHA256 for file: {}", file);
+        debug_println!("[verify_github_release] Verifying SHA256 for file: {}", file);
 
         let release_text = response
             .text()
@@ -2982,11 +3005,11 @@ async fn verify_github_release(
                         if let Some(digest) = asset.get("digest").and_then(|d| d.as_str()) {
                             let remote_sha256 = digest.strip_prefix("sha256:").unwrap_or(digest);
 
-                            println!("[verify_github_release] Remote SHA256: {}", remote_sha256);
-                            println!("[verify_github_release] Expected SHA256: {}", expected);
+                            debug_println!("[verify_github_release] Remote SHA256: {}", remote_sha256);
+                            debug_println!("[verify_github_release] Expected SHA256: {}", expected);
 
                             if remote_sha256.to_lowercase() == expected.to_lowercase() {
-                                println!("[verify_github_release] ✓ SHA256 matches!");
+                                debug_println!("[verify_github_release] ✓ SHA256 matches!");
                                 return Ok(());
                             } else {
                                 // CRITICAL ERROR: SHA256 mismatch (file was modified!)
@@ -2997,7 +3020,7 @@ async fn verify_github_release(
                             }
                         } else {
                             // WARNING: No digest available (not critical, Flatpak will verify)
-                            println!("[verify_github_release] ⚠ No digest field in asset");
+                            debug_println!("[verify_github_release] ⚠ No digest field in asset");
                             return Err("Could not verify: GitHub release has no SHA256 digest available".to_string());
                         }
                     }
@@ -3010,7 +3033,7 @@ async fn verify_github_release(
     }
 
     // No SHA256 verification requested, just confirm release exists
-    println!("[verify_github_release] Release {} exists and is public", tag);
+    debug_println!("[verify_github_release] Release {} exists and is public", tag);
     Ok(())
 }
 
@@ -3031,7 +3054,7 @@ async fn verify_gitlab_release(
         domain, encoded_path, tag
     );
 
-    println!("[verify_gitlab_release] Checking release: {}", api_url);
+    debug_println!("[verify_gitlab_release] Checking release: {}", api_url);
 
     let response = client
         .get(&api_url)
@@ -3046,7 +3069,7 @@ async fn verify_gitlab_release(
     }
 
     let Some(expected) = expected_sha256 else {
-        println!("[verify_gitlab_release] Release {} exists (no SHA256 to verify)", tag);
+        debug_println!("[verify_gitlab_release] Release {} exists (no SHA256 to verify)", tag);
         return Ok(());
     };
 
@@ -3075,7 +3098,7 @@ async fn verify_gitlab_release(
                     .and_then(|u| u.as_str())
                     .ok_or("No URL for .sha256sum link")?;
 
-                println!("[verify_gitlab_release] Found .sha256sum link: {}", sha256sum_url);
+                debug_println!("[verify_gitlab_release] Found .sha256sum link: {}", sha256sum_url);
 
                 let sha256sum_content = client
                     .get(sha256sum_url)
@@ -3093,11 +3116,11 @@ async fn verify_gitlab_release(
                     .next()
                     .ok_or("Could not parse .sha256sum content")?;
 
-                println!("[verify_gitlab_release] Remote SHA256: {}", remote_sha256);
-                println!("[verify_gitlab_release] Expected SHA256: {}", expected);
+                debug_println!("[verify_gitlab_release] Remote SHA256: {}", remote_sha256);
+                debug_println!("[verify_gitlab_release] Expected SHA256: {}", expected);
 
                 return if remote_sha256.to_lowercase() == expected.to_lowercase() {
-                    println!("[verify_gitlab_release] ✓ SHA256 matches!");
+                    debug_println!("[verify_gitlab_release] ✓ SHA256 matches!");
                     Ok(())
                 } else {
                     Err(format!(
@@ -3118,7 +3141,7 @@ async fn verify_gitlab_release(
 
 #[tauri::command]
 async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
-    println!("[verify_app_hash] Starting hash verification for: {}", app_id);
+    debug_println!("[verify_app_hash] Starting hash verification for: {}", app_id);
 
     // Creamos un único cliente HTTP para todas las operaciones
     let client = reqwest::Client::builder()
@@ -3163,10 +3186,10 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
 
     let main_source = match main_module {
         Some(module) => {
-            println!("[verify_app_hash] Found main module: {}", module.name);
-            println!("[verify_app_hash] Module has {} sources", module.sources.len());
+            debug_println!("[verify_app_hash] Found main module: {}", module.name);
+            debug_println!("[verify_app_hash] Module has {} sources", module.sources.len());
             for (idx, src) in module.sources.iter().enumerate() {
-                println!("[verify_app_hash]   Source {}: type={}, url={:?}",
+                debug_println!("[verify_app_hash]   Source {}: type={}, url={:?}",
                     idx, src.source_type, src.url);
             }
             // Find the first git source, or archive from GitHub/GitLab release
@@ -3178,7 +3201,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
             })
         }
         None => {
-            println!("[verify_app_hash] No main module found, looking for any git or archive source");
+            debug_println!("[verify_app_hash] No main module found, looking for any git or archive source");
             // Fallback: find first git or archive source in any module
             manifest.modules.iter().find_map(|module_value| {
                 if let Ok(module) = serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
@@ -3231,20 +3254,20 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
 
     // Handle archive sources (GitHub/GitLab releases) differently
     if source_type == "archive" {
-        println!("[verify_app_hash] Source is an archive from release");
+        debug_println!("[verify_app_hash] Source is an archive from release");
 
         // Extract release info from URL (e.g., https://github.com/owner/repo/releases/download/v1.2.2/file.tar.gz)
         if let Some((owner_or_domain, repo_or_path, release_tag, filename, is_generated_archive, platform)) = extract_release_info(&url) {
-            println!("[verify_app_hash] Detected release: {}/{} @ {} ({})", owner_or_domain, repo_or_path, release_tag, platform);
-            println!("[verify_app_hash] File: {}", filename);
-            println!("[verify_app_hash] Is auto-generated archive: {}", is_generated_archive);
+            debug_println!("[verify_app_hash] Detected release: {}/{} @ {} ({})", owner_or_domain, repo_or_path, release_tag, platform);
+            debug_println!("[verify_app_hash] File: {}", filename);
+            debug_println!("[verify_app_hash] Is auto-generated archive: {}", is_generated_archive);
 
             // Get SHA256 from manifest
             let manifest_sha256 = source.sha256.as_deref();
             if let Some(sha) = manifest_sha256 {
-                println!("[verify_app_hash] Manifest SHA256: {}", sha);
+                debug_println!("[verify_app_hash] Manifest SHA256: {}", sha);
             } else {
-                println!("[verify_app_hash] ⚠ No SHA256 in manifest");
+                debug_println!("[verify_app_hash] ⚠ No SHA256 in manifest");
             }
 
             let release_verified = if platform == "gitlab" {
@@ -3389,7 +3412,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
         format!("{}/{}", owner, repo)
     };
 
-    println!(
+    debug_println!(
         "[verify_app_hash] Verifying main source: {} @ {} (platform: {})",
         project_display, manifest_commit, platform_name
     );
@@ -3397,7 +3420,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
     // Si hay un tag, verificamos que el commit del manifest coincida con el del tag
     // Esto también verifica implícitamente que el commit existe en el repo
     let (verified, remote_commit, error) = if let Some(ref tag_name) = tag {
-        println!(
+        debug_println!(
             "[verify_app_hash] Tag specified: {}, fetching remote commit for tag",
             tag_name
         );
@@ -3405,7 +3428,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
         // Reusamos el cliente HTTP existente
         match get_tag_commit_with_fallback(&client, &platform, &owner, &repo, tag_name).await {
             Ok(tag_commit) => {
-                println!(
+                debug_println!(
                     "[verify_app_hash] Tag {} resolves to commit: {}",
                     tag_name, tag_commit
                 );
@@ -3423,12 +3446,12 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                         "Hash mismatch: manifest specifies {} but tag {} resolves to {}",
                         manifest_commit, tag_name, tag_commit
                     );
-                    println!("[verify_app_hash] {}", error_msg);
+                    debug_println!("[verify_app_hash] {}", error_msg);
                     (false, Some(tag_commit), Some(error_msg))
                 }
             }
             Err(e) => {
-                println!(
+                debug_println!(
                     "[verify_app_hash] Could not fetch tag {}: {}",
                     tag_name, e
                 );
@@ -3438,14 +3461,14 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
             }
         }
     } else {
-        println!(
+        debug_println!(
             "[verify_app_hash] No tag specified, only verifying commit exists"
         );
         // No tag specified, just verify commit exists (already done above)
         (true, None, None)
     };
 
-    println!(
+    debug_println!(
         "[verify_app_hash] Verification complete. Verified: {}, Error: {:?}",
         verified, error
     );
@@ -3471,37 +3494,37 @@ fn find_main_module(modules: &[serde_yaml::Value], app_id: &str) -> Option<Flatp
     // Extract the last part of app_id to match against module names
     let app_name = app_id.split('.').last().unwrap_or(app_id).to_lowercase();
 
-    println!("[find_main_module] Looking for main module. App name: {}", app_name);
-    println!("[find_main_module] Total modules: {}", modules.len());
+    debug_println!("[find_main_module] Looking for main module. App name: {}", app_name);
+    debug_println!("[find_main_module] Total modules: {}", modules.len());
 
     // First pass: look for exact match (case-insensitive)
     for (idx, module_value) in modules.iter().enumerate() {
         match serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
             Ok(module) => {
-                println!("[find_main_module] Module {}: name='{}', sources={}",
+                debug_println!("[find_main_module] Module {}: name='{}', sources={}",
                     idx, module.name, module.sources.len());
                 let module_name_lower = module.name.to_lowercase();
                 if module_name_lower == app_name || module_name_lower == app_id.to_lowercase() {
-                    println!("[find_main_module] Found exact match: {}", module.name);
+                    debug_println!("[find_main_module] Found exact match: {}", module.name);
                     return Some(module);
                 }
             }
             Err(e) => {
-                println!("[find_main_module] Module {}: Failed to parse: {}", idx, e);
-                println!("[find_main_module] Module {} raw value: {:?}", idx, module_value);
+                debug_println!("[find_main_module] Module {}: Failed to parse: {}", idx, e);
+                debug_println!("[find_main_module] Module {} raw value: {:?}", idx, module_value);
             }
         }
     }
 
     // Second pass: look for partial match
-    println!("[find_main_module] No exact match, trying partial match...");
+    debug_println!("[find_main_module] No exact match, trying partial match...");
     for (_idx, module_value) in modules.iter().enumerate() {
         if let Ok(module) = serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
             let module_name_lower = module.name.to_lowercase();
-            println!("[find_main_module] Checking partial match for '{}' against '{}'",
+            debug_println!("[find_main_module] Checking partial match for '{}' against '{}'",
                 module_name_lower, app_name);
             if module_name_lower.contains(&app_name) || app_name.contains(&module_name_lower) {
-                println!("[find_main_module] Found partial match: {}", module.name);
+                debug_println!("[find_main_module] Found partial match: {}", module.name);
                 return Some(module);
             }
         }
@@ -3510,12 +3533,12 @@ fn find_main_module(modules: &[serde_yaml::Value], app_id: &str) -> Option<Flatp
     // Fallback: return the last module (usually the main app)
     if let Some(last) = modules.last() {
         if let Ok(module) = serde_yaml::from_value::<FlatpakModule>(last.clone()) {
-            println!("[find_main_module] Using last module as fallback: {}", module.name);
+            debug_println!("[find_main_module] Using last module as fallback: {}", module.name);
             return Some(module);
         }
     }
 
-    println!("[find_main_module] No suitable module found");
+    debug_println!("[find_main_module] No suitable module found");
     None
 }
 

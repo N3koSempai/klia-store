@@ -1,4 +1,6 @@
-import { ArrowBack, InfoOutlined, SystemUpdateAlt } from "@mui/icons-material";
+import ArrowBack from "@mui/icons-material/ArrowBack";
+import InfoOutlined from "@mui/icons-material/InfoOutlined";
+import SystemUpdateAlt from "@mui/icons-material/SystemUpdateAlt";
 import {
 	alpha,
 	Box,
