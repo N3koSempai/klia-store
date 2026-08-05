@@ -38,6 +38,13 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.11.2" date="2026-08-05">
+      <description>
+        <p>Installing a .flatpak file by opening it directly now updates the app's status right away, so it correctly shows as installed without needing to restart Klia Store.</p>
+        <p>General performance improvements across the app: faster loading of the Home screen, quicker app searches, and a smaller, more efficient install.</p>
+        <p>Improved stability: the app is now more resilient if something goes wrong during an installation, avoiding unexpected crashes.</p>
+      </description>
+    </release>
     <release version="2.11.1" date="2026-08-02">
       <description>
         <p>Backups have arrived. Pick any installed app, choose whether to include its data and runtime, and Klia Store packs everything into a single portable archive you can restore later — on this machine or a new one. No terminal commands, no guesswork.</p>
