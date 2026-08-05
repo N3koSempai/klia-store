@@ -1,10 +1,8 @@
-import {
-	DeleteOutline,
-	Description,
-	Extension,
-	Person,
-	Update,
-} from "@mui/icons-material";
+import DeleteOutline from "@mui/icons-material/DeleteOutline";
+import Description from "@mui/icons-material/Description";
+import Extension from "@mui/icons-material/Extension";
+import Person from "@mui/icons-material/Person";
+import Update from "@mui/icons-material/Update";
 import {
 	Avatar,
 	Box,

@@ -1,7 +1,7 @@
 {
   "name": "klia-store",
   "private": true,
-  "version": "2.11.1",
+  "version": "2.11.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,7 +19,6 @@
     "@react-three/fiber": "^9.5.0",
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-router": "^1.168.10",
-    "@tanstack/react-virtual": "^3.13.12",
     "@tauri-apps/api": "~2.9",
     "@tauri-apps/plugin-dialog": "2.5.0",
     "@tauri-apps/plugin-fs": "~2.4",
@@ -32,10 +31,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-i18next": "^16.2.0",
-    "react-qr-code": "^2.0.18",
     "three": "^0.182.0",
     "use-debounce": "^10.0.6",
-    "uuid": "^13.0.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

@@ -3,7 +3,6 @@ import { alpha, Box, Link, Paper, Skeleton, Typography,
 } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
-import { v4 as uuidv4 } from "uuid";
 import { CachedImage } from "../../../components/CachedImage";
 import { useAppsOfTheWeek } from "../../../hooks/useAppsOfTheWeek";
 import type { AppStream, CategoryApp } from "../../../types";
@@ -95,9 +94,9 @@ export const AppsOfTheDaySection = ({
 				}}
 			>
 				{isLoading || !data
-					? Array.from(new Array(6)).map((_) => (
+					? Array.from(new Array(6)).map((_, index) => (
 							<Paper
-								key={uuidv4()}
+								key={`skeleton-${index}`}
 								elevation={0}
 								sx={{
 									minWidth: 200,

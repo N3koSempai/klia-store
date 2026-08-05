@@ -1,8 +1,6 @@
-import {
-	DeleteOutline,
-	DownloadOutlined,
-	Extension as ExtensionIcon,
-} from "@mui/icons-material";
+import DeleteOutline from "@mui/icons-material/DeleteOutline";
+import DownloadOutlined from "@mui/icons-material/DownloadOutlined";
+import ExtensionIcon from "@mui/icons-material/Extension";
 import {
 	alpha,
 	Box,

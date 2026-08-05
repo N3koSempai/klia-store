@@ -1,10 +1,8 @@
-import {
-	Apps,
-	Close,
-	CropSquare,
-	FilterNone,
-	Remove,
-} from "@mui/icons-material";
+import Apps from "@mui/icons-material/Apps";
+import Close from "@mui/icons-material/Close";
+import CropSquare from "@mui/icons-material/CropSquare";
+import FilterNone from "@mui/icons-material/FilterNone";
+import Remove from "@mui/icons-material/Remove";
 import { Box, IconButton, Stack, Typography, useTheme } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
@@ -91,13 +89,18 @@ const TitleBar = () => {
 				}}
 			>
 				{/* Minimizar */}
-				<WindowButton aria-label={t("common.windowMinimize")} onClick={handleMinimize}>
+				<WindowButton
+					aria-label={t("common.windowMinimize")}
+					onClick={handleMinimize}
+				>
 					<Remove sx={{ fontSize: 16 }} />
 				</WindowButton>
 
 				{/* Maximizar / Restaurar */}
 				<WindowButton
-					aria-label={isMaximized ? t("common.windowRestore") : t("common.windowMaximize")}
+					aria-label={
+						isMaximized ? t("common.windowRestore") : t("common.windowMaximize")
+					}
 					onClick={handleMaximize}
 				>
 					{isMaximized ? (
@@ -108,7 +111,11 @@ const TitleBar = () => {
 				</WindowButton>
 
 				{/* Cerrar (Rojo al hover) */}
-				<WindowButton aria-label={t("common.windowClose")} onClick={handleClose} isClose>
+				<WindowButton
+					aria-label={t("common.windowClose")}
+					onClick={handleClose}
+					isClose
+				>
 					<Close sx={{ fontSize: 18 }} />
 				</WindowButton>
 			</Stack>

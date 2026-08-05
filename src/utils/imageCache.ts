@@ -142,18 +142,11 @@ export class ImageCacheManager {
 		);
 
 		try {
-			// Descargar y guardar la imagen (el backend generará el hash)
-			const filename = await invoke<string>("download_and_cache_image", {
+			// Descargar y guardar la imagen (el backend genera el hash y devuelve
+			// la ruta absoluta ya resuelta, sin necesidad de un segundo invoke)
+			const fullPath = await invoke<string>("download_and_cache_image", {
 				appId,
 				imageUrl,
-			});
-
-			if (abortController.signal.aborted) {
-				throw new DOMException("Aborted", "AbortError");
-			}
-
-			const fullPath = await invoke<string>("get_cached_image_path", {
-				filename,
 			});
 
 			if (abortController.signal.aborted) {

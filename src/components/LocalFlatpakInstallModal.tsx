@@ -22,6 +22,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { refreshInstalledPackages } from "../hooks/useInstalledApps";
 import { Terminal } from "./Terminal";
 
 interface LocalFlatpakPermissions {
@@ -255,6 +256,10 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 			if (event.payload === processKey.current) {
 				setPhase("done");
 				for (const fn of unlisteners) fn();
+				// Reconcile the store with the system so AppDetails/MyApps/etc.
+				// reflect this install even though it bypassed the normal
+				// AppDetails install flow (which calls setInstalledApp itself).
+				refreshInstalledPackages();
 			}
 		});
 		unlisteners.push(unlistenDone);

@@ -12,6 +12,29 @@ use tauri::{Emitter, Manager, State};
 use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::ShellExt;
 
+// Debug-only tracing: compiles to a no-op in release builds so verbose
+// internal logs never reach stdout/stderr (and journald under systemd).
+macro_rules! debug_println {
+    ($($arg:tt)*) => {
+        {
+            #[cfg(debug_assertions)]
+            println!($($arg)*);
+            #[cfg(not(debug_assertions))]
+            let _ = format_args!($($arg)*);
+        }
+    };
+}
+macro_rules! debug_eprintln {
+    ($($arg:tt)*) => {
+        {
+            #[cfg(debug_assertions)]
+            eprintln!($($arg)*);
+            #[cfg(not(debug_assertions))]
+            let _ = format_args!($($arg)*);
+        }
+    };
+}
+
 // Regex compilado una sola vez para extraer owner/repo
 static GITHUB_HTTPS_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
     regex::Regex::new(r"https?://github\.com/([^/]+)/([^/]+?)(?:\.git)?$").unwrap()
@@ -28,6 +51,27 @@ static GITLAB_SSH_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
     // Support any GitLab instance via SSH
     // Captures: (1) domain, (2) full path
     regex::Regex::new(r"git@(gitlab\.[^:]+):(.+?)(?:\.git)?$").unwrap()
+});
+
+// Regex used by extract_release_info, compiled once instead of per-call
+// (that function runs on every hash verification triggered from the frontend).
+static GITHUB_RELEASE_ASSET_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$")
+        .unwrap()
+});
+static GITHUB_RELEASE_ARCHIVE_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/archive/refs/tags/([^/]+)/(.+)$")
+        .unwrap()
+});
+static GITLAB_RELEASE_ASSET_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(
+        r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/releases/([^/]+)/downloads/(.+)$",
+    )
+    .unwrap()
+});
+static GITLAB_RELEASE_ARCHIVE_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/archive/([^/]+)/(.+)$")
+        .unwrap()
 });
 
 #[derive(Debug, Clone)]
@@ -102,6 +146,72 @@ fn build_flatpak_dependency_check_cmd(is_flatpak: bool, app_id: &str) -> String 
             base_cmd
         )
     }
+}
+
+// Flatpak app/extension IDs follow reverse-DNS notation (e.g. org.mozilla.firefox).
+// Validating against this before interpolating into a shell string closes the
+// command-injection vector without needing to escape shell metacharacters.
+static APP_ID_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+    regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9][A-Za-z0-9_-]*)+$").unwrap()
+});
+
+fn is_valid_app_id(app_id: &str) -> bool {
+    APP_ID_REGEX.is_match(app_id)
+}
+
+fn is_running_in_flatpak() -> bool {
+    std::env::var("FLATPAK_ID").is_ok()
+}
+
+/// Runs a flatpak subcommand via the Tauri shell plugin, transparently going
+/// through flatpak-spawn when klia-store itself is sandboxed. Mirrors
+/// `backup.rs::run_flatpak_async` for the simple "one shot, wait for full
+/// output" case used by most read-only commands here.
+async fn run_flatpak_async(
+    app: &tauri::AppHandle,
+    args: &[&str],
+) -> Result<tauri_plugin_shell::process::Output, String> {
+    let shell = app.shell();
+    let output = if is_running_in_flatpak() {
+        let mut full_args = vec!["--host", "flatpak"];
+        full_args.extend_from_slice(args);
+        shell.command("flatpak-spawn").args(&full_args).output()
+    } else {
+        shell.command("flatpak").args(args).output()
+    }
+    .await
+    .map_err(|e| format!("Failed to execute flatpak: {}", e))?;
+
+    Ok(output)
+}
+
+// User-supplied file paths (e.g. from a file picker) can contain shell
+// metacharacters that aren't safe to interpolate into a `sh -c` string, and
+// Rust's `{:?}` Debug formatting is NOT a shell escape. Instead of trying to
+// escape the original path, copy the bundle to a temp file with a
+// app-generated safe name and operate on that path in shell commands.
+fn stage_flatpak_bundle_safely(file_path: &str) -> Result<std::path::PathBuf, String> {
+    let source = std::path::Path::new(file_path);
+    if !source.is_file() {
+        return Err("Selected file does not exist".to_string());
+    }
+
+    let safe_name = format!("klia-store-local-{}.flatpak", uuid_like_token());
+    let staged_path = std::env::temp_dir().join(safe_name);
+    fs::copy(source, &staged_path).map_err(|e| format!("Failed to stage bundle: {}", e))?;
+    Ok(staged_path)
+}
+
+// Small dependency-free random token generator (hex-encoded), good enough for
+// a temp filename — doesn't need cryptographic guarantees, just low collision
+// probability within a single run.
+fn uuid_like_token() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    format!("{:x}-{:x}", nanos, std::process::id())
 }
 
 // Helper function to parse size string from flatpak list output
@@ -547,7 +657,7 @@ fn clear_old_cache(app: tauri::AppHandle) -> Result<(), String> {
     let index_path = cache_images_dir.join("index.json");
 
     if index_path.exists() {
-        println!("[Cache] Old cache system detected (index.json found). Clearing...");
+        debug_println!("[Cache] Old cache system detected (index.json found). Clearing...");
         if cache_images_dir.exists() {
             fs::remove_dir_all(&cache_images_dir)
                 .map_err(|e| format!("Failed to clear old cache directory: {}", e))?;
@@ -558,6 +668,43 @@ fn clear_old_cache(app: tauri::AppHandle) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+// Shared by every cache-image command: picks the hashing key (cacheKey takes
+// priority over the raw URL when provided and different) and the extension
+// inferred from the image URL, then returns the resulting cache filename.
+fn compute_cache_filename(cache_key: &str, image_url: &str) -> String {
+    use xxhash_rust::xxh3::xxh3_64;
+
+    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
+        cache_key
+    } else {
+        image_url
+    };
+
+    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
+        "svg"
+    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
+        "webp"
+    } else if image_url.ends_with(".jpg")
+        || image_url.ends_with(".jpeg")
+        || image_url.contains(".jpg?")
+        || image_url.contains(".jpeg?")
+    {
+        "jpg"
+    } else {
+        "png" // default
+    };
+
+    let hash = xxh3_64(key_to_hash.as_bytes());
+    format!("{:x}.{}", hash, extension)
+}
+
+fn canonical_path_string(path: &std::path::Path) -> String {
+    path.canonicalize()
+        .unwrap_or_else(|_| path.to_path_buf())
+        .to_string_lossy()
+        .to_string()
 }
 
 #[tauri::command]
@@ -575,38 +722,12 @@ async fn download_and_cache_image(
     fs::create_dir_all(&cache_images_dir)
         .map_err(|e| format!("Failed to create cacheImages directory: {}", e))?;
 
-    // Determinar extensión desde la URL (consistente con check_cached_image_exists)
-    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
-        "svg"
-    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
-        "webp"
-    } else if image_url.ends_with(".jpg")
-        || image_url.ends_with(".jpeg")
-        || image_url.contains(".jpg?")
-        || image_url.contains(".jpeg?")
-    {
-        "jpg"
-    } else {
-        "png" // default
-    };
-
-    // Generar nombre de archivo único usando xxHash3
-    // Si app_id no está vacío y es diferente de image_url, usarlo como key (caso de cacheKey)
-    // Si no, usar image_url (caso normal)
-    use xxhash_rust::xxh3::xxh3_64;
-    let key_to_hash = if !app_id.is_empty() && app_id != image_url {
-        app_id
-    } else {
-        image_url.clone()
-    };
-
-    let hash = xxh3_64(key_to_hash.as_bytes());
-    let filename = format!("{:x}.{}", hash, extension);
+    let filename = compute_cache_filename(&app_id, &image_url);
     let file_path = cache_images_dir.join(&filename);
 
     // Si el archivo ya existe, no descargar de nuevo
     if file_path.exists() {
-        return Ok(filename);
+        return Ok(canonical_path_string(&file_path));
     }
 
     // Descargar la imagen
@@ -628,7 +749,7 @@ async fn download_and_cache_image(
 
     fs::write(&file_path, &bytes).map_err(|e| format!("Error saving image: {}", e))?;
 
-    Ok(filename)
+    Ok(canonical_path_string(&file_path))
 }
 
 #[tauri::command]
@@ -639,95 +760,13 @@ fn get_cached_image_path(app: tauri::AppHandle, filename: String) -> Result<Stri
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
     let file_path = app_data_dir.join("cacheImages").join(filename);
-
-    // Usar canonicalize para obtener la ruta absoluta normalizada
-    let canonical_path = file_path
-        .canonicalize()
-        .unwrap_or_else(|_| file_path.clone());
-
-    Ok(canonical_path.to_string_lossy().to_string())
+    Ok(canonical_path_string(&file_path))
 }
 
 #[tauri::command]
 fn check_file_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
 }
-
-#[tauri::command]
-fn get_cached_image_filename(cache_key: String, image_url: String) -> String {
-    use xxhash_rust::xxh3::xxh3_64;
-    // Si hay cacheKey, usar eso; si no, usar imageUrl
-    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
-        cache_key
-    } else {
-        image_url.clone()
-    };
-
-    let hash = xxh3_64(key_to_hash.as_bytes());
-
-    // Determinar extensión basándose en la URL
-    let extension = if image_url.ends_with(".svg") {
-        "svg"
-    } else if image_url.ends_with(".webp") {
-        "webp"
-    } else if image_url.ends_with(".jpg") || image_url.ends_with(".jpeg") {
-        "jpg"
-    } else {
-        "png"
-    };
-
-    format!("{:x}.{}", hash, extension)
-}
-
-#[tauri::command]
-fn check_cached_image_exists(
-    app: tauri::AppHandle,
-    cache_key: String,
-    image_url: String,
-) -> Result<String, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-
-    let cache_images_dir = app_data_dir.join("cacheImages");
-
-    use xxhash_rust::xxh3::xxh3_64;
-
-    // Si hay cacheKey, usar eso; si no, usar imageUrl
-    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
-        cache_key
-    } else {
-        image_url.clone()
-    };
-
-    let hash = xxh3_64(key_to_hash.as_bytes());
-
-    // Determinar extensión desde la URL (que siempre tiene la URL real de la imagen)
-    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
-        "svg"
-    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
-        "webp"
-    } else if image_url.ends_with(".jpg")
-        || image_url.ends_with(".jpeg")
-        || image_url.contains(".jpg?")
-        || image_url.contains(".jpeg?")
-    {
-        "jpg"
-    } else {
-        "png" // default
-    };
-
-    let filename = format!("{:x}.{}", hash, extension);
-    let file_path = cache_images_dir.join(&filename);
-
-    if file_path.exists() {
-        Ok(filename)
-    } else {
-        Err("Image not found in cache".to_string())
-    }
-}
-
 
 #[tauri::command]
 fn get_cached_image_info(
@@ -742,43 +781,11 @@ fn get_cached_image_info(
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
 
     let cache_images_dir = app_data_dir.join("cacheImages");
-
-    use xxhash_rust::xxh3::xxh3_64;
-
-    // Si hay cacheKey, usar eso; si no, usar imageUrl
-    let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
-        cache_key
-    } else {
-        image_url.clone()
-    };
-
-    let hash = xxh3_64(key_to_hash.as_bytes());
-
-    // Determinar extension desde la URL
-    let extension = if image_url.ends_with(".svg") || image_url.contains(".svg?") {
-        "svg"
-    } else if image_url.ends_with(".webp") || image_url.contains(".webp?") {
-        "webp"
-    } else if image_url.ends_with(".jpg")
-        || image_url.ends_with(".jpeg")
-        || image_url.contains(".jpg?")
-        || image_url.contains(".jpeg?")
-    {
-        "jpg"
-    } else {
-        "png" // default
-    };
-
-    let filename = format!("{:x}.{}", hash, extension);
+    let filename = compute_cache_filename(&cache_key, &image_url);
     let file_path = cache_images_dir.join(&filename);
 
-    // Verificar que existe y retornar la ruta absoluta
     if file_path.exists() {
-        // Usar canonicalize para obtener la ruta absoluta normalizada
-        let canonical_path = file_path
-            .canonicalize()
-            .unwrap_or_else(|_| file_path.clone());
-        Ok(canonical_path.to_string_lossy().to_string())
+        Ok(canonical_path_string(&file_path))
     } else {
         Err("Image not found in cache".to_string())
     }
@@ -788,40 +795,18 @@ fn get_cached_image_info(
 async fn get_installed_flatpaks(
     app: tauri::AppHandle,
 ) -> Result<InstalledPackagesResponse, String> {
-    let shell = app.shell();
-
-    // Detect if we're running inside a flatpak
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
     // Get everything (apps + runtimes) with options column to distinguish
     // Note: flatpak list without --system or --user gets both
     // The 'options' column contains 'runtime' for runtimes/extensions and 'current' for apps
     // The 'size' column contains the installed size in bytes
-    let output = if is_flatpak {
-        // Inside flatpak, use flatpak-spawn to execute on the host
-        shell
-            .command("flatpak-spawn")
-            .args([
-                "--host",
-                "flatpak",
-                "list",
-                "--columns=application,name,version,description,options,ref,size",
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
-    } else {
-        // Outside flatpak, use flatpak directly
-        shell
-            .command("flatpak")
-            .args([
-                "list",
-                "--columns=application,name,version,description,options,ref,size",
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak: {}", e))?
-    };
+    let output = run_flatpak_async(
+        &app,
+        &[
+            "list",
+            "--columns=application,name,version,description,options,ref,size",
+        ],
+    )
+    .await?;
 
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
@@ -932,6 +917,9 @@ async fn get_install_dependencies(
     app: tauri::AppHandle,
     app_id: String,
 ) -> Result<Vec<Dependency>, String> {
+    if !is_valid_app_id(&app_id) {
+        return Err(format!("Invalid app id: {}", app_id));
+    }
     let shell = app.shell();
 
     // Detect if we're running inside a flatpak
@@ -1177,38 +1165,15 @@ async fn get_install_dependencies(
 
 #[tauri::command]
 async fn get_available_updates(app: tauri::AppHandle) -> Result<Vec<UpdateAvailable>, String> {
-    let shell = app.shell();
-
-    // Detect if we're running inside a flatpak
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
-    let output = if is_flatpak {
-        // Inside flatpak, use flatpak-spawn to execute on the host
-        shell
-            .command("flatpak-spawn")
-            .args([
-                "--host",
-                "flatpak",
-                "remote-ls",
-                "--updates",
-                "--columns=application,version,branch",
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
-    } else {
-        // Outside flatpak, use flatpak directly
-        shell
-            .command("flatpak")
-            .args([
-                "remote-ls",
-                "--updates",
-                "--columns=application,version,branch",
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak: {}", e))?
-    };
+    let output = run_flatpak_async(
+        &app,
+        &[
+            "remote-ls",
+            "--updates",
+            "--columns=application,version,branch",
+        ],
+    )
+    .await?;
 
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
@@ -1449,42 +1414,17 @@ async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), 
 
 #[tauri::command]
 async fn get_app_remote_metadata(app: tauri::AppHandle, app_id: String) -> Result<String, String> {
-    let shell = app.shell();
-
-    // Detect if we're running inside a flatpak
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
-    let output = if is_flatpak {
-        // Inside flatpak, use flatpak-spawn to execute on the host
-        shell
-            .command("flatpak-spawn")
-            .args([
-                "--host",
-                "flatpak",
-                "remote-info",
-                "--user",
-                "--show-metadata",
-                "flathub",
-                &app_id,
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
-    } else {
-        // Outside flatpak, use flatpak directly
-        shell
-            .command("flatpak")
-            .args([
-                "remote-info",
-                "--user",
-                "--show-metadata",
-                "flathub",
-                &app_id,
-            ])
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute flatpak: {}", e))?
-    };
+    let output = run_flatpak_async(
+        &app,
+        &[
+            "remote-info",
+            "--user",
+            "--show-metadata",
+            "flathub",
+            &app_id,
+        ],
+    )
+    .await?;
 
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
@@ -1507,9 +1447,6 @@ async fn get_installable_extensions(
     app: tauri::AppHandle,
     app_id: String,
 ) -> Result<Vec<InstallableExtension>, String> {
-    let shell = app.shell();
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
     // First, get the metadata to find extension points
     let metadata = get_app_remote_metadata(app.clone(), app_id.clone()).await?;
 
@@ -1553,27 +1490,11 @@ async fn get_installable_extensions(
     for extension_point in extension_points {
         // Use flatpak search to find extensions matching the extension point
         // Note: flatpak search doesn't return version info, only application and name
-        let output = if is_flatpak {
-            shell
-                .command("flatpak-spawn")
-                .args([
-                    "--host",
-                    "flatpak",
-                    "search",
-                    "--columns=application,name",
-                    &extension_point,
-                ])
-                .output()
-                .await
-                .map_err(|e| format!("Failed to execute flatpak-spawn: {}", e))?
-        } else {
-            shell
-                .command("flatpak")
-                .args(["search", "--columns=application,name", &extension_point])
-                .output()
-                .await
-                .map_err(|e| format!("Failed to execute flatpak: {}", e))?
-        };
+        let output = run_flatpak_async(
+            &app,
+            &["search", "--columns=application,name", &extension_point],
+        )
+        .await?;
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1745,13 +1666,16 @@ async fn start_flatpak_interactive(
     processes: State<'_, ProcessMap>,
     app_id: String,
 ) -> Result<(), String> {
-    eprintln!(
+    if !is_valid_app_id(&app_id) {
+        return Err(format!("Invalid app id: {}", app_id));
+    }
+    debug_eprintln!(
         "[start_flatpak_interactive] Starting for app_id: {}",
         app_id
     );
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
     let cmd_str = build_flatpak_interactive_cmd(is_flatpak, &app_id);
-    eprintln!("[start_flatpak_interactive] Command: {}", cmd_str);
+    debug_eprintln!("[start_flatpak_interactive] Command: {}", cmd_str);
 
     let mut child = Command::new("sh")
         .args(["-c", &cmd_str])
@@ -1765,13 +1689,13 @@ async fn start_flatpak_interactive(
     let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
     let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
 
-    eprintln!("[start_flatpak_interactive] Process spawned successfully");
+    debug_eprintln!("[start_flatpak_interactive] Process spawned successfully");
 
     // Store the process
     {
-        let mut map = processes.lock().unwrap();
+        let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
         map.insert(app_id.clone(), PtyProcess { child, stdin });
-        eprintln!("[start_flatpak_interactive] Process stored in map");
+        debug_eprintln!("[start_flatpak_interactive] Process stored in map");
     }
 
     // Read stdout in background thread - read byte by byte to capture \r updates
@@ -1796,7 +1720,7 @@ async fn start_flatpak_interactive(
                     }
                 }
                 Err(e) => {
-                    eprintln!("[start_flatpak_interactive] Error reading stdout: {}", e);
+                    debug_eprintln!("[start_flatpak_interactive] Error reading stdout: {}", e);
                     break;
                 }
             }
@@ -1824,11 +1748,11 @@ async fn start_flatpak_interactive(
         loop {
             std::thread::sleep(std::time::Duration::from_millis(500));
 
-            let mut map = processes_clone.lock().unwrap();
+            let mut map = processes_clone.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(pty_process) = map.get_mut(&app_id_clone3) {
                 match pty_process.child.try_wait() {
                     Ok(Some(status)) => {
-                        eprintln!(
+                        debug_eprintln!(
                             "[start_flatpak_interactive] Process terminated with status: {:?}",
                             status
                         );
@@ -1841,7 +1765,7 @@ async fn start_flatpak_interactive(
                         // Still running, continue
                     }
                     Err(e) => {
-                        eprintln!("[start_flatpak_interactive] Error checking process: {}", e);
+                        debug_eprintln!("[start_flatpak_interactive] Error checking process: {}", e);
                         map.remove(&app_id_clone3);
                         break;
                     }
@@ -1937,7 +1861,7 @@ async fn download_flatpak_release(github_repo: String, app_id: String) -> Result
 
     let dest = std::env::temp_dir().join(filename);
 
-    eprintln!(
+    debug_eprintln!(
         "[download_flatpak_release] Downloading {} for {}",
         flatpak_url, app_id
     );
@@ -1959,7 +1883,7 @@ async fn download_flatpak_release(github_repo: String, app_id: String) -> Result
 
     fs::write(&dest, &bytes).map_err(|e| format!("Failed to write file: {}", e))?;
 
-    eprintln!(
+    debug_eprintln!(
         "[download_flatpak_release] Saved {} ({} bytes)",
         filename,
         bytes.len()
@@ -1987,9 +1911,6 @@ async fn check_github_updates(
     // List of (app_id, github_repo) pairs to check, e.g. [["io.github.N3kosempai.klia-kompress", "N3koSempai/klia-kompress"]]
     apps: Vec<(String, String)>,
 ) -> Result<Vec<GitHubUpdateInfo>, String> {
-    let shell = app.shell();
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-
     let client = reqwest::Client::builder()
         .user_agent("klia-store")
         .build()
@@ -1999,19 +1920,7 @@ async fn check_github_updates(
 
     for (app_id, github_repo) in apps {
         // Get installed version via flatpak info
-        let output = if is_flatpak {
-            shell
-                .command("flatpak-spawn")
-                .args(["--host", "flatpak", "info", "--show-version", &app_id])
-                .output()
-                .await
-        } else {
-            shell
-                .command("flatpak")
-                .args(["info", "--show-version", &app_id])
-                .output()
-                .await
-        };
+        let output = run_flatpak_async(&app, &["info", "--show-version", &app_id]).await;
 
         let installed_version = match output {
             Ok(o) if o.status.success() => {
@@ -2074,16 +1983,22 @@ async fn inspect_local_flatpak(
         .map(|m| m.len())
         .unwrap_or(0);
 
+    // The original file name/path is user-controlled (file picker) and unsafe
+    // to interpolate into a shell string. Stage it under an app-generated safe
+    // name so shell metacharacters in the original path can never reach `sh -c`.
+    let staged_path = stage_flatpak_bundle_safely(&file_path)?;
+    let staged_path_str = staged_path.to_string_lossy().into_owned();
+
     // Run flatpak install --no-deploy with echo n piped to stdin to get package info without installing
     let cmd_str = if is_flatpak {
         format!(
-            "LANG=C echo n | flatpak-spawn --host flatpak install --no-deploy --user {:?} 2>&1",
-            file_path
+            "LANG=C echo n | flatpak-spawn --host flatpak install --no-deploy --user {} 2>&1",
+            staged_path_str
         )
     } else {
         format!(
-            "LANG=C echo n | flatpak install --no-deploy --user {:?} 2>&1",
-            file_path
+            "LANG=C echo n | flatpak install --no-deploy --user {} 2>&1",
+            staged_path_str
         )
     };
 
@@ -2094,23 +2009,29 @@ async fn inspect_local_flatpak(
         .output()
         .await
         .map_err(|e| format!("Failed to run flatpak: {}", e))?;
+    let _ = fs::remove_file(&staged_path);
 
     let raw = String::from_utf8_lossy(&output.stdout).to_string();
 
-    // Also read metadata directly from the binary bundle (available in all cases)
-    // The bundle embeds a plain-text [Application] block right after the "flatpak\0" magic
-    let metadata_block = fs::read(&file_path)
-        .ok()
-        .and_then(|bytes| {
-            let text = String::from_utf8_lossy(&bytes).into_owned();
-            // Find [Application] section
-            let start = text.find("[Application]")?;
-            // Find end: first occurrence of two+ consecutive NUL bytes after start
-            let section = &text[start..];
-            // Grab up to 2000 chars which is more than enough for the metadata ini
-            Some(section.chars().take(2000).collect::<String>())
-        })
+    // Read the bundle once and reuse the decoded text for both the metadata
+    // block and the branch lookup below, instead of reading the (potentially
+    // multi-hundred-MB) file from disk twice.
+    let bundle_text = fs::read(&file_path)
+        .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
         .unwrap_or_default();
+
+    // The bundle embeds a plain-text [Application] block right after the "flatpak\0" magic
+    let metadata_block = {
+        // Find [Application] section
+        bundle_text
+            .find("[Application]")
+            .map(|start| {
+                let section = &bundle_text[start..];
+                // Grab up to 2000 chars which is more than enough for the metadata ini
+                section.chars().take(2000).collect::<String>()
+            })
+            .unwrap_or_default()
+    };
 
     // Parse metadata fields
     let get_meta = |key: &str| -> String {
@@ -2129,16 +2050,13 @@ async fn inspect_local_flatpak(
     let command = get_meta("command");
 
     // Parse branch from the ref line in the binary (app/id/arch/branch)
-    let branch = {
-        let bytes = fs::read(&file_path).unwrap_or_default();
-        let text = String::from_utf8_lossy(&bytes).into_owned();
-        text.lines()
-            .find(|l| l.starts_with(&format!("app/{}/", app_id)))
-            .and_then(|l| l.splitn(4, '/').nth(3))
-            .unwrap_or("master")
-            .trim_matches('\0')
-            .to_string()
-    };
+    let branch = bundle_text
+        .lines()
+        .find(|l| l.starts_with(&format!("app/{}/", app_id)))
+        .and_then(|l| l.splitn(4, '/').nth(3))
+        .unwrap_or("master")
+        .trim_matches('\0')
+        .to_string();
 
     // Parse context permissions from metadata
     let get_context_list = |section_key: &str| -> Vec<String> {
@@ -2241,22 +2159,23 @@ async fn inspect_local_flatpak(
         })
         .collect();
 
-    // Check if already installed
-    let check_cmd = if is_flatpak {
-        format!(
-            "flatpak-spawn --host flatpak info {} 2>/dev/null",
-            app_id
-        )
+    // Check if already installed. app_id here comes from parsing the bundle's
+    // own metadata block, not a raw shell string, so pass it as a separate
+    // argument instead of interpolating it into a command string.
+    let already_installed = if !app_id.is_empty() && is_valid_app_id(&app_id) {
+        let result = if is_flatpak {
+            shell
+                .command("flatpak-spawn")
+                .args(["--host", "flatpak", "info", &app_id])
+                .output()
+                .await
+        } else {
+            shell.command("flatpak").args(["info", &app_id]).output().await
+        };
+        result.map(|o| o.status.success()).unwrap_or(false)
     } else {
-        format!("flatpak info {} 2>/dev/null", app_id)
+        false
     };
-    let already_installed = shell
-        .command("sh")
-        .args(["-c", &check_cmd])
-        .output()
-        .await
-        .map(|o| o.status.success())
-        .unwrap_or(false);
 
     let name = if app_id.is_empty() {
         std::path::Path::new(&file_path)
@@ -2291,15 +2210,21 @@ async fn install_local_flatpak(
 ) -> Result<(), String> {
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
+    // The original file name/path is user-controlled (file picker) and unsafe
+    // to interpolate into a shell string (Rust's `{:?}` Debug formatting is not
+    // a shell escape). Stage the bundle under an app-generated safe name first.
+    let staged_path = stage_flatpak_bundle_safely(&file_path)?;
+    let staged_path_str = staged_path.to_string_lossy().into_owned();
+
     let cmd_str = if is_flatpak {
         format!(
-            "LANG=C script -q /dev/null -c \"flatpak-spawn --host flatpak install -y --user {:?}\"",
-            file_path
+            "LANG=C script -q /dev/null -c \"flatpak-spawn --host flatpak install -y --user {}\"",
+            staged_path_str
         )
     } else {
         format!(
-            "LANG=C script -q /dev/null -c \"flatpak install -y --user {:?}\"",
-            file_path
+            "LANG=C script -q /dev/null -c \"flatpak install -y --user {}\"",
+            staged_path_str
         )
     };
 
@@ -2318,7 +2243,7 @@ async fn install_local_flatpak(
     let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
 
     {
-        let mut map = processes.lock().unwrap();
+        let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
         map.insert(process_key.clone(), PtyProcess { child, stdin });
     }
 
@@ -2358,24 +2283,28 @@ async fn install_local_flatpak(
     let app_clone3 = app.clone();
     let key_clone3 = process_key.clone();
     let processes_clone = processes.inner().clone();
+    let staged_path_cleanup = staged_path.clone();
     std::thread::spawn(move || {
         loop {
             std::thread::sleep(std::time::Duration::from_millis(500));
-            let mut map = processes_clone.lock().unwrap();
+            let mut map = processes_clone.lock().unwrap_or_else(|e| e.into_inner());
             if let Some(pty_process) = map.get_mut(&key_clone3) {
                 match pty_process.child.try_wait() {
                     Ok(Some(_status)) => {
                         let _ = app_clone3.emit("pty-terminated", key_clone3.clone());
                         map.remove(&key_clone3);
+                        let _ = fs::remove_file(&staged_path_cleanup);
                         break;
                     }
                     Ok(None) => {}
                     Err(_) => {
                         map.remove(&key_clone3);
+                        let _ = fs::remove_file(&staged_path_cleanup);
                         break;
                     }
                 }
             } else {
+                let _ = fs::remove_file(&staged_path_cleanup);
                 break;
             }
         }
@@ -2391,14 +2320,14 @@ async fn send_to_pty(
     app_id: String,
     input: String,
 ) -> Result<(), String> {
-    eprintln!(
+    debug_eprintln!(
         "[send_to_pty] Attempting to send '{}' to app_id: {}",
         input, app_id
     );
-    let mut map = processes.lock().unwrap();
+    let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
 
     if let Some(pty_process) = map.get_mut(&app_id) {
-        eprintln!("[send_to_pty] Process found, writing to stdin");
+        debug_eprintln!("[send_to_pty] Process found, writing to stdin");
         pty_process
             .stdin
             .write_all(format!("{}\n", input).as_bytes())
@@ -2407,10 +2336,10 @@ async fn send_to_pty(
             .stdin
             .flush()
             .map_err(|e| format!("Failed to flush stdin: {}", e))?;
-        eprintln!("[send_to_pty] Successfully sent input");
+        debug_eprintln!("[send_to_pty] Successfully sent input");
         Ok(())
     } else {
-        eprintln!(
+        debug_eprintln!(
             "[send_to_pty] ERROR: No process found for app_id: {}",
             app_id
         );
@@ -2425,7 +2354,7 @@ async fn kill_pty_process(
     processes: State<'_, ProcessMap>,
     app_id: String,
 ) -> Result<(), String> {
-    let mut map = processes.lock().unwrap();
+    let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
 
     if let Some(mut pty_process) = map.remove(&app_id) {
         let _ = pty_process.child.kill();
@@ -2443,7 +2372,7 @@ async fn check_pty_process(
     processes: State<'_, ProcessMap>,
     app_id: String,
 ) -> Result<bool, String> {
-    let mut map = processes.lock().unwrap();
+    let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(pty_process) = map.get_mut(&app_id) {
         match pty_process.child.try_wait() {
             Ok(Some(_)) => {
@@ -2591,7 +2520,7 @@ async fn detect_manifest_format(
         app_id
     );
 
-    println!("[detect_manifest_format] Querying GitHub API: {}", api_url);
+    debug_println!("[detect_manifest_format] Querying GitHub API: {}", api_url);
 
     let response = client
         .get(&api_url)
@@ -2606,7 +2535,7 @@ async fn detect_manifest_format(
             .text()
             .await
             .unwrap_or_else(|_| "Unknown error".to_string());
-        println!(
+        debug_println!(
             "[detect_manifest_format] GitHub API error: {} - {}",
             status, error_text
         );
@@ -2630,20 +2559,20 @@ async fn detect_manifest_format(
         for file in files {
             if let Some(name) = file.get("name").and_then(|n| n.as_str()) {
                 if name == yml_name {
-                    println!("[detect_manifest_format] Found: {}", yml_name);
+                    debug_println!("[detect_manifest_format] Found: {}", yml_name);
                     return Ok(Some(yml_name));
                 } else if name == yaml_name {
-                    println!("[detect_manifest_format] Found: {}", yaml_name);
+                    debug_println!("[detect_manifest_format] Found: {}", yaml_name);
                     return Ok(Some(yaml_name));
                 } else if name == json_name {
-                    println!("[detect_manifest_format] Found: {}", json_name);
+                    debug_println!("[detect_manifest_format] Found: {}", json_name);
                     return Ok(Some(json_name));
                 }
             }
         }
     }
 
-    println!("[detect_manifest_format] No manifest found in repo listing");
+    debug_println!("[detect_manifest_format] No manifest found in repo listing");
     Ok(None)
 }
 
@@ -2661,25 +2590,25 @@ async fn fetch_manifest_from_flathub(
                 "https://raw.githubusercontent.com/flathub/{}/master/{}",
                 app_id, manifest_name
             );
-            println!("[fetch_manifest_from_flathub] Fetching detected format: {}", url);
+            debug_println!("[fetch_manifest_from_flathub] Fetching detected format: {}", url);
 
             match client.get(&url).send().await {
                 Ok(response) => {
                     if response.status().is_success() {
                         match response.text().await {
                             Ok(content) => return Ok(content),
-                            Err(e) => println!("[fetch_manifest_from_flathub] Failed to read content: {}", e),
+                            Err(e) => debug_println!("[fetch_manifest_from_flathub] Failed to read content: {}", e),
                         }
                     }
                 }
-                Err(e) => println!("[fetch_manifest_from_flathub] Request failed: {}", e),
+                Err(e) => debug_println!("[fetch_manifest_from_flathub] Request failed: {}", e),
             }
         }
         Ok(None) => {
-            println!("[fetch_manifest_from_flathub] Detection failed, falling back to sequential attempts");
+            debug_println!("[fetch_manifest_from_flathub] Detection failed, falling back to sequential attempts");
         }
         Err(e) => {
-            println!("[detect_manifest_format] Error: {}, falling back to sequential attempts", e);
+            debug_println!("[detect_manifest_format] Error: {}, falling back to sequential attempts", e);
         }
     }
 
@@ -2696,7 +2625,7 @@ async fn fetch_manifest_from_flathub(
             app_id, manifest_name
         );
 
-        println!(
+        debug_println!(
             "[fetch_manifest_from_flathub] Trying URL: {}",
             url
         );
@@ -2706,28 +2635,28 @@ async fn fetch_manifest_from_flathub(
                 if response.status().is_success() {
                     match response.text().await {
                         Ok(content) => {
-                            println!(
+                            debug_println!(
                                 "[fetch_manifest_from_flathub] Successfully fetched manifest: {}",
                                 manifest_name
                             );
                             return Ok(content);
                         }
                         Err(e) => {
-                            println!(
+                            debug_println!(
                                 "[fetch_manifest_from_flathub] Failed to read response body: {}",
                                 e
                             );
                         }
                     }
                 } else {
-                    println!(
+                    debug_println!(
                         "[fetch_manifest_from_flathub] URL returned status: {}",
                         response.status()
                     );
                 }
             }
             Err(e) => {
-                println!("[fetch_manifest_from_flathub] Request failed: {}", e);
+                debug_println!("[fetch_manifest_from_flathub] Request failed: {}", e);
             }
         }
     }
@@ -2910,7 +2839,7 @@ async fn get_gitlab_tag_commit(
         Err(e) => {
             // Try with 'v' prefix
             if !tag.starts_with('v') {
-                println!(
+                debug_println!(
                     "[get_gitlab_tag_commit] Tag '{}' not found, trying with 'v' prefix",
                     tag
                 );
@@ -2951,7 +2880,7 @@ async fn get_tag_commit_with_fallback(
         Err(e) => {
             // Try with 'v' prefix if the tag doesn't exist and tag doesn't already start with 'v'
             if !tag.starts_with('v') {
-                println!(
+                debug_println!(
                     "[get_tag_commit] Tag '{}' not found, trying with 'v' prefix",
                     tag
                 );
@@ -2985,10 +2914,7 @@ async fn get_github_tag_commit(owner: &str, repo: &str, tag: &str) -> Result<Str
 fn extract_release_info(url: &str) -> Option<(String, String, String, String, bool, String)> {
     // GitHub pattern: https://github.com/owner/repo/releases/download/tag/file
     // These are manually uploaded assets and have SHA256 digest available
-    if let Some(caps) = regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$")
-        .ok()?
-        .captures(url)
-    {
+    if let Some(caps) = GITHUB_RELEASE_ASSET_REGEX.captures(url) {
         let owner = caps.get(1)?.as_str().to_string();
         let repo = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
@@ -2998,10 +2924,7 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String, bo
 
     // GitHub archive pattern: https://github.com/owner/repo/archive/refs/tags/tag/file
     // These are auto-generated tarballs and do NOT have SHA256 digest available via API
-    if let Some(caps) = regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/archive/refs/tags/([^/]+)/(.+)$")
-        .ok()?
-        .captures(url)
-    {
+    if let Some(caps) = GITHUB_RELEASE_ARCHIVE_REGEX.captures(url) {
         let owner = caps.get(1)?.as_str().to_string();
         let repo = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
@@ -3011,10 +2934,7 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String, bo
 
     // GitLab releases pattern: https://gitlab.DOMAIN/owner/repo/-/releases/tag/downloads/file
     // These are manually uploaded assets; a companion .sha256sum link may be available
-    if let Some(caps) = regex::Regex::new(r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/releases/([^/]+)/downloads/(.+)$")
-        .ok()?
-        .captures(url)
-    {
+    if let Some(caps) = GITLAB_RELEASE_ASSET_REGEX.captures(url) {
         let domain = caps.get(1)?.as_str().to_string();
         let project_path = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
@@ -3025,10 +2945,7 @@ fn extract_release_info(url: &str) -> Option<(String, String, String, String, bo
 
     // GitLab archive pattern: https://gitlab.DOMAIN/owner/repo/-/archive/tag/file
     // Auto-generated tarballs, no sha256sum companion expected
-    if let Some(caps) = regex::Regex::new(r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/archive/([^/]+)/(.+)$")
-        .ok()?
-        .captures(url)
-    {
+    if let Some(caps) = GITLAB_RELEASE_ARCHIVE_REGEX.captures(url) {
         let domain = caps.get(1)?.as_str().to_string();
         let project_path = caps.get(2)?.as_str().to_string();
         let tag = caps.get(3)?.as_str().to_string();
@@ -3053,7 +2970,7 @@ async fn verify_github_release(
         owner, repo, tag
     );
 
-    println!("[verify_github_release] Checking release: {}", release_url);
+    debug_println!("[verify_github_release] Checking release: {}", release_url);
 
     let response = client
         .get(&release_url)
@@ -3069,7 +2986,7 @@ async fn verify_github_release(
 
     // If we need to verify SHA256, get the release data
     if let (Some(file), Some(expected)) = (filename, expected_sha256) {
-        println!("[verify_github_release] Verifying SHA256 for file: {}", file);
+        debug_println!("[verify_github_release] Verifying SHA256 for file: {}", file);
 
         let release_text = response
             .text()
@@ -3088,11 +3005,11 @@ async fn verify_github_release(
                         if let Some(digest) = asset.get("digest").and_then(|d| d.as_str()) {
                             let remote_sha256 = digest.strip_prefix("sha256:").unwrap_or(digest);
 
-                            println!("[verify_github_release] Remote SHA256: {}", remote_sha256);
-                            println!("[verify_github_release] Expected SHA256: {}", expected);
+                            debug_println!("[verify_github_release] Remote SHA256: {}", remote_sha256);
+                            debug_println!("[verify_github_release] Expected SHA256: {}", expected);
 
                             if remote_sha256.to_lowercase() == expected.to_lowercase() {
-                                println!("[verify_github_release] ✓ SHA256 matches!");
+                                debug_println!("[verify_github_release] ✓ SHA256 matches!");
                                 return Ok(());
                             } else {
                                 // CRITICAL ERROR: SHA256 mismatch (file was modified!)
@@ -3103,7 +3020,7 @@ async fn verify_github_release(
                             }
                         } else {
                             // WARNING: No digest available (not critical, Flatpak will verify)
-                            println!("[verify_github_release] ⚠ No digest field in asset");
+                            debug_println!("[verify_github_release] ⚠ No digest field in asset");
                             return Err("Could not verify: GitHub release has no SHA256 digest available".to_string());
                         }
                     }
@@ -3116,7 +3033,7 @@ async fn verify_github_release(
     }
 
     // No SHA256 verification requested, just confirm release exists
-    println!("[verify_github_release] Release {} exists and is public", tag);
+    debug_println!("[verify_github_release] Release {} exists and is public", tag);
     Ok(())
 }
 
@@ -3137,7 +3054,7 @@ async fn verify_gitlab_release(
         domain, encoded_path, tag
     );
 
-    println!("[verify_gitlab_release] Checking release: {}", api_url);
+    debug_println!("[verify_gitlab_release] Checking release: {}", api_url);
 
     let response = client
         .get(&api_url)
@@ -3152,7 +3069,7 @@ async fn verify_gitlab_release(
     }
 
     let Some(expected) = expected_sha256 else {
-        println!("[verify_gitlab_release] Release {} exists (no SHA256 to verify)", tag);
+        debug_println!("[verify_gitlab_release] Release {} exists (no SHA256 to verify)", tag);
         return Ok(());
     };
 
@@ -3181,7 +3098,7 @@ async fn verify_gitlab_release(
                     .and_then(|u| u.as_str())
                     .ok_or("No URL for .sha256sum link")?;
 
-                println!("[verify_gitlab_release] Found .sha256sum link: {}", sha256sum_url);
+                debug_println!("[verify_gitlab_release] Found .sha256sum link: {}", sha256sum_url);
 
                 let sha256sum_content = client
                     .get(sha256sum_url)
@@ -3199,11 +3116,11 @@ async fn verify_gitlab_release(
                     .next()
                     .ok_or("Could not parse .sha256sum content")?;
 
-                println!("[verify_gitlab_release] Remote SHA256: {}", remote_sha256);
-                println!("[verify_gitlab_release] Expected SHA256: {}", expected);
+                debug_println!("[verify_gitlab_release] Remote SHA256: {}", remote_sha256);
+                debug_println!("[verify_gitlab_release] Expected SHA256: {}", expected);
 
                 return if remote_sha256.to_lowercase() == expected.to_lowercase() {
-                    println!("[verify_gitlab_release] ✓ SHA256 matches!");
+                    debug_println!("[verify_gitlab_release] ✓ SHA256 matches!");
                     Ok(())
                 } else {
                     Err(format!(
@@ -3224,7 +3141,7 @@ async fn verify_gitlab_release(
 
 #[tauri::command]
 async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
-    println!("[verify_app_hash] Starting hash verification for: {}", app_id);
+    debug_println!("[verify_app_hash] Starting hash verification for: {}", app_id);
 
     // Creamos un único cliente HTTP para todas las operaciones
     let client = reqwest::Client::builder()
@@ -3269,10 +3186,10 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
 
     let main_source = match main_module {
         Some(module) => {
-            println!("[verify_app_hash] Found main module: {}", module.name);
-            println!("[verify_app_hash] Module has {} sources", module.sources.len());
+            debug_println!("[verify_app_hash] Found main module: {}", module.name);
+            debug_println!("[verify_app_hash] Module has {} sources", module.sources.len());
             for (idx, src) in module.sources.iter().enumerate() {
-                println!("[verify_app_hash]   Source {}: type={}, url={:?}",
+                debug_println!("[verify_app_hash]   Source {}: type={}, url={:?}",
                     idx, src.source_type, src.url);
             }
             // Find the first git source, or archive from GitHub/GitLab release
@@ -3284,7 +3201,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
             })
         }
         None => {
-            println!("[verify_app_hash] No main module found, looking for any git or archive source");
+            debug_println!("[verify_app_hash] No main module found, looking for any git or archive source");
             // Fallback: find first git or archive source in any module
             manifest.modules.iter().find_map(|module_value| {
                 if let Ok(module) = serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
@@ -3337,20 +3254,20 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
 
     // Handle archive sources (GitHub/GitLab releases) differently
     if source_type == "archive" {
-        println!("[verify_app_hash] Source is an archive from release");
+        debug_println!("[verify_app_hash] Source is an archive from release");
 
         // Extract release info from URL (e.g., https://github.com/owner/repo/releases/download/v1.2.2/file.tar.gz)
         if let Some((owner_or_domain, repo_or_path, release_tag, filename, is_generated_archive, platform)) = extract_release_info(&url) {
-            println!("[verify_app_hash] Detected release: {}/{} @ {} ({})", owner_or_domain, repo_or_path, release_tag, platform);
-            println!("[verify_app_hash] File: {}", filename);
-            println!("[verify_app_hash] Is auto-generated archive: {}", is_generated_archive);
+            debug_println!("[verify_app_hash] Detected release: {}/{} @ {} ({})", owner_or_domain, repo_or_path, release_tag, platform);
+            debug_println!("[verify_app_hash] File: {}", filename);
+            debug_println!("[verify_app_hash] Is auto-generated archive: {}", is_generated_archive);
 
             // Get SHA256 from manifest
             let manifest_sha256 = source.sha256.as_deref();
             if let Some(sha) = manifest_sha256 {
-                println!("[verify_app_hash] Manifest SHA256: {}", sha);
+                debug_println!("[verify_app_hash] Manifest SHA256: {}", sha);
             } else {
-                println!("[verify_app_hash] ⚠ No SHA256 in manifest");
+                debug_println!("[verify_app_hash] ⚠ No SHA256 in manifest");
             }
 
             let release_verified = if platform == "gitlab" {
@@ -3495,7 +3412,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
         format!("{}/{}", owner, repo)
     };
 
-    println!(
+    debug_println!(
         "[verify_app_hash] Verifying main source: {} @ {} (platform: {})",
         project_display, manifest_commit, platform_name
     );
@@ -3503,7 +3420,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
     // Si hay un tag, verificamos que el commit del manifest coincida con el del tag
     // Esto también verifica implícitamente que el commit existe en el repo
     let (verified, remote_commit, error) = if let Some(ref tag_name) = tag {
-        println!(
+        debug_println!(
             "[verify_app_hash] Tag specified: {}, fetching remote commit for tag",
             tag_name
         );
@@ -3511,7 +3428,7 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
         // Reusamos el cliente HTTP existente
         match get_tag_commit_with_fallback(&client, &platform, &owner, &repo, tag_name).await {
             Ok(tag_commit) => {
-                println!(
+                debug_println!(
                     "[verify_app_hash] Tag {} resolves to commit: {}",
                     tag_name, tag_commit
                 );
@@ -3529,12 +3446,12 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
                         "Hash mismatch: manifest specifies {} but tag {} resolves to {}",
                         manifest_commit, tag_name, tag_commit
                     );
-                    println!("[verify_app_hash] {}", error_msg);
+                    debug_println!("[verify_app_hash] {}", error_msg);
                     (false, Some(tag_commit), Some(error_msg))
                 }
             }
             Err(e) => {
-                println!(
+                debug_println!(
                     "[verify_app_hash] Could not fetch tag {}: {}",
                     tag_name, e
                 );
@@ -3544,14 +3461,14 @@ async fn verify_app_hash(app_id: String) -> Result<VerificationResult, String> {
             }
         }
     } else {
-        println!(
+        debug_println!(
             "[verify_app_hash] No tag specified, only verifying commit exists"
         );
         // No tag specified, just verify commit exists (already done above)
         (true, None, None)
     };
 
-    println!(
+    debug_println!(
         "[verify_app_hash] Verification complete. Verified: {}, Error: {:?}",
         verified, error
     );
@@ -3577,37 +3494,37 @@ fn find_main_module(modules: &[serde_yaml::Value], app_id: &str) -> Option<Flatp
     // Extract the last part of app_id to match against module names
     let app_name = app_id.split('.').last().unwrap_or(app_id).to_lowercase();
 
-    println!("[find_main_module] Looking for main module. App name: {}", app_name);
-    println!("[find_main_module] Total modules: {}", modules.len());
+    debug_println!("[find_main_module] Looking for main module. App name: {}", app_name);
+    debug_println!("[find_main_module] Total modules: {}", modules.len());
 
     // First pass: look for exact match (case-insensitive)
     for (idx, module_value) in modules.iter().enumerate() {
         match serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
             Ok(module) => {
-                println!("[find_main_module] Module {}: name='{}', sources={}",
+                debug_println!("[find_main_module] Module {}: name='{}', sources={}",
                     idx, module.name, module.sources.len());
                 let module_name_lower = module.name.to_lowercase();
                 if module_name_lower == app_name || module_name_lower == app_id.to_lowercase() {
-                    println!("[find_main_module] Found exact match: {}", module.name);
+                    debug_println!("[find_main_module] Found exact match: {}", module.name);
                     return Some(module);
                 }
             }
             Err(e) => {
-                println!("[find_main_module] Module {}: Failed to parse: {}", idx, e);
-                println!("[find_main_module] Module {} raw value: {:?}", idx, module_value);
+                debug_println!("[find_main_module] Module {}: Failed to parse: {}", idx, e);
+                debug_println!("[find_main_module] Module {} raw value: {:?}", idx, module_value);
             }
         }
     }
 
     // Second pass: look for partial match
-    println!("[find_main_module] No exact match, trying partial match...");
+    debug_println!("[find_main_module] No exact match, trying partial match...");
     for (_idx, module_value) in modules.iter().enumerate() {
         if let Ok(module) = serde_yaml::from_value::<FlatpakModule>(module_value.clone()) {
             let module_name_lower = module.name.to_lowercase();
-            println!("[find_main_module] Checking partial match for '{}' against '{}'",
+            debug_println!("[find_main_module] Checking partial match for '{}' against '{}'",
                 module_name_lower, app_name);
             if module_name_lower.contains(&app_name) || app_name.contains(&module_name_lower) {
-                println!("[find_main_module] Found partial match: {}", module.name);
+                debug_println!("[find_main_module] Found partial match: {}", module.name);
                 return Some(module);
             }
         }
@@ -3616,12 +3533,12 @@ fn find_main_module(modules: &[serde_yaml::Value], app_id: &str) -> Option<Flatp
     // Fallback: return the last module (usually the main app)
     if let Some(last) = modules.last() {
         if let Ok(module) = serde_yaml::from_value::<FlatpakModule>(last.clone()) {
-            println!("[find_main_module] Using last module as fallback: {}", module.name);
+            debug_println!("[find_main_module] Using last module as fallback: {}", module.name);
             return Some(module);
         }
     }
 
-    println!("[find_main_module] No suitable module found");
+    debug_println!("[find_main_module] No suitable module found");
     None
 }
 
@@ -3661,8 +3578,7 @@ pub fn run() {
             clear_old_cache,
             download_and_cache_image,
             get_cached_image_path,
-            get_cached_image_filename,
-            check_cached_image_exists,
+            get_cached_image_info,
             check_file_exists,
             get_installed_flatpaks,
             get_install_dependencies,
