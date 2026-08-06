@@ -197,24 +197,57 @@ fn stage_flatpak_bundle_safely(file_path: &str) -> Result<std::path::PathBuf, St
     }
 
     let safe_name = format!("klia-store-local-{}.flatpak", uuid_like_token());
-    // When sandboxed, commands run via `flatpak-spawn --host` execute on the
-    // host, which cannot see the sandbox's private /tmp. Stage under
-    // $XDG_RUNTIME_DIR/app/$FLATPAK_ID instead: Flatpak bind-mounts that
-    // directory between the sandbox and the host automatically, without
-    // needing a --filesystem permission.
-    let staged_dir = match std::env::var("FLATPAK_ID") {
-        Ok(flatpak_id) => {
-            let runtime_dir = std::env::var("XDG_RUNTIME_DIR").map_err(|_| {
-                "XDG_RUNTIME_DIR is not set".to_string()
-            })?;
-            let dir = std::path::Path::new(&runtime_dir).join("app").join(flatpak_id);
-            fs::create_dir_all(&dir).map_err(|e| format!("Failed to prepare staging dir: {}", e))?;
-            dir
+
+    // When sandboxed, the install command runs on the host via
+    // `flatpak-spawn --host`, which only shares specific filesystem
+    // locations with the sandbox (per finish-args, e.g. xdg-download).
+    // Staging in the source file's own directory guarantees the host sees
+    // the exact bytes the sandbox wrote — a separate staging directory
+    // (like /tmp) isn't reliably visible to the host the same way, and was
+    // the source of both "file not found" and "invalid checksum"
+    // (zero-length read) failures. If the source directory isn't writable
+    // from the sandbox (e.g. a read-only host-os location), fall back to
+    // $XDG_RUNTIME_DIR/app/$FLATPAK_ID, which Flatpak always shares with
+    // the host. Outside the sandbox there's no such restriction, so just
+    // use the system temp dir as before.
+    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+    let staged_path = if is_flatpak {
+        let same_dir_attempt = source.parent().map(|dir| dir.join(&safe_name)).and_then(|p| {
+            fs::copy(source, &p).ok().map(|_| p)
+        });
+        match same_dir_attempt {
+            Some(p) => p,
+            None => {
+                // The first attempt may have left a partial/corrupt copy
+                // behind in the user's own directory (e.g. Downloads) before
+                // failing — remove it so nothing unexpected shows up there.
+                if let Some(dir) = source.parent() {
+                    let _ = fs::remove_file(dir.join(&safe_name));
+                }
+                let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
+                    .map_err(|_| "XDG_RUNTIME_DIR is not set".to_string())?;
+                let flatpak_id = std::env::var("FLATPAK_ID").unwrap_or_default();
+                let dir = std::path::Path::new(&runtime_dir).join("app").join(flatpak_id);
+                fs::create_dir_all(&dir)
+                    .map_err(|e| format!("Failed to prepare staging dir: {}", e))?;
+                let p = dir.join(&safe_name);
+                fs::copy(source, &p).map_err(|e| format!("Failed to stage bundle: {}", e))?;
+                p
+            }
         }
-        Err(_) => std::env::temp_dir(),
+    } else {
+        let p = std::env::temp_dir().join(&safe_name);
+        fs::copy(source, &p).map_err(|e| format!("Failed to stage bundle: {}", e))?;
+        p
     };
-    let staged_path = staged_dir.join(safe_name);
-    fs::copy(source, &staged_path).map_err(|e| format!("Failed to stage bundle: {}", e))?;
+
+    // Force the copy to hit disk before the host-side process reads it —
+    // otherwise it can observe a truncated/zero-length file while the
+    // sandbox's write is still buffered, which flatpak reports as an
+    // invalid (empty) checksum.
+    if let Ok(f) = fs::File::open(&staged_path) {
+        let _ = f.sync_all();
+    }
     Ok(staged_path)
 }
 
@@ -2019,13 +2052,16 @@ async fn inspect_local_flatpak(
     };
 
     let shell = app.shell();
-    let output = shell
+    let output_result = shell
         .command("sh")
         .args(["-c", &cmd_str])
         .output()
-        .await
-        .map_err(|e| format!("Failed to run flatpak: {}", e))?;
+        .await;
+    // Always clean up the staged copy, even if the command failed to spawn —
+    // otherwise a spawn error leaves an orphaned .flatpak next to the
+    // original file (e.g. in the user's Downloads folder).
     let _ = fs::remove_file(&staged_path);
+    let output = output_result.map_err(|e| format!("Failed to run flatpak: {}", e))?;
 
     let raw = String::from_utf8_lossy(&output.stdout).to_string();
 
@@ -2246,6 +2282,18 @@ async fn install_local_flatpak(
 
     let process_key = format!("local::{}", file_path);
 
+    // Guard against duplicate installs of the same file racing each other
+    // (e.g. a double-click registered twice by the file manager): without
+    // this, a second call would silently overwrite the first entry in the
+    // map, orphaning the first process's cleanup thread and staged file.
+    {
+        let map = processes.lock().unwrap_or_else(|e| e.into_inner());
+        if map.contains_key(&process_key) {
+            let _ = fs::remove_file(&staged_path);
+            return Err("An installation for this file is already in progress".to_string());
+        }
+    }
+
     let mut child = Command::new("sh")
         .args(["-c", &cmd_str])
         .stdin(Stdio::piped())
@@ -2260,6 +2308,11 @@ async fn install_local_flatpak(
 
     {
         let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
+        if map.contains_key(&process_key) {
+            drop(map);
+            let _ = fs::remove_file(&staged_path);
+            return Err("An installation for this file is already in progress".to_string());
+        }
         map.insert(process_key.clone(), PtyProcess { child, stdin });
     }
 
