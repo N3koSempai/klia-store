@@ -190,77 +190,15 @@ async fn run_flatpak_async(
 // Rust's `{:?}` Debug formatting is NOT a shell escape. Instead of trying to
 // escape the original path, copy the bundle to a temp file with a
 // app-generated safe name and operate on that path in shell commands.
-fn stage_flatpak_bundle_safely(file_path: &str) -> Result<std::path::PathBuf, String> {
-    let source = std::path::Path::new(file_path);
-    if !source.is_file() {
-        return Err("Selected file does not exist".to_string());
-    }
-
-    let safe_name = format!("klia-store-local-{}.flatpak", uuid_like_token());
-
-    // When sandboxed, the install command runs on the host via
-    // `flatpak-spawn --host`, which only shares specific filesystem
-    // locations with the sandbox (per finish-args, e.g. xdg-download).
-    // Staging in the source file's own directory guarantees the host sees
-    // the exact bytes the sandbox wrote — a separate staging directory
-    // (like /tmp) isn't reliably visible to the host the same way, and was
-    // the source of both "file not found" and "invalid checksum"
-    // (zero-length read) failures. If the source directory isn't writable
-    // from the sandbox (e.g. a read-only host-os location), fall back to
-    // $XDG_RUNTIME_DIR/app/$FLATPAK_ID, which Flatpak always shares with
-    // the host. Outside the sandbox there's no such restriction, so just
-    // use the system temp dir as before.
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-    let staged_path = if is_flatpak {
-        let same_dir_attempt = source.parent().map(|dir| dir.join(&safe_name)).and_then(|p| {
-            fs::copy(source, &p).ok().map(|_| p)
-        });
-        match same_dir_attempt {
-            Some(p) => p,
-            None => {
-                // The first attempt may have left a partial/corrupt copy
-                // behind in the user's own directory (e.g. Downloads) before
-                // failing — remove it so nothing unexpected shows up there.
-                if let Some(dir) = source.parent() {
-                    let _ = fs::remove_file(dir.join(&safe_name));
-                }
-                let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
-                    .map_err(|_| "XDG_RUNTIME_DIR is not set".to_string())?;
-                let flatpak_id = std::env::var("FLATPAK_ID").unwrap_or_default();
-                let dir = std::path::Path::new(&runtime_dir).join("app").join(flatpak_id);
-                fs::create_dir_all(&dir)
-                    .map_err(|e| format!("Failed to prepare staging dir: {}", e))?;
-                let p = dir.join(&safe_name);
-                fs::copy(source, &p).map_err(|e| format!("Failed to stage bundle: {}", e))?;
-                p
-            }
-        }
-    } else {
-        let p = std::env::temp_dir().join(&safe_name);
-        fs::copy(source, &p).map_err(|e| format!("Failed to stage bundle: {}", e))?;
-        p
-    };
-
-    // Force the copy to hit disk before the host-side process reads it —
-    // otherwise it can observe a truncated/zero-length file while the
-    // sandbox's write is still buffered, which flatpak reports as an
-    // invalid (empty) checksum.
-    if let Ok(f) = fs::File::open(&staged_path) {
-        let _ = f.sync_all();
-    }
-    Ok(staged_path)
-}
-
-// Small dependency-free random token generator (hex-encoded), good enough for
-// a temp filename — doesn't need cryptographic guarantees, just low collision
-// probability within a single run.
-fn uuid_like_token() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    format!("{:x}-{:x}", nanos, std::process::id())
+// User-supplied file paths (e.g. from a file picker) can contain shell
+// metacharacters that aren't safe to interpolate into a `sh -c` string, and
+// Rust's `{:?}` Debug formatting is NOT a shell escape. Rather than copying
+// the bundle elsewhere (which breaks under the Flatpak sandbox — the host
+// side of `flatpak-spawn --host` can't reliably see a separately-staged
+// copy), quote the original path using standard POSIX single-quote escaping
+// and operate on it in place.
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', r"'\''"))
 }
 
 // Helper function to parse size string from flatpak list output
@@ -2033,35 +1971,30 @@ async fn inspect_local_flatpak(
         .unwrap_or(0);
 
     // The original file name/path is user-controlled (file picker) and unsafe
-    // to interpolate into a shell string. Stage it under an app-generated safe
-    // name so shell metacharacters in the original path can never reach `sh -c`.
-    let staged_path = stage_flatpak_bundle_safely(&file_path)?;
-    let staged_path_str = staged_path.to_string_lossy().into_owned();
+    // to interpolate into a shell string raw — quote it instead of copying
+    // the bundle elsewhere (see shell_quote's doc comment for why).
+    let quoted_path = shell_quote(&file_path);
 
     // Run flatpak install --no-deploy with echo n piped to stdin to get package info without installing
     let cmd_str = if is_flatpak {
         format!(
             "LANG=C echo n | flatpak-spawn --host flatpak install --no-deploy --user {} 2>&1",
-            staged_path_str
+            quoted_path
         )
     } else {
         format!(
             "LANG=C echo n | flatpak install --no-deploy --user {} 2>&1",
-            staged_path_str
+            quoted_path
         )
     };
 
     let shell = app.shell();
-    let output_result = shell
+    let output = shell
         .command("sh")
         .args(["-c", &cmd_str])
         .output()
-        .await;
-    // Always clean up the staged copy, even if the command failed to spawn —
-    // otherwise a spawn error leaves an orphaned .flatpak next to the
-    // original file (e.g. in the user's Downloads folder).
-    let _ = fs::remove_file(&staged_path);
-    let output = output_result.map_err(|e| format!("Failed to run flatpak: {}", e))?;
+        .await
+        .map_err(|e| format!("Failed to run flatpak: {}", e))?;
 
     let raw = String::from_utf8_lossy(&output.stdout).to_string();
 
@@ -2263,20 +2196,19 @@ async fn install_local_flatpak(
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
     // The original file name/path is user-controlled (file picker) and unsafe
-    // to interpolate into a shell string (Rust's `{:?}` Debug formatting is not
-    // a shell escape). Stage the bundle under an app-generated safe name first.
-    let staged_path = stage_flatpak_bundle_safely(&file_path)?;
-    let staged_path_str = staged_path.to_string_lossy().into_owned();
+    // to interpolate into a shell string raw — quote it instead of copying
+    // the bundle elsewhere (see shell_quote's doc comment for why).
+    let quoted_path = shell_quote(&file_path);
 
     let cmd_str = if is_flatpak {
         format!(
             "LANG=C script -q /dev/null -c \"flatpak-spawn --host flatpak install -y --user {}\"",
-            staged_path_str
+            quoted_path
         )
     } else {
         format!(
             "LANG=C script -q /dev/null -c \"flatpak install -y --user {}\"",
-            staged_path_str
+            quoted_path
         )
     };
 
@@ -2285,11 +2217,10 @@ async fn install_local_flatpak(
     // Guard against duplicate installs of the same file racing each other
     // (e.g. a double-click registered twice by the file manager): without
     // this, a second call would silently overwrite the first entry in the
-    // map, orphaning the first process's cleanup thread and staged file.
+    // map, orphaning the first process's cleanup thread.
     {
         let map = processes.lock().unwrap_or_else(|e| e.into_inner());
         if map.contains_key(&process_key) {
-            let _ = fs::remove_file(&staged_path);
             return Err("An installation for this file is already in progress".to_string());
         }
     }
@@ -2310,7 +2241,6 @@ async fn install_local_flatpak(
         let mut map = processes.lock().unwrap_or_else(|e| e.into_inner());
         if map.contains_key(&process_key) {
             drop(map);
-            let _ = fs::remove_file(&staged_path);
             return Err("An installation for this file is already in progress".to_string());
         }
         map.insert(process_key.clone(), PtyProcess { child, stdin });
@@ -2352,7 +2282,6 @@ async fn install_local_flatpak(
     let app_clone3 = app.clone();
     let key_clone3 = process_key.clone();
     let processes_clone = processes.inner().clone();
-    let staged_path_cleanup = staged_path.clone();
     std::thread::spawn(move || {
         loop {
             std::thread::sleep(std::time::Duration::from_millis(500));
@@ -2362,18 +2291,15 @@ async fn install_local_flatpak(
                     Ok(Some(_status)) => {
                         let _ = app_clone3.emit("pty-terminated", key_clone3.clone());
                         map.remove(&key_clone3);
-                        let _ = fs::remove_file(&staged_path_cleanup);
                         break;
                     }
                     Ok(None) => {}
                     Err(_) => {
                         map.remove(&key_clone3);
-                        let _ = fs::remove_file(&staged_path_cleanup);
                         break;
                     }
                 }
             } else {
-                let _ = fs::remove_file(&staged_path_cleanup);
                 break;
             }
         }
