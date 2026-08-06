@@ -38,31 +38,12 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
-    <release version="2.11.2" date="2026-08-05">
+    <release version="2.11.3" date="2026-08-06">
       <description>
+        <p>Fixed an issue where installing a .flatpak file by double-clicking it could fail with a file-not-found error when Klia Store is running as a sandboxed Flatpak app.</p>
         <p>Installing a .flatpak file by opening it directly now updates the app's status right away, so it correctly shows as installed without needing to restart Klia Store.</p>
         <p>General performance improvements across the app: faster loading of the Home screen, quicker app searches, and a smaller, more efficient install.</p>
         <p>Improved stability: the app is now more resilient if something goes wrong during an installation, avoiding unexpected crashes.</p>
-      </description>
-    </release>
-    <release version="2.11.1" date="2026-08-02">
-      <description>
-        <p>Backups have arrived. Pick any installed app, choose whether to include its data and runtime, and Klia Store packs everything into a single portable archive you can restore later — on this machine or a new one. No terminal commands, no guesswork.</p>
-        <p>You can now support Klia Store directly from the app: after a successful install, an optional "watch an ad to support" button opens a short ad in your browser. It's entirely optional and takes a few seconds — a small way to help keep the project going if you feel like it.</p>
-        <p>Fixed an issue where creating a backup with the runtime included could silently fail without producing an archive, and the progress dialog now clearly shows when something goes wrong instead of looking stuck.</p>
-      </description>
-    </release>
-    <release version="2.10.3" date="2026-06-20">
-      <description>
-        <p>You can now install .flatpak files directly by opening them with Klia Store. A dedicated installation dialog shows app metadata, size, and dependencies before confirming, with real-time terminal output during the process.</p>
-        <p>Added Klia Kompress — a local image compression and conversion tool — as the first app available directly from its GitHub releases, independent of Flathub.</p>
-        <p>Introduced a separate update-checking system for GitHub-sourced apps that runs in parallel with the Flathub update checker, keeping both paths fully isolated.</p>
-      </description>
-    </release>
-    <release version="2.10.2" date="2026-06-07">
-      <description>
-        <p>SHA256 verification now works correctly for GitLab apps that upload their release archives manually.</p>
-        <p>Fixed a scroll issue in the installation terminal where an invisible element was causing extra blank space at the bottom of the page.</p>
       </description>
     </release>
   </releases>

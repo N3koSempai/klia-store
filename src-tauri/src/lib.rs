@@ -197,7 +197,23 @@ fn stage_flatpak_bundle_safely(file_path: &str) -> Result<std::path::PathBuf, St
     }
 
     let safe_name = format!("klia-store-local-{}.flatpak", uuid_like_token());
-    let staged_path = std::env::temp_dir().join(safe_name);
+    // When sandboxed, commands run via `flatpak-spawn --host` execute on the
+    // host, which cannot see the sandbox's private /tmp. Stage under
+    // $XDG_RUNTIME_DIR/app/$FLATPAK_ID instead: Flatpak bind-mounts that
+    // directory between the sandbox and the host automatically, without
+    // needing a --filesystem permission.
+    let staged_dir = match std::env::var("FLATPAK_ID") {
+        Ok(flatpak_id) => {
+            let runtime_dir = std::env::var("XDG_RUNTIME_DIR").map_err(|_| {
+                "XDG_RUNTIME_DIR is not set".to_string()
+            })?;
+            let dir = std::path::Path::new(&runtime_dir).join("app").join(flatpak_id);
+            fs::create_dir_all(&dir).map_err(|e| format!("Failed to prepare staging dir: {}", e))?;
+            dir
+        }
+        Err(_) => std::env::temp_dir(),
+    };
+    let staged_path = staged_dir.join(safe_name);
     fs::copy(source, &staged_path).map_err(|e| format!("Failed to stage bundle: {}", e))?;
     Ok(staged_path)
 }
