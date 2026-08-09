@@ -1,4 +1,5 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { LruMap, LruSet } from "./lruCache";
 
 interface QueueItem {
 	appId: string;
@@ -10,9 +11,10 @@ interface QueueItem {
 	abortController: AbortController;
 }
 
-// Cache en memoria para respuestas rapidas
-const memoryCache = new Map<string, string>();
-const failedCache = new Set<string>();
+// Cache en memoria para respuestas rapidas (limitado a 20 entradas, el cache en disco se encarga del resto)
+const MAX_MEMORY_CACHE_SIZE = 20;
+const memoryCache = new LruMap<string, string>(MAX_MEMORY_CACHE_SIZE);
+const failedCache = new LruSet<string>(MAX_MEMORY_CACHE_SIZE);
 
 export class ImageCacheManager {
 	private static instance: ImageCacheManager;
