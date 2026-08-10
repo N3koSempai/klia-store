@@ -39,6 +39,8 @@ jobs:
       needs: check-release
       if: needs.check-release.outputs.should_release == 'true'
       runs-on: ubuntu-22.04
+      env:
+        XDG_DATA_HOME: /home/runner/.local/share
       steps:
         # 1. Limpieza estándar (sin redimensionar particiones, es más seguro)
         - name: Free Disk Space
@@ -87,16 +89,13 @@ jobs:
         # 4. Instalar SDKs (Ahora irán al disco gigante)
         - name: Install Runtime & SDKs
           run: |
-            flatpak install --user -y flathub org.gnome.Sdk//49 org.gnome.Platform//49
+            flatpak install --user -y flathub org.gnome.Sdk//50 org.gnome.Platform//50
             flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//25.08
             flatpak install --user -y flathub org.freedesktop.Sdk.Extension.node20//25.08
 
         # 5. Compilar (Usando --sandbox para aislar)
         - name: Build Flatpak
           run: |
-            # Importante: XDG_DATA_HOME fuerza a usar nuestras rutas locales
-            export XDG_DATA_HOME=$HOME/.local/share
-
             flatpak-builder --user --repo=repo --force-clean build-dir io.github.N3kosempai.klia-store.yml
 
             flatpak build-bundle repo Klia-Store-${{ needs.check-release.outputs.version }}.flatpak io.github.N3kosempai.klia-store
