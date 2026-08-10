@@ -13,10 +13,14 @@ import {
 } from "@mui/material";
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as THREE from "three";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
+
+// Geometría compartida por todos los AppBlock: misma forma siempre (0.85, 0.85, 0.85),
+// se reutiliza en vez de instanciar un BoxGeometry nuevo por bloque en cada render.
+const sharedEdgesGeometry = new THREE.BoxGeometry(0.85, 0.85, 0.85);
 
 export type PermissionFilter = "storage" | "camera" | "files" | null;
 
@@ -187,7 +191,7 @@ const AppBlock = ({
 			/>
 			{/* Wireframe overlay */}
 			<lineSegments>
-				<edgesGeometry args={[new THREE.BoxGeometry(0.85, 0.85, 0.85)]} />
+				<edgesGeometry args={[sharedEdgesGeometry]} />
 				<lineBasicMaterial
 					color={hovered || isSelected ? "#ffffff" : color}
 					transparent
@@ -232,6 +236,12 @@ const CubeScene = ({
 	// Calculate cube dimensions to fit all apps
 	const totalApps = installedApps.length;
 	const cubeSize = Math.ceil(Math.cbrt(totalApps)); // Size of one side of the cube
+
+	// Reutilizar la geometría del wireframe exterior mientras cubeSize no cambie
+	const outerWireframeGeometry = useMemo(
+		() => new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize),
+		[cubeSize],
+	);
 
 	// Generate cube positions
 	const cubePositions: [number, number, number][] = [];
@@ -379,9 +389,7 @@ const CubeScene = ({
 			{/* Large wireframe box outline around the entire cube - only show in cube mode */}
 			{!isGridView && (
 				<lineSegments>
-					<edgesGeometry
-						args={[new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize)]}
-					/>
+					<edgesGeometry args={[outerWireframeGeometry]} />
 					<lineBasicMaterial
 						color="#30363d"
 						transparent

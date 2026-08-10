@@ -2,6 +2,7 @@ import BrokenImage from "@mui/icons-material/BrokenImage";
 import { Box, Skeleton } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { imageCacheManager } from "../utils/imageCache";
+import { LruMap, LruSet } from "../utils/lruCache";
 
 interface CachedImageProps {
 	appId: string;
@@ -17,8 +18,10 @@ interface CachedImageProps {
 }
 
 // In-memory cache to remember failed images across component mounts/unmounts
-const failedImagesCache = new Set<string>();
-const loadedImagesCache = new Map<string, string>();
+// Limited to 20 entries (LRU) - the on-disk cache in imageCache.ts handles the rest
+const MAX_IMAGE_MEMORY_CACHE_SIZE = 20;
+const failedImagesCache = new LruSet<string>(MAX_IMAGE_MEMORY_CACHE_SIZE);
+const loadedImagesCache = new LruMap<string, string>(MAX_IMAGE_MEMORY_CACHE_SIZE);
 
 export const CachedImage = ({
 	appId,

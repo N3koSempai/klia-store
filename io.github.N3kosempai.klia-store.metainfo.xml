@@ -38,6 +38,11 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.11.4" date="2026-08-09">
+      <description>
+        <p>Optimization pack: Klia Store now uses noticeably less RAM while running. You shouldn't notice any change in how the app looks or behaves — just a lighter footprint on your system.</p>
+      </description>
+    </release>
     <release version="2.11.3" date="2026-08-06">
       <description>
         <p>Fixed an issue where installing a .flatpak file by double-clicking it could fail with a file-not-found error when Klia Store is running as a sandboxed Flatpak app.</p>
