@@ -4,9 +4,18 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>LicenseRef-proprietary=https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md</project_license>
   <name>Klia Store</name>
-  <summary>Flatpak application store</summary>
+  <summary>Browse, install and manage your Flatpak applications</summary>
   <description>
-    <p>A modern application store for managing Flatpak applications.</p>
+    <p>Klia Store is a modern, fast application store built specifically for managing Flatpak applications on Linux. Beyond browsing and installing apps, it gives you tools to keep your system organized and under control.</p>
+    <p>Features:</p>
+    <ul>
+      <li>Browse, install and update Flatpak applications, all from one place</li>
+      <li>Back up and restore your installed applications, including their data and runtimes</li>
+      <li>Visualize your installed apps and their permissions (storage, camera, file access) in an interactive view</li>
+      <li>Audit installed apps by verifying their source manifest against Flathub, helping protect against supply-chain tampering</li>
+      <li>Review requested permissions and a risk assessment before installing a local .flatpak file</li>
+      <li>Available in multiple languages, with automatic detection of your system language</li>
+    </ul>
   </description>
   <launchable type="desktop-id">io.github.N3kosempai.klia-store.desktop</launchable>
   <developer id="io.github.N3kosempai">
