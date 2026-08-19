@@ -74,7 +74,7 @@ fn home_dir() -> Result<PathBuf, String> {
 /// paths that are perfectly real from klia-store's point of view. `~/.var/app`
 /// is bind-mounted to the real host path by `--filesystem=~/.var/app:create`,
 /// so staging there keeps the directory visible on both sides.
-fn staging_base_dir() -> Result<PathBuf, String> {
+pub fn staging_base_dir() -> Result<PathBuf, String> {
     match std::env::var("FLATPAK_ID") {
         Ok(id) => Ok(home_dir()?.join(".var/app").join(id).join("cache")),
         Err(_) => Ok(std::env::temp_dir()),

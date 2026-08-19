@@ -1846,7 +1846,13 @@ async fn download_flatpak_release(github_repo: String, app_id: String) -> Result
         .filter(|s| !s.is_empty())
         .unwrap_or("app.flatpak");
 
-    let dest = std::env::temp_dir().join(filename);
+    // Must be visible to the `flatpak` process spawned on the host via
+    // `flatpak-spawn --host` in install_local_flatpak, not just inside
+    // klia-store's own sandbox — see staging_base_dir's doc comment.
+    let staging_dir = backup::staging_base_dir()?;
+    fs::create_dir_all(&staging_dir)
+        .map_err(|e| format!("Failed to create staging directory: {}", e))?;
+    let dest = staging_dir.join(filename);
 
     debug_eprintln!(
         "[download_flatpak_release] Downloading {} for {}",

@@ -47,6 +47,11 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.11.5" date="2026-08-18">
+      <description>
+        <p>Fixed an issue where installing or updating Klia Kompress from Klia Store could fail with a file-not-found error.</p>
+      </description>
+    </release>
     <release version="2.11.4" date="2026-08-09">
       <description>
         <p>Optimization pack: Klia Store now uses noticeably less RAM while running. You shouldn't notice any change in how the app looks or behaves — just a lighter footprint on your system.</p>
