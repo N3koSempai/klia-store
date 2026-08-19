@@ -113,12 +113,121 @@ export async function executeFlatpakOperation(
 }
 
 /**
+ * Downloads the latest GitHub release .flatpak for the given repo and
+ * installs it locally, reporting progress through the same shape as
+ * executeFlatpakOperation. Used for apps not distributed via Flathub
+ * (see GITHUB_RELEASE_REPOS), for both first install and updates.
+ */
+export async function installFromGitHubRelease(
+	githubRepo: string,
+	appId: string,
+	onProgress?: (progress: FlatpakOperationProgress) => void,
+): Promise<FlatpakOperationResult> {
+	const output: string[] = [];
+	const emit = (line: string) => {
+		output.push(line);
+		onProgress?.({ output: line });
+	};
+
+	emit("Fetching latest release from GitHub…");
+
+	let tmpPath: string;
+	try {
+		tmpPath = await invoke<string>("download_flatpak_release", {
+			githubRepo,
+			appId,
+		});
+	} catch (error) {
+		emit(`Error: ${error}`);
+		return { success: false, exitCode: -1, output };
+	}
+
+	emit(`Downloaded to ${tmpPath}`);
+	emit("Installing…");
+
+	await invoke("kill_pty_process", { appId }).catch(() => {});
+	await new Promise((resolve) => setTimeout(resolve, 100));
+
+	// install_local_flatpak uses processKey "local::<filePath>" for pty events
+	const processKey = `local::${tmpPath}`;
+
+	return new Promise<FlatpakOperationResult>((resolve) => {
+		let unlistenOutput: UnlistenFn | null = null;
+		let unlistenError: UnlistenFn | null = null;
+		let unlistenTerminated: UnlistenFn | null = null;
+
+		const cleanup = () => {
+			unlistenOutput?.();
+			unlistenError?.();
+			unlistenTerminated?.();
+		};
+
+		const settle = async () => {
+			cleanup();
+			try {
+				const installed = await invoke<{ apps: Array<{ app_id: string }> }>(
+					"get_installed_flatpaks",
+				);
+				const isNowInstalled = installed.apps.some(
+					(a) => a.app_id === appId,
+				);
+				resolve({
+					success: isNowInstalled,
+					exitCode: isNowInstalled ? 0 : -1,
+					output,
+				});
+			} catch (error) {
+				emit(`Error: ${error}`);
+				resolve({ success: false, exitCode: -1, output });
+			}
+		};
+
+		(async () => {
+			unlistenOutput = await listen<[string, string]>(
+				"pty-output",
+				(event) => {
+					const [key, line] = event.payload;
+					if (key === processKey) emit(line);
+				},
+			);
+			unlistenError = await listen<[string, string]>(
+				"pty-error",
+				(event) => {
+					const [key, line] = event.payload;
+					if (key === processKey) emit(`Error: ${line}`);
+				},
+			);
+			unlistenTerminated = await listen<string>(
+				"pty-terminated",
+				(event) => {
+					if (event.payload === processKey) {
+						setTimeout(settle, 500);
+					}
+				},
+			);
+
+			try {
+				await invoke("install_local_flatpak", { filePath: tmpPath });
+			} catch (error) {
+				emit(`Error: ${error}`);
+				cleanup();
+				resolve({ success: false, exitCode: -1, output });
+			}
+		})();
+	});
+}
+
+/**
  * Update a single flatpak app
  */
 export async function updateFlatpakApp(
 	appId: string,
 	onProgress?: (progress: FlatpakOperationProgress) => void,
+	githubRepo?: string,
 ): Promise<FlatpakOperationResult> {
+	if (githubRepo) {
+		return installFromGitHubRelease(githubRepo, appId, onProgress);
+	}
 	return executeFlatpakOperation(
 		() => invoke("update_flatpak", { appId }),
 		onProgress,

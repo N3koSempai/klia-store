@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { dbCacheManager } from "../utils/dbCache";
 import { updateFlatpakApp } from "../utils/flatpakOperations";
+import { getGitHubReleaseRepo } from "../utils/githubReleaseApps";
 
 interface UseUpdateAppReturn {
 	updateApp: (appId: string, appName?: string) => Promise<boolean>;
@@ -24,15 +25,20 @@ export function useUpdateApp(): UseUpdateAppReturn {
 		setUpdateProgress(0);
 
 		try {
-			const result = await updateFlatpakApp(appId, (progress) => {
-				// Update output in real-time
-				setUpdateOutput((prev) => [...prev, progress.output]);
+			const githubRepo = getGitHubReleaseRepo(appId);
+			const result = await updateFlatpakApp(
+				appId,
+				(progress) => {
+					// Update output in real-time
+					setUpdateOutput((prev) => [...prev, progress.output]);
 
-				// Update progress if available
-				if (progress.progress !== undefined) {
-					setUpdateProgress(progress.progress);
-				}
-			});
+					// Update progress if available
+					if (progress.progress !== undefined) {
+						setUpdateProgress(progress.progress);
+					}
+				},
+				githubRepo,
+			);
 
 			// No need to set output again, it's already been updated in real-time
 			// setUpdateOutput(result.output);

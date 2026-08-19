@@ -6,6 +6,7 @@ import {
 	updateSystemFlatpaks,
 } from "../utils/flatpakOperations";
 import { checkAvailableUpdates } from "../utils/updateChecker";
+import { getGitHubReleaseRepo } from "../utils/githubReleaseApps";
 
 interface UpdateAllProgress {
 	totalApps: number;
@@ -87,16 +88,20 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 				]);
 
 				try {
-					const result = await updateFlatpakApp(app.appId, (progress) => {
-						// Update progress bar
-						setUpdateAllProgress((prev) => ({
-							...prev,
-							currentAppProgress: progress.progress ?? 0,
-						}));
+					const result = await updateFlatpakApp(
+						app.appId,
+						(progress) => {
+							// Update progress bar
+							setUpdateAllProgress((prev) => ({
+								...prev,
+								currentAppProgress: progress.progress ?? 0,
+							}));
 
-						// Add output line to terminal
-						setUpdateAllOutput((prev) => [...prev, progress.output]);
-					});
+							// Add output line to terminal
+							setUpdateAllOutput((prev) => [...prev, progress.output]);
+						},
+						getGitHubReleaseRepo(app.appId),
+					);
 
 					if (result.success) {
 						setUpdateAllOutput((prev) => [

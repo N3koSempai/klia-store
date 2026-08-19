@@ -27,6 +27,7 @@ import { useRepoStats } from "../../hooks/useRepoStats";
 import { useRuntimeCheck } from "../../hooks/useRuntimeCheck";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { AppStream, CategoryApp } from "../../types";
+import { GITHUB_RELEASE_REPOS } from "../../utils/githubReleaseApps";
 import {
 	InstallProgressPanel,
 	type InstallStatus,
@@ -340,11 +341,6 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				.replace(/\u00a0/g, " ")
 			// Note: We intentionally preserve Unicode block characters (█, ▓, ▒, ░) for progress bars
 		);
-	};
-
-	// GitHub repo (owner/repo) for apps not on Flathub — always resolves latest release
-	const GITHUB_RELEASE_REPOS: Record<string, string> = {
-		"io.github.N3kosempai.klia-kompress": "N3koSempai/klia-kompress",
 	};
 
 	const startInstallation = async () => {
