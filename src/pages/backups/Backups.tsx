@@ -46,6 +46,7 @@ interface InstalledAppRust {
 	version: string;
 	summary?: string;
 	developer?: string;
+	source: "flathub" | "github";
 }
 
 interface InstalledExtensionRust {
@@ -316,6 +317,7 @@ export const Backups = ({ onBack }: BackupsProps) => {
 					version: app.version,
 					summary: app.summary,
 					developer: app.developer,
+					source: app.source,
 				}),
 			);
 

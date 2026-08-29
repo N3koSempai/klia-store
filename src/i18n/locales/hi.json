@@ -266,6 +266,7 @@
     "verificationWarningMessage": "इस ऐप के स्रोत की पूरी तरह से पुष्टि नहीं की जा सकी। पैकेज सुरक्षित हो सकता है, लेकिन अपडेट करने से पहले विवरण देखने की सलाह दी जाती है।",
     "installAppsMessage": "उन्हें यहाँ देखने के लिए स्टोर से ऐप इंस्टॉल करें",
     "installed": "इंस्टॉल किया गया",
+    "installedFromGithub": "GitHub Releases से इंस्टॉल किया गया",
     "listUpdated": "✓ सूची अपडेट की गई।",
     "noAppsInstalled": "अभी तक कोई ऐप इंस्टॉल नहीं किया गया",
     "noAppsInstalledMessage": "आपने कोई ऐप इंस्टॉल नहीं किया है",

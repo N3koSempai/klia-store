@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
+import { useInstalledAppsStore } from "../store/installedAppsStore";
 import { dbCacheManager } from "../utils/dbCache";
 import { updateFlatpakApp } from "../utils/flatpakOperations";
-import { getGitHubReleaseRepo } from "../utils/githubReleaseApps";
+import { resolveGithubRepoForUpdate } from "../utils/githubReleaseApps";
 
 interface UseUpdateAppReturn {
 	updateApp: (appId: string, appName?: string) => Promise<boolean>;
@@ -13,6 +14,13 @@ interface UseUpdateAppReturn {
 }
 
 export function useUpdateApp(): UseUpdateAppReturn {
+	const getUpdateInfo = useInstalledAppsStore((state) => state.getUpdateInfo);
+	const getInstallSource = useInstalledAppsStore(
+		(state) => state.getInstallSource,
+	);
+	const clearAvailableUpdate = useInstalledAppsStore(
+		(state) => state.clearAvailableUpdate,
+	);
 	const [updatingApp, setUpdatingApp] = useState<string | null>(null);
 	const [isUpdating, setIsUpdating] = useState(false);
 	const [updateOutput, setUpdateOutput] = useState<string[]>([]);
@@ -25,7 +33,11 @@ export function useUpdateApp(): UseUpdateAppReturn {
 		setUpdateProgress(0);
 
 		try {
-			const githubRepo = getGitHubReleaseRepo(appId);
+			const githubRepo = resolveGithubRepoForUpdate(
+				appId,
+				getInstallSource(appId),
+				getUpdateInfo(appId),
+			);
 			const result = await updateFlatpakApp(
 				appId,
 				(progress) => {
@@ -50,6 +62,7 @@ export function useUpdateApp(): UseUpdateAppReturn {
 					"✓ Actualización completada exitosamente",
 				]);
 				setUpdateProgress(100);
+				clearAvailableUpdate(appId);
 
 				// Mark permissions as outdated since the app was updated
 				try {
@@ -76,7 +89,7 @@ export function useUpdateApp(): UseUpdateAppReturn {
 			setIsUpdating(false);
 			return false;
 		}
-	}, []);
+	}, [getUpdateInfo, getInstallSource, clearAvailableUpdate]);
 
 	const clearUpdate = useCallback(() => {
 		setUpdatingApp(null);

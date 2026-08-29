@@ -168,9 +168,7 @@ export async function installFromGitHubRelease(
 				const installed = await invoke<{ apps: Array<{ app_id: string }> }>(
 					"get_installed_flatpaks",
 				);
-				const isNowInstalled = installed.apps.some(
-					(a) => a.app_id === appId,
-				);
+				const isNowInstalled = installed.apps.some((a) => a.app_id === appId);
 				resolve({
 					success: isNowInstalled,
 					exitCode: isNowInstalled ? 0 : -1,
@@ -183,28 +181,19 @@ export async function installFromGitHubRelease(
 		};
 
 		(async () => {
-			unlistenOutput = await listen<[string, string]>(
-				"pty-output",
-				(event) => {
-					const [key, line] = event.payload;
-					if (key === processKey) emit(line);
-				},
-			);
-			unlistenError = await listen<[string, string]>(
-				"pty-error",
-				(event) => {
-					const [key, line] = event.payload;
-					if (key === processKey) emit(`Error: ${line}`);
-				},
-			);
-			unlistenTerminated = await listen<string>(
-				"pty-terminated",
-				(event) => {
-					if (event.payload === processKey) {
-						setTimeout(settle, 500);
-					}
-				},
-			);
+			unlistenOutput = await listen<[string, string]>("pty-output", (event) => {
+				const [key, line] = event.payload;
+				if (key === processKey) emit(line);
+			});
+			unlistenError = await listen<[string, string]>("pty-error", (event) => {
+				const [key, line] = event.payload;
+				if (key === processKey) emit(`Error: ${line}`);
+			});
+			unlistenTerminated = await listen<string>("pty-terminated", (event) => {
+				if (event.payload === processKey) {
+					setTimeout(settle, 500);
+				}
+			});
 
 			try {
 				await invoke("install_local_flatpak", { filePath: tmpPath });

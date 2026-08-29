@@ -1,12 +1,13 @@
 import { useCallback, useState } from "react";
 import type { InstalledAppInfo } from "../store/installedAppsStore";
+import { useInstalledAppsStore } from "../store/installedAppsStore";
 import { dbCacheManager } from "../utils/dbCache";
 import {
 	updateFlatpakApp,
 	updateSystemFlatpaks,
 } from "../utils/flatpakOperations";
+import { resolveGithubRepoForUpdate } from "../utils/githubReleaseApps";
 import { checkAvailableUpdates } from "../utils/updateChecker";
-import { getGitHubReleaseRepo } from "../utils/githubReleaseApps";
 
 interface UpdateAllProgress {
 	totalApps: number;
@@ -36,6 +37,10 @@ interface UseUpdateAllReturn {
 }
 
 export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
+	const getUpdateInfo = useInstalledAppsStore((state) => state.getUpdateInfo);
+	const clearAvailableUpdate = useInstalledAppsStore(
+		(state) => state.clearAvailableUpdate,
+	);
 	const [isUpdatingAll, setIsUpdatingAll] = useState(false);
 	const [updateAllProgress, setUpdateAllProgress] = useState<UpdateAllProgress>(
 		{
@@ -49,7 +54,9 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 	const [systemUpdatesCount, setSystemUpdatesCount] = useState(0);
 	const [isUpdatingSystem, setIsUpdatingSystem] = useState(false);
 	const [systemUpdateProgress, setSystemUpdateProgress] = useState(0);
-	const [updateSummary, setUpdateSummary] = useState<UpdateSummary | null>(null);
+	const [updateSummary, setUpdateSummary] = useState<UpdateSummary | null>(
+		null,
+	);
 
 	const updateAll = useCallback(
 		async (appsToUpdate: InstalledAppInfo[], initialSystemUpdates: number) => {
@@ -88,6 +95,11 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 				]);
 
 				try {
+					const githubRepo = resolveGithubRepoForUpdate(
+						app.appId,
+						app.source,
+						getUpdateInfo(app.appId),
+					);
 					const result = await updateFlatpakApp(
 						app.appId,
 						(progress) => {
@@ -100,7 +112,7 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 							// Add output line to terminal
 							setUpdateAllOutput((prev) => [...prev, progress.output]);
 						},
-						getGitHubReleaseRepo(app.appId),
+						githubRepo,
 					);
 
 					if (result.success) {
@@ -109,6 +121,7 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 							"",
 							`✓ ${app.name} actualizado exitosamente`,
 						]);
+						clearAvailableUpdate(app.appId);
 						successfullyUpdatedAppIds.push(app.appId);
 					} else {
 						errorCount++;
@@ -255,7 +268,7 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 				onComplete();
 			}
 		},
-		[onComplete],
+		[onComplete, getUpdateInfo, clearAvailableUpdate],
 	);
 
 	const clearUpdateAll = useCallback(() => {

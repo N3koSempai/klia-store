@@ -233,6 +233,7 @@
     "hideDetails": "Ocultar detalles",
     "installAppsMessage": "Instala aplicaciones desde la tienda para verlas aquí",
     "installed": "Instaladas",
+    "installedFromGithub": "Instalado desde GitHub Releases",
     "verificationSkipApp": "Omitir",
     "verificationIncludeApp": "Incluir",
     "verificationForceApp": "Forzar",

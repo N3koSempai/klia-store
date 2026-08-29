@@ -1,6 +1,7 @@
 import DeleteOutline from "@mui/icons-material/DeleteOutline";
 import Description from "@mui/icons-material/Description";
 import Extension from "@mui/icons-material/Extension";
+import GitHubIcon from "@mui/icons-material/GitHub";
 import Person from "@mui/icons-material/Person";
 import Update from "@mui/icons-material/Update";
 import {
@@ -342,6 +343,21 @@ const InstalledAppCardComponent = ({
 							{app.appId}
 						</Typography>
 
+						{/* Origen: solo se marca GitHub, flathub es el caso por defecto */}
+						{app.source === "github" && (
+							<Tooltip title={t("myApps.installedFromGithub")}>
+								<GitHubIcon
+									sx={{
+										fontSize: "0.85rem",
+										color: "text.secondary",
+										opacity: 0.6,
+										ml: 1,
+										flexShrink: 0,
+									}}
+								/>
+							</Tooltip>
+						)}
+
 						{/* Versión */}
 						<Typography
 							variant="caption"
@@ -373,6 +389,7 @@ export const InstalledAppCard = memo(
 			prevProps.app.version === nextProps.app.version &&
 			prevProps.app.summary === nextProps.app.summary &&
 			prevProps.app.developer === nextProps.app.developer &&
+			prevProps.app.source === nextProps.app.source &&
 			prevProps.hasUpdate === nextProps.hasUpdate &&
 			prevProps.isUpdating === nextProps.isUpdating &&
 			prevProps.isUninstalling === nextProps.isUninstalling &&

@@ -218,6 +218,7 @@
     "verificationWarningMessage": "このアプリのソースを完全に検証できませんでした。パッケージは安全かもしれませんが、更新前に詳細を確認することをお勧めします。",
     "installAppsMessage": "ストアからアプリをインストールしてここに表示してください",
     "installed": "インストール済み",
+    "installedFromGithub": "GitHub Releases からインストール済み",
     "listUpdated": "✓ リストが更新されました。",
     "noAppsInstalled": "まだアプリがインストールされていません",
     "noAppsInstalledMessage": "インストールされたアプリはありません",
