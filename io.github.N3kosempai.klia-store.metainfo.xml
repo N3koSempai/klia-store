@@ -47,6 +47,12 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.12.0" date="2026-08-29">
+      <description>
+        <p>Klia Store now correctly tells apart apps installed from Flathub versus apps installed from a GitHub release, and shows the source next to installed apps.</p>
+        <p>Fixed an issue where an app's available update could be detected but then get updated from the wrong source, or keep showing as "update available" forever after already being updated.</p>
+      </description>
+    </release>
     <release version="2.11.5" date="2026-08-18">
       <description>
         <p>Fixed an issue where installing or updating Klia Kompress from Klia Store could fail with a file-not-found error.</p>
