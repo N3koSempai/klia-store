@@ -5,8 +5,8 @@ import {
 	updateFlatpakApp,
 	updateSystemFlatpaks,
 } from "../utils/flatpakOperations";
-import { checkAvailableUpdates } from "../utils/updateChecker";
 import { getGitHubReleaseRepo } from "../utils/githubReleaseApps";
+import { checkAvailableUpdates } from "../utils/updateChecker";
 
 interface UpdateAllProgress {
 	totalApps: number;
@@ -49,7 +49,9 @@ export function useUpdateAll(onComplete?: () => void): UseUpdateAllReturn {
 	const [systemUpdatesCount, setSystemUpdatesCount] = useState(0);
 	const [isUpdatingSystem, setIsUpdatingSystem] = useState(false);
 	const [systemUpdateProgress, setSystemUpdateProgress] = useState(0);
-	const [updateSummary, setUpdateSummary] = useState<UpdateSummary | null>(null);
+	const [updateSummary, setUpdateSummary] = useState<UpdateSummary | null>(
+		null,
+	);
 
 	const updateAll = useCallback(
 		async (appsToUpdate: InstalledAppInfo[], initialSystemUpdates: number) => {
