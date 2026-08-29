@@ -266,6 +266,7 @@
     "verificationWarningMessage": "无法完全验证此应用的来源。该包可能是安全的，但我们建议在更新前查看详情。",
     "installAppsMessage": "从商店安装应用后将在此显示",
     "installed": "已安装",
+    "installedFromGithub": "通过 GitHub Releases 安装",
     "listUpdated": "✓ 列表已更新。",
     "noAppsInstalled": "尚未安装任何应用",
     "noAppsInstalledMessage": "您还没有安装任何应用",

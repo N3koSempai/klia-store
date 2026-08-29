@@ -234,6 +234,7 @@
     "hideDetails": "Hide Details",
     "installAppsMessage": "Install apps from the store to see them here",
     "installed": "Installed",
+    "installedFromGithub": "Installed from GitHub Releases",
     "verificationSkipApp": "Skip",
     "verificationIncludeApp": "Include",
     "verificationForceApp": "Force",

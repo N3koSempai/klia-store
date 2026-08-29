@@ -24,6 +24,7 @@ export const useAvailableUpdates = () => {
 					appId: update.app_id,
 					newVersion: update.new_version,
 					branch: update.branch,
+					source: "flathub" as const,
 				}));
 
 				setAvailableUpdates(updatesInfo);

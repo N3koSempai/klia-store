@@ -266,6 +266,7 @@
     "verificationWarningMessage": "Não foi possível verificar completamente a origem deste app. O pacote pode ser seguro, mas recomendamos revisar os detalhes antes de atualizar.",
     "installAppsMessage": "Instale aplicativos da loja para vê-los aqui",
     "installed": "Instalado",
+    "installedFromGithub": "Instalado a partir dos GitHub Releases",
     "listUpdated": "✓ Lista atualizada.",
     "noAppsInstalled": "Nenhum aplicativo instalado ainda",
     "noAppsInstalledMessage": "Você não tem nenhum aplicativo instalado",

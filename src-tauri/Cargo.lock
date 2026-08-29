@@ -2116,7 +2116,7 @@ dependencies = [
 
 [[package]]
 name = "klia-store"
-version = "2.11.4"
+version = "2.11.5"
 dependencies = [
  "chrono",
  "once_cell",

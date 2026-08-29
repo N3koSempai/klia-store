@@ -16,6 +16,8 @@ export const useGitHubUpdates = () => {
 					appId: r.appId,
 					newVersion: r.latestVersion,
 					branch: "stable",
+					source: "github" as const,
+					githubRepo: r.githubRepo,
 				}));
 
 			if (withUpdate.length > 0) {

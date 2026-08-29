@@ -11,6 +11,7 @@ interface InstalledAppRust {
 	summary?: string;
 	developer?: string;
 	installed_size?: number;
+	source: "flathub" | "github";
 }
 
 interface InstalledExtensionRust {
@@ -58,6 +59,7 @@ export const refreshInstalledPackages = async (): Promise<void> => {
 				developer: app.developer,
 				installedSize: app.installed_size,
 				permissions: [], // Loaded on-demand
+				source: app.source,
 			}),
 		);
 

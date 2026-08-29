@@ -24,6 +24,7 @@ export const checkAvailableUpdates = async (): Promise<
 			appId: update.app_id,
 			newVersion: update.new_version,
 			branch: update.branch,
+			source: "flathub" as const,
 		}));
 
 		return updatesInfo;

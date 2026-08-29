@@ -94,6 +94,72 @@ struct InstalledApp {
     developer: Option<String>,
     permissions: Option<Vec<String>>,
     installed_size: Option<u64>,
+    // "flathub" para apps instaladas desde un remote registrado (flathub,
+    // appcenter, etc), "github" para bundles .flatpak instalados localmente
+    // (flatpak crea un remote efímero con sufijo "-origin" para éstos).
+    source: String,
+}
+
+fn derive_install_source(origin: &str) -> String {
+    if origin.ends_with("-origin") {
+        "github".to_string()
+    } else {
+        "flathub".to_string()
+    }
+}
+
+#[cfg(test)]
+mod install_source_tests {
+    use super::derive_install_source;
+
+    // Líneas reales capturadas de `flatpak list --columns=...,origin` en un
+    // sistema con apps instaladas tanto desde Flathub como desde bundles
+    // .flatpak de GitHub releases (vía install_local_flatpak).
+    const REAL_FLATPAK_LIST_OUTPUT: &str = "ca.vlacroix.Tally\tTally\t1.0\tCount anything\tuser,current\tca.vlacroix.Tally/x86_64/stable\t966.1 kB\tflathub
+com.her01n.BatteryInfo\tBattery Info\t0.2\tShows informations about the system battery.\tuser,current\tcom.her01n.BatteryInfo/x86_64/stable\t66.8 MB\tbatteryinfo-origin
+io.github.N3kosempai.hetairos-ai\tHetairos AI\t5.2.1\tYour AI Waifu Assistant with Voice and Animated Interactions\tuser,current\tio.github.N3kosempai.hetairos-ai/x86_64/master\t183.7 MB\thetairos-ai1-origin
+io.github.N3kosempai.klia-store\tKlia Store\t2.11.4\tBrowse, install and manage your Flatpak applications\tuser,current\tio.github.N3kosempai.klia-store/x86_64/master\t13.8 MB\tklia-store1-origin
+com.bitwarden.desktop\tBitwarden\t2026.8.0\tA secure and free password manager for all of your devices\tuser,current\tcom.bitwarden.desktop/x86_64/stable\t511.1 MB\tflathub";
+
+    fn parse_origin(line: &str) -> &str {
+        let parts: Vec<&str> = line.split('\t').collect();
+        parts.get(7).map(|s| s.trim()).unwrap_or("")
+    }
+
+    #[test]
+    fn flathub_remote_maps_to_flathub_source() {
+        assert_eq!(derive_install_source("flathub"), "flathub");
+        assert_eq!(derive_install_source("appcenter"), "flathub");
+    }
+
+    #[test]
+    fn ephemeral_bundle_remote_maps_to_github_source() {
+        assert_eq!(derive_install_source("klia-store1-origin"), "github");
+        assert_eq!(derive_install_source("hetairos-ai1-origin"), "github");
+        assert_eq!(derive_install_source("batteryinfo-origin"), "github");
+        assert_eq!(derive_install_source("aviator-origin"), "github");
+        assert_eq!(derive_install_source("podmandesktop1-origin"), "github");
+    }
+
+    #[test]
+    fn end_to_end_against_real_flatpak_list_output() {
+        let expected: &[(&str, &str)] = &[
+            ("ca.vlacroix.Tally", "flathub"),
+            ("com.her01n.BatteryInfo", "github"),
+            ("io.github.N3kosempai.hetairos-ai", "github"),
+            ("io.github.N3kosempai.klia-store", "github"),
+            ("com.bitwarden.desktop", "flathub"),
+        ];
+
+        for (line, (app_id, expected_source)) in
+            REAL_FLATPAK_LIST_OUTPUT.lines().zip(expected)
+        {
+            let parts: Vec<&str> = line.split('\t').collect();
+            assert_eq!(parts[0], *app_id);
+            let source = derive_install_source(parse_origin(line));
+            assert_eq!(&source, expected_source, "mismatch for {app_id}");
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -790,7 +856,7 @@ async fn get_installed_flatpaks(
         &app,
         &[
             "list",
-            "--columns=application,name,version,description,options,ref,size",
+            "--columns=application,name,version,description,options,ref,size,origin",
         ],
     )
     .await?;
@@ -812,11 +878,12 @@ async fn get_installed_flatpaks(
         }
 
         let parts: Vec<&str> = line.split('\t').collect();
-        if parts.len() >= 7 {
+        if parts.len() >= 8 {
             let app_id = parts[0].trim();
             let options = parts[4].trim();
             let ref_full = parts[5].trim();
             let size_str = parts[6].trim();
+            let origin = parts[7].trim();
 
             // Distinguish apps from runtimes using the official 'options' column
             // Apps have 'current' in options (e.g., "user,current" or "system,current")
@@ -863,6 +930,7 @@ async fn get_installed_flatpaks(
                     developer: extract_developer(app_id),
                     permissions: None, // Don't get permissions here, too slow
                     installed_size,
+                    source: derive_install_source(origin),
                 });
             }
         }
