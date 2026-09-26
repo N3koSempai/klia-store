@@ -96,7 +96,10 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 		);
 	}
 
-	if (error) {
+	// Si falla la carga del app destacado del backend, seguimos mostrando lo
+	// que sí tenemos localmente (la promo estática) en vez de bloquear toda
+	// la sección. Solo si no queda ningún slide mostramos el aviso de error.
+	if (error && slides.length === 0) {
 		return (
 			<Box sx={{ mb: 6 }}>
 				<Box

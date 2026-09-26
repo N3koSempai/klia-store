@@ -2,10 +2,12 @@ import ArrowBack from "@mui/icons-material/ArrowBack";
 import BoltRounded from "@mui/icons-material/BoltRounded";
 import Delete from "@mui/icons-material/Delete";
 import {
+	Alert,
 	Box,
 	Button,
 	IconButton,
 	Skeleton,
+	Snackbar,
 	Tooltip,
 	Typography,
 } from "@mui/material";
@@ -25,9 +27,11 @@ import { GitHubStarBadge } from "../../components/GitHubStarBadge";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
 import { useRepoStats } from "../../hooks/useRepoStats";
 import { useRuntimeCheck } from "../../hooks/useRuntimeCheck";
+import { reportNetworkFailure, reportNetworkSuccess } from "../../store/connectivityStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { AppStream, CategoryApp } from "../../types";
 import { GITHUB_RELEASE_REPOS } from "../../utils/githubReleaseApps";
+import { isNetworkError } from "../../utils/networkError";
 import {
 	InstallProgressPanel,
 	type InstallStatus,
@@ -90,6 +94,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const [installOutput, setInstallOutput] = useState<string[]>([]);
 	const [installStatus, setInstallStatus] = useState<InstallStatus>("idle");
 	const [isUninstalling, setIsUninstalling] = useState(false);
+	const [showOfflineToast, setShowOfflineToast] = useState(false);
 	const [showDonationModal, setShowDonationModal] = useState(false);
 	const hasCryptoDonation = !!(
 		urls?.donation && /bitcoin|ethereum/i.test(urls.donation)
@@ -433,6 +438,8 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
 		console.log("[AppDetails] handleInstall - starting hash verification");
 
+		const verificationStartedAt = Date.now();
+
 		try {
 			// Verify app hash before installation
 			const result = await invoke<{
@@ -467,9 +474,16 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 					errorMsg.toLowerCase().includes("hash mismatch") ||
 					errorMsg.toLowerCase().includes("mismatch");
 
+				// Sin conexión: se comprueba antes que "fuente no disponible" porque
+				// el backend envuelve los errores de red/DNS de reqwest en el mismo
+				// string ("Could not verify tag ...: <error de red>"), y ese texto
+				// también matchea los patrones de fuente no encontrada.
+				const networkError = !isHashMismatch && isNetworkError(errorMsg);
+
 				// Check if it's a source/tag not found issue (warning - no es crítico)
 				const isSourceUnavailable =
 					!isHashMismatch &&
+					!networkError &&
 					(errorMsg.toLowerCase().includes("tag") ||
 						errorMsg.toLowerCase().includes("could not verify") ||
 						errorMsg.toLowerCase().includes("not found") ||
@@ -477,11 +491,26 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
 				console.log("[AppDetails] Verification failed:", {
 					isHashMismatch,
+					networkError,
 					isSourceUnavailable,
 					isUnsupportedPlatform,
 					platform,
 					error: errorMsg,
 				});
+
+				if (networkError) {
+					// Sin conexión no es una decisión de seguridad que el usuario deba
+					// evaluar (no hay nada que "continuar de todos modos" — no se
+					// verificó nada). Se informa con un aviso descartable y el botón
+					// vuelve a "Instalar" para reintentar cuando vuelva la red.
+					reportNetworkFailure();
+					setVerificationResult(null);
+					setInstallStatus("idle");
+					setShowOfflineToast(true);
+					return;
+				}
+
+				reportNetworkSuccess(verificationStartedAt);
 
 				setVerificationResult({
 					verified: false,
@@ -498,6 +527,8 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				}
 				return;
 			}
+
+			reportNetworkSuccess(verificationStartedAt);
 
 			// Verification successful, show success state with countdown
 			setVerificationResult({
@@ -520,6 +551,17 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 			}, 1000);
 		} catch (error) {
 			console.error("[AppDetails] Verification error:", error);
+			const networkError = isNetworkError(error);
+
+			if (networkError) {
+				reportNetworkFailure();
+				setVerificationResult(null);
+				setInstallStatus("idle");
+				setShowOfflineToast(true);
+				return;
+			}
+
+			reportNetworkSuccess(verificationStartedAt);
 			setVerificationResult({
 				verified: false,
 				sources: [],
@@ -905,6 +947,22 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				isInstalled={isInstalled}
 				onInstall={handleInstall}
 			/>
+
+			<Snackbar
+				open={showOfflineToast}
+				autoHideDuration={5000}
+				onClose={() => setShowOfflineToast(false)}
+				anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+			>
+				<Alert
+					onClose={() => setShowOfflineToast(false)}
+					severity="warning"
+					variant="filled"
+					sx={{ width: "100%" }}
+				>
+					{t("appDetails.installOfflineMessage")}
+				</Alert>
+			</Snackbar>
 		</Box>
 	);
 };

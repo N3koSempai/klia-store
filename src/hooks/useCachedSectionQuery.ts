@@ -103,6 +103,8 @@ export const useCachedSectionQuery = <T>({
 	return {
 		data: hasCachedData ? cachedData : query.data,
 		isLoading: isChecking || (query.isLoading && !hasCachedData),
-		error: query.error,
+		// Si ya hay datos cacheados sirviendo a la UI, un fallo del fetch de
+		// refresco en background no debe ocultar ese contenido.
+		error: hasCachedData ? null : query.error,
 	};
 };

@@ -3,6 +3,7 @@ import { Box, Skeleton } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { imageCacheManager } from "../utils/imageCache";
 import { LruMap, LruSet } from "../utils/lruCache";
+import { isNetworkError } from "../utils/networkError";
 
 interface CachedImageProps {
 	appId: string;
@@ -134,12 +135,7 @@ export const CachedImage = ({
 
 				console.error("Error loading cached image:", err);
 				if (isMounted) {
-					const errorMsg = String(err).toLowerCase();
-					const isTemporaryError =
-						errorMsg.includes("timeout") ||
-						errorMsg.includes("error sending request") ||
-						errorMsg.includes("connection") ||
-						errorMsg.includes("network");
+					const isTemporaryError = isNetworkError(err);
 
 					// Solo marcar como error permanente si no es temporal
 					// o si ya se agotaron los reintentos del imageCache (que tiene su propio retry)
