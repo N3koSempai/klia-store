@@ -1,10 +1,10 @@
 app-id: io.github.N3kosempai.klia-store
 runtime: org.gnome.Platform
-runtime-version: '50'
+runtime-version: '51'
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-  - org.freedesktop.Sdk.Extension.node20
+  - org.freedesktop.Sdk.Extension.node22
 command: klia-store
 finish-args:
   - --share=ipc
@@ -22,7 +22,7 @@ finish-args:
   - --talk-name=org.freedesktop.Flatpak
   - --system-talk-name=org.freedesktop.Flatpak
 build-options:
-  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node20/bin:/run/build/klia-store/npm-global/bin
+  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin:/run/build/klia-store/npm-global/bin
   env:
     CARGO_HOME: /run/build/klia-store/cargo
     RUST_BACKTRACE: '1'
