@@ -89,9 +89,9 @@ jobs:
         # 4. Instalar SDKs (Ahora irán al disco gigante)
         - name: Install Runtime & SDKs
           run: |
-            flatpak install --user -y flathub org.gnome.Sdk//50 org.gnome.Platform//50
-            flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//25.08
-            flatpak install --user -y flathub org.freedesktop.Sdk.Extension.node20//25.08
+            flatpak install --user -y flathub org.gnome.Sdk//51 org.gnome.Platform//51
+            flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+            flatpak install --user -y flathub org.freedesktop.Sdk.Extension.node22//26.08
 
         # 5. Compilar (Usando --sandbox para aislar)
         - name: Build Flatpak
