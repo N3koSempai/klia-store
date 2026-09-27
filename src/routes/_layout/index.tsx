@@ -27,7 +27,7 @@ function HomeRoute() {
 		navigate({
 			to: "/app/$appId",
 			params: { appId: app.app_id },
-			search: { searchQuery: query, searchResults: results },
+			search: { searchQuery: query, searchResults: results, selectedApp: app },
 		});
 	};
 

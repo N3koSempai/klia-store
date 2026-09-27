@@ -1,5 +1,7 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { reportNetworkFailure, reportNetworkSuccess } from "../store/connectivityStore";
 import { LruMap, LruSet } from "./lruCache";
+import { isNetworkError } from "./networkError";
 
 interface QueueItem {
 	appId: string;
@@ -119,14 +121,7 @@ export class ImageCacheManager {
 	}
 
 	private isTemporaryError(error: unknown): boolean {
-		const errorMsg = String(error).toLowerCase();
-		// Errores temporales: timeout, network, connection
-		return (
-			errorMsg.includes("timeout") ||
-			errorMsg.includes("error sending request") ||
-			errorMsg.includes("connection") ||
-			errorMsg.includes("network")
-		);
+		return isNetworkError(error);
 	}
 
 	private async downloadImage(
@@ -142,6 +137,8 @@ export class ImageCacheManager {
 		console.log(
 			`[ImageCache] Downloading and caching image for ${appId}: ${imageUrl}${retryCount > 0 ? ` (retry ${retryCount})` : ""}`,
 		);
+
+		const startedAt = Date.now();
 
 		try {
 			// Descargar y guardar la imagen (el backend genera el hash y devuelve
@@ -165,6 +162,7 @@ export class ImageCacheManager {
 			}
 
 			memoryCache.set(imageUrl, convertedPath);
+			reportNetworkSuccess(startedAt);
 			return convertedPath;
 		} catch (error) {
 			if (abortController.signal.aborted) {
@@ -172,6 +170,10 @@ export class ImageCacheManager {
 			}
 
 			console.error(`[ImageCache] Error caching image for ${appId}:`, error);
+
+			if (this.isTemporaryError(error)) {
+				reportNetworkFailure();
+			}
 
 			// Si es un error temporal y aún quedan reintentos
 			if (this.isTemporaryError(error) && retryCount < this.MAX_RETRIES) {

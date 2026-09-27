@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { apiService } from "../services/api";
+import { reportNetworkFailure, reportNetworkSuccess } from "../store/connectivityStore";
 import type { AppStream } from "../types";
 import { imageCacheManager } from "../utils/imageCache";
+import { isNetworkError } from "../utils/networkError";
 import { hasAnyValidRepoUrl } from "../utils/repoValidation";
 
 interface UseAppScreenshotsReturn {
@@ -47,12 +49,35 @@ export const useAppScreenshots = (app: AppStream): UseAppScreenshotsReturn => {
 				return;
 			}
 
-			try {
-				setIsLoading(true);
-				setError(null);
+			setIsLoading(true);
+			setError(null);
+			const startedAt = Date.now();
 
-				// Intentar encontrar screenshots en caché en batch
-				// Generar hasta 10 keys y consultarlas en paralelo
+			// La red tiene prioridad (trae datos frescos). Si falla, caemos en
+			// silencio a las screenshots que ya tengamos cacheadas en disco de
+			// una visita anterior, sin mostrar error al usuario.
+			try {
+				const appStreamData = await apiService.getAppStream(app.id);
+				reportNetworkSuccess(startedAt);
+
+				if (isMounted) {
+					setScreenshots(appStreamData.screenshots);
+					setUrls(appStreamData.urls);
+					setIsLoading(false);
+				}
+				return;
+			} catch (err) {
+				console.error("Error fetching screenshots, falling back to cache:", err);
+				if (isNetworkError(err)) {
+					reportNetworkFailure();
+				} else {
+					reportNetworkSuccess(startedAt);
+				}
+			}
+
+			try {
+				// Buscar screenshots ya cacheadas en disco de una visita anterior.
+				// Generar hasta 10 keys y consultarlas en paralelo.
 				const cacheKeys = Array.from(
 					{ length: 10 },
 					(_, i) => `${app.id}:::${i + 1}`,
@@ -82,38 +107,13 @@ export const useAppScreenshots = (app: AppStream): UseAppScreenshotsReturn => {
 					}
 				}
 
-				const foundInCache = cachedScreenshots.length > 0;
-
-				if (foundInCache && isMounted) {
-					setScreenshots(cachedScreenshots);
-
-					// If we found screenshots in cache but still need URLs, fetch them
-					if (needsUrls) {
-						const appStreamData = await apiService.getAppStream(app.id);
-
-						if (isMounted) {
-							setUrls(appStreamData.urls);
-						}
-					}
-
-					setIsLoading(false);
-					return;
-				}
-
-				// Si no encontramos en caché, buscar en la API
-				const appStreamData = await apiService.getAppStream(app.id);
-
 				if (isMounted) {
-					setScreenshots(appStreamData.screenshots);
-					setUrls(appStreamData.urls);
+					setScreenshots(cachedScreenshots);
 					setIsLoading(false);
 				}
 			} catch (err) {
-				console.error("Error loading screenshots:", err);
+				console.error("Error loading cached screenshots:", err);
 				if (isMounted) {
-					setError(
-						err instanceof Error ? err : new Error("Error loading screenshots"),
-					);
 					setIsLoading(false);
 				}
 			}

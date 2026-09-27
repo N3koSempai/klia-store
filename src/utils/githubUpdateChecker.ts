@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { reportNetworkFailure, reportNetworkSuccess } from "../store/connectivityStore";
 import { OFF_FLATHUB_APPS } from "../data/offFlathubApps";
+import { isNetworkError } from "./networkError";
 
 interface GitHubUpdateInfoRust {
 	app_id: string;
@@ -33,8 +35,10 @@ export const checkGitHubUpdates = async (): Promise<GitHubUpdateInfo[]> => {
 	const apps = buildAppsToCheck();
 	if (apps.length === 0) return [];
 
+	const startedAt = Date.now();
 	try {
 		const results = await invoke<GitHubUpdateInfoRust[]>("check_github_updates", { apps });
+		reportNetworkSuccess(startedAt);
 		return results.map((r) => ({
 			appId: r.app_id,
 			latestVersion: r.latest_version,
@@ -44,6 +48,9 @@ export const checkGitHubUpdates = async (): Promise<GitHubUpdateInfo[]> => {
 		}));
 	} catch (error) {
 		console.error("[githubUpdateChecker] Failed to check GitHub updates:", error);
+		if (isNetworkError(error)) {
+			reportNetworkFailure();
+		}
 		return [];
 	}
 };

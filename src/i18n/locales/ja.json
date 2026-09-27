@@ -56,6 +56,7 @@
     "securityHashVerificationExplanation": "Flatpakマニフェスト内のコミットハッシュを公式ソースリポジトリと比較してセキュリティを検証します。これにより、パスが信頼性の高い変更されていないソースコードから構築されたことが保証されます。",
     "securityHashMismatch": "ソースコードハッシュがリポジトリと一致しません。パッケージが改ざんされている可能性があります。",
     "securitySourceUnavailable": "ソースリポジトリを検証できませんでした。マニフェストまたはリポジトリが利用できない可能性があります。",
+    "installOfflineMessage": "インストールできませんでした：インターネット接続がありません。オンラインに戻ったら再試行してください。",
     "securityVerificationDetailsTitle": "セキュリティ検証の詳細:",
     "securityVerificationOverallStatus": "全体ステータス",
     "securityVerificationVerified": "検証済み",
@@ -157,6 +158,7 @@
     "errorLoadingApp": "今日のアプリの読み込みエラー",
     "errorLoadingApps": "アプリの読み込みエラー：{{error}}",
     "errorLoadingCategories": "カテゴリの読み込みエラー：{{error}}",
+    "offline": "オフライン — 保存済みのコンテンツを表示中",
     "featured": "注目",
     "myApps": "マイアプリ",
     "noDescription": "説明はありません",
@@ -169,6 +171,7 @@
     "searchResults": "「{{query}}」の検索結果",
     "searching": "検索中...",
     "promoted": "プロモーション",
+    "beta": "ベータ",
     "wantYourAppHere": "あなたのアプリをここに掲載しますか？",
     "goToSlide": "スライド {{index}} に移動"
   },

@@ -3,14 +3,17 @@ import Close from "@mui/icons-material/Close";
 import CropSquare from "@mui/icons-material/CropSquare";
 import FilterNone from "@mui/icons-material/FilterNone";
 import Remove from "@mui/icons-material/Remove";
-import { Box, IconButton, Stack, Typography, useTheme } from "@mui/material";
+import WifiOffRounded from "@mui/icons-material/WifiOffRounded";
+import { Box, IconButton, Stack, Tooltip, Typography, useTheme } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useConnectivityStore } from "../store/connectivityStore";
 
 const TitleBar = () => {
 	const theme = useTheme();
 	const { t } = useTranslation();
+	const isOffline = useConnectivityStore((state) => state.isOffline);
 	const [appWindow, setAppWindow] = useState<ReturnType<
 		typeof getCurrentWindow
 	> | null>(null);
@@ -82,12 +85,34 @@ const TitleBar = () => {
 			{/* DERECHA: Controles */}
 			<Stack
 				direction="row"
+				alignItems="center"
 				sx={{
 					WebkitAppRegion: "no-drag",
 					position: "absolute",
 					right: 0,
 				}}
 			>
+				{/* Indicador de sin conexión */}
+				{isOffline && (
+					<Tooltip title={t("home.offline")}>
+						<Box
+							aria-label={t("home.offline")}
+							sx={{
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								width: 28,
+								height: 28,
+								mr: 1.5,
+								borderRadius: "50%",
+								bgcolor: "#f6d32d",
+							}}
+						>
+							<WifiOffRounded sx={{ fontSize: 16, color: "#1a1a1a" }} />
+						</Box>
+					</Tooltip>
+				)}
+
 				{/* Minimizar */}
 				<WindowButton
 					aria-label={t("common.windowMinimize")}

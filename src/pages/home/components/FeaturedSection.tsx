@@ -21,15 +21,18 @@ interface PromotedAppCardData {
 	categoryApp?: CategoryApp;
 }
 
-const KLIA_KOMPRESS_APP_ID = "io.github.N3kosempai.klia-kompress";
-const kliaKompressData = OFF_FLATHUB_APPS[KLIA_KOMPRESS_APP_ID];
+// Marrón del badge "beta" que acompaña al chip de promocionado.
+const BETA_BROWN = "#B98A5E";
 
-const KLIA_KOMPRESS_PROMO: PromotedAppCardData = {
-	appId: KLIA_KOMPRESS_APP_ID,
-	name: kliaKompressData.name,
-	summary: kliaKompressData.summary,
-	icon: kliaKompressData.icon,
-	categoryApp: kliaKompressData,
+const KLIA_TRANSCRIBE_APP_ID = "io.github.N3kosempai.klia-transcribe";
+const kliaTranscribeData = OFF_FLATHUB_APPS[KLIA_TRANSCRIBE_APP_ID];
+
+const KLIA_TRANSCRIBE_PROMO: PromotedAppCardData = {
+	appId: KLIA_TRANSCRIBE_APP_ID,
+	name: kliaTranscribeData.name,
+	summary: kliaTranscribeData.summary,
+	icon: kliaTranscribeData.icon,
+	categoryApp: kliaTranscribeData,
 };
 
 export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
@@ -37,7 +40,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const theme = useTheme();
 	const { data: appOfTheDay, isLoading, error } = useAppOfTheDay();
 
-	const promotedApp = KLIA_KOMPRESS_PROMO;
+	const promotedApp = KLIA_TRANSCRIBE_PROMO;
 
 	// Carousel state - includes backend app and optional promoted app
 	const [activeSlide, setActiveSlide] = useState(0);
@@ -96,7 +99,10 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 		);
 	}
 
-	if (error) {
+	// Si falla la carga del app destacado del backend, seguimos mostrando lo
+	// que sí tenemos localmente (la promo estática) en vez de bloquear toda
+	// la sección. Solo si no queda ningún slide mostramos el aviso de error.
+	if (error && slides.length === 0) {
 		return (
 			<Box sx={{ mb: 6 }}>
 				<Box
@@ -188,7 +194,12 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 										display: "flex",
 										alignItems: "center",
 										justifyContent: "center",
-										boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+										// El icono promocionado ya trae su propio fondo transparente:
+										// la sombra del contenedor dibujaba un cuadrado oscuro.
+										boxShadow:
+											currentSlide.type === "promoted"
+												? "none"
+												: "0 8px 24px rgba(0,0,0,0.3)",
 									}}
 								>
 									{currentSlide.type === "promoted" ? (
@@ -222,21 +233,43 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 
 							{/* Text */}
 							<Box sx={{ flexGrow: 1 }}>
-								<Chip
-									label={
-										currentSlide.type === "backend"
-											? t("home.appOfTheDay").toUpperCase()
-											: t("home.promoted").toUpperCase()
-									}
+								<Box
 									sx={{
-										bgcolor: alpha(theme.palette.primary.main, 0.15),
-										color: "primary.main",
-										fontWeight: 800,
-										fontSize: "0.7rem",
+										display: "flex",
+										alignItems: "center",
+										gap: 1,
 										mb: 2,
-										borderRadius: 1,
 									}}
-								/>
+								>
+									<Chip
+										label={
+											currentSlide.type === "backend"
+												? t("home.appOfTheDay").toUpperCase()
+												: t("home.promoted").toUpperCase()
+										}
+										sx={{
+											bgcolor: alpha(theme.palette.primary.main, 0.15),
+											color: "primary.main",
+											fontWeight: 800,
+											fontSize: "0.7rem",
+											borderRadius: 1,
+										}}
+									/>
+									{currentSlide.type === "promoted" && (
+										<Chip
+											label={t("home.beta").toUpperCase()}
+											size="small"
+											sx={{
+												bgcolor: alpha(BETA_BROWN, 0.15),
+												color: BETA_BROWN,
+												fontWeight: 800,
+												fontSize: "0.65rem",
+												height: 20,
+												borderRadius: 1,
+											}}
+										/>
+									)}
+								</Box>
 								<Typography
 									variant="h3"
 									sx={{

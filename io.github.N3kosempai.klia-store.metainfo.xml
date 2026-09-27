@@ -47,6 +47,15 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.13.0" date="2026-09-27">
+      <description>
+        <p>Klia Transcription is now the featured app on the Home screen, tagged as Beta: local call transcription with speaker separation and on-device summaries.</p>
+        <p>Klia Store now works local-first. If you lose your connection, the store keeps showing the content you already had instead of an error, and a yellow indicator in the title bar tells you that you are offline.</p>
+        <p>Installing an app or updating it while offline now shows a clear message, instead of a security warning you could not do anything about.</p>
+        <p>Updated to the GNOME 51 runtime, so Klia Store runs on the latest platform libraries.</p>
+        <p>Multiple bug fixes and stability improvements across the app.</p>
+      </description>
+    </release>
     <release version="2.12.0" date="2026-08-29">
       <description>
         <p>Klia Store now correctly tells apart apps installed from Flathub versus apps installed from a GitHub release, and shows the source next to installed apps.</p>
