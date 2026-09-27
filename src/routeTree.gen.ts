@@ -11,12 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
-import { Route as LayoutMyAppsRouteImport } from './routes/_layout/my-apps'
-import { Route as LayoutBackupsRouteImport } from './routes/_layout/backups'
 import { Route as LayoutAnalyticsRouteImport } from './routes/_layout/analytics'
-import { Route as LayoutDeveloperDeveloperIdRouteImport } from './routes/_layout/developer.$developerId'
-import { Route as LayoutCategoryCategoryIdRouteImport } from './routes/_layout/category.$categoryId'
+import { Route as LayoutBackupsRouteImport } from './routes/_layout/backups'
+import { Route as LayoutMyAppsRouteImport } from './routes/_layout/my-apps'
 import { Route as LayoutAppAppIdRouteImport } from './routes/_layout/app.$appId'
+import { Route as LayoutCategoryCategoryIdRouteImport } from './routes/_layout/category.$categoryId'
+import { Route as LayoutDeveloperDeveloperIdRouteImport } from './routes/_layout/developer.$developerId'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -27,9 +27,9 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutMyAppsRoute = LayoutMyAppsRouteImport.update({
-  id: '/my-apps',
-  path: '/my-apps',
+const LayoutAnalyticsRoute = LayoutAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutBackupsRoute = LayoutBackupsRouteImport.update({
@@ -37,28 +37,28 @@ const LayoutBackupsRoute = LayoutBackupsRouteImport.update({
   path: '/backups',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutAnalyticsRoute = LayoutAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+const LayoutMyAppsRoute = LayoutMyAppsRouteImport.update({
+  id: '/my-apps',
+  path: '/my-apps',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutDeveloperDeveloperIdRoute =
-  LayoutDeveloperDeveloperIdRouteImport.update({
-    id: '/developer/$developerId',
-    path: '/developer/$developerId',
-    getParentRoute: () => LayoutRoute,
-  } as any)
+const LayoutAppAppIdRoute = LayoutAppAppIdRouteImport.update({
+  id: '/app/$appId',
+  path: '/app/$appId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutCategoryCategoryIdRoute =
   LayoutCategoryCategoryIdRouteImport.update({
     id: '/category/$categoryId',
     path: '/category/$categoryId',
     getParentRoute: () => LayoutRoute,
   } as any)
-const LayoutAppAppIdRoute = LayoutAppAppIdRouteImport.update({
-  id: '/app/$appId',
-  path: '/app/$appId',
-  getParentRoute: () => LayoutRoute,
-} as any)
+const LayoutDeveloperDeveloperIdRoute =
+  LayoutDeveloperDeveloperIdRouteImport.update({
+    id: '/developer/$developerId',
+    path: '/developer/$developerId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -140,11 +140,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/my-apps': {
-      id: '/_layout/my-apps'
-      path: '/my-apps'
-      fullPath: '/my-apps'
-      preLoaderRoute: typeof LayoutMyAppsRouteImport
+    '/_layout/analytics': {
+      id: '/_layout/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof LayoutAnalyticsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/backups': {
@@ -154,18 +154,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutBackupsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/analytics': {
-      id: '/_layout/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof LayoutAnalyticsRouteImport
+    '/_layout/my-apps': {
+      id: '/_layout/my-apps'
+      path: '/my-apps'
+      fullPath: '/my-apps'
+      preLoaderRoute: typeof LayoutMyAppsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/developer/$developerId': {
-      id: '/_layout/developer/$developerId'
-      path: '/developer/$developerId'
-      fullPath: '/developer/$developerId'
-      preLoaderRoute: typeof LayoutDeveloperDeveloperIdRouteImport
+    '/_layout/app/$appId': {
+      id: '/_layout/app/$appId'
+      path: '/app/$appId'
+      fullPath: '/app/$appId'
+      preLoaderRoute: typeof LayoutAppAppIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/category/$categoryId': {
@@ -175,11 +175,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutCategoryCategoryIdRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/app/$appId': {
-      id: '/_layout/app/$appId'
-      path: '/app/$appId'
-      fullPath: '/app/$appId'
-      preLoaderRoute: typeof LayoutAppAppIdRouteImport
+    '/_layout/developer/$developerId': {
+      id: '/_layout/developer/$developerId'
+      path: '/developer/$developerId'
+      fullPath: '/developer/$developerId'
+      preLoaderRoute: typeof LayoutDeveloperDeveloperIdRouteImport
       parentRoute: typeof LayoutRoute
     }
   }

@@ -112,7 +112,7 @@ jobs:
             install_with_retry org.gnome.Sdk//51
             install_with_retry org.gnome.Platform//51
             install_with_retry org.freedesktop.Sdk.Extension.rust-stable//26.08
-            install_with_retry org.freedesktop.Sdk.Extension.node22//26.08
+            install_with_retry org.freedesktop.Sdk.Extension.node24//26.08
 
         # 5. Compilar (Usando --sandbox para aislar)
         - name: Build Flatpak

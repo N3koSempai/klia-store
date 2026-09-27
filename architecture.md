@@ -260,10 +260,10 @@ CREATE TABLE categories (
 ## Key Implementation Details
 
 ### Running the Application
-- **Development**: `pnpm tauri dev` (NOT `pnpm run dev`)
-  - `pnpm run dev` only runs Vite dev server without Tauri context
+- **Development**: `npm run tauri dev` (NOT `npm run dev`)
+  - `npm run dev` only runs Vite dev server without Tauri context
   - Tauri APIs (like HTTP plugin) only work in Tauri window
-- **Build**: `pnpm tauri build`
+- **Build**: `npm run tauri build`
 
 ### TanStack Query Setup
 - QueryClient configured in `src/main.tsx`
@@ -335,8 +335,8 @@ CREATE TABLE categories (
 ## Common Issues & Solutions
 
 ### Issue: "Cannot read properties of undefined (reading 'invoke')"
-**Cause**: Running app with `pnpm run dev` instead of `pnpm tauri dev`
-**Solution**: Always use `pnpm tauri dev` to access Tauri APIs
+**Cause**: Running app with `npm run dev` instead of `npm run tauri dev`
+**Solution**: Always use `npm run tauri dev` to access Tauri APIs
 
 ### Issue: HTTP requests blocked
 **Cause**: URL not in permissions scope
@@ -386,12 +386,12 @@ KliaStore can be distributed as a Flatpak package. The build process is complex 
 sudo apt install flatpak flatpak-builder
 
 # Install runtime and SDK
-flatpak install --user flathub org.gnome.Platform//50
-flatpak install --user flathub org.gnome.Sdk//50
+flatpak install --user flathub org.gnome.Platform//51
+flatpak install --user flathub org.gnome.Sdk//51
 
 # Install SDK extensions for Rust and Node
-flatpak install --user flathub org.freedesktop.Sdk.Extension.rust-stable//25.08
-flatpak install --user flathub org.freedesktop.Sdk.Extension.node20//25.08
+flatpak install --user flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
+flatpak install --user flathub org.freedesktop.Sdk.Extension.node24//26.08
 ```
 
 #### Build Process
@@ -535,7 +535,7 @@ npm run tauri build -- --bundles deb
 </Box>
 ```
 
-#### Problem: "ENOENT: no such file or directory, mkdir '/usr/lib/sdk/node20/lib/node_modules'"
+#### Problem: "ENOENT: no such file or directory, mkdir '/usr/lib/sdk/node24/lib/node_modules'"
 **Cause**: npm trying to install to read-only SDK directory.
 
 **Solution**: Configure `npm_config_prefix` to point to writable build directory.
@@ -546,6 +546,8 @@ npm run tauri build -- --bundles deb
 **Solution**: Match SDK extension versions to runtime base:
 - GNOME 48 → Freedesktop SDK 23.08 extensions
 - GNOME 49 → Freedesktop SDK 25.08 extensions
+- GNOME 50 → Freedesktop SDK 25.08 extensions
+- GNOME 51 → Freedesktop SDK 26.08 extensions (node24, rust-stable)
 
 #### Build Performance Tips
 

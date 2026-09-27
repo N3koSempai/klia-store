@@ -18,30 +18,30 @@ A modern desktop application for browsing and managing Flatpak applications from
 - **TypeScript**: Type safety
 - **Material UI v7**: Component library
 - **TanStack Query**: Data fetching and caching
-- **pnpm**: Package manager
+- **npm**: Package manager
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+ (LTS 24 recomendado)
 - Rust
-- pnpm (`corepack enable pnpm`)
+- npm (incluido con Node.js)
 
 ### Setup
 
 ```bash
 # Install dependencies
-pnpm install
+npm install
 
 # Run development server (IMPORTANT: use tauri dev, not just dev)
-pnpm tauri dev
+npm run tauri dev
 
 # Build for production
-pnpm tauri build
+npm run tauri build
 ```
 
-> **Important**: Always use `pnpm tauri dev` instead of `pnpm dev`. The Tauri context is required for the app to function properly.
+> **Important**: Always use `npm run tauri dev` instead of `npm run dev`. The Tauri context is required for the app to function properly.
 
 ## Building and Distribution
 
@@ -53,16 +53,16 @@ For detailed instructions on building Flatpak packages and troubleshooting commo
 
 **Flatpak:**
 ```bash
-flatpak-builder --user --install --force-clean build-dir com.gatorand.klia-store.yml
-flatpak run com.gatorand.klia-store
+flatpak-builder --user --install --force-clean build-dir io.github.N3kosempai.klia-store.yml
+flatpak run io.github.N3kosempai.klia-store
 
 # Create distributable bundle
-flatpak build-bundle ~/.local/share/flatpak/repo klia-store.flatpak com.gatorand.klia-store
+flatpak build-bundle ~/.local/share/flatpak/repo klia-store.flatpak io.github.N3kosempai.klia-store
 ```
 
 **Debian Package:**
 ```bash
-pnpm tauri build --bundles deb
+npm run tauri build -- --bundles deb
 sudo dpkg -i src-tauri/target/release/bundle/deb/klia-store_*.deb
 ```
 

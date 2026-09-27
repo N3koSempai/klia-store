@@ -47,6 +47,13 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.13.1" date="2026-09-27">
+      <description>
+        <p>Fixed the Flathub package, which was still being built against the previous GNOME platform even though the app itself had already moved on. The Flatpak version now really runs on GNOME 51, the same platform the other packages use.</p>
+        <p>The Flatpak and .deb packages are now built with the Node.js 24 long-term-support toolchain, instead of the older Node.js 20 line that no longer receives security updates.</p>
+        <p>Project dependencies were brought up to date (React 19.3, Vite 7.3, Material UI 7.3, TanStack Query 5.104, Tauri plugins). All packages now ship the same library versions, and the security advisories reported by npm audit are gone.</p>
+      </description>
+    </release>
     <release version="2.13.0" date="2026-09-27">
       <description>
         <p>Klia Transcription is now the featured app on the Home screen, tagged as Beta: local call transcription with speaker separation and on-device summaries.</p>
