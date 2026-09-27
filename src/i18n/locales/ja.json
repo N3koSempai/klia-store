@@ -171,6 +171,7 @@
     "searchResults": "「{{query}}」の検索結果",
     "searching": "検索中...",
     "promoted": "プロモーション",
+    "beta": "ベータ",
     "wantYourAppHere": "あなたのアプリをここに掲載しますか？",
     "goToSlide": "スライド {{index}} に移動"
   },

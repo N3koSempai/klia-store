@@ -214,6 +214,7 @@
     "noImage": "Sem imagem",
     "noResultsFor": "Nenhum resultado encontrado para \"{{query}}\"",
     "promoted": "Promovido",
+    "beta": "Beta",
     "searchLabel": "Pesquisar aplicativos",
     "searchClear": "Limpar pesquisa",
     "searchPlaceholder": "Pesquisar aplicativos...",

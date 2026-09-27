@@ -222,6 +222,7 @@
     "searchResults": "Results for \"{{query}}\"",
     "searching": "Searching...",
     "promoted": "Promoted",
+    "beta": "Beta",
     "wantYourAppHere": "Want your app here?",
     "goToSlide": "Go to slide {{index}}"
   },

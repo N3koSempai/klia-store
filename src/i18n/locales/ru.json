@@ -214,6 +214,7 @@
     "noImage": "Нет изображения",
     "noResultsFor": "Результатов по запросу «{{query}}» не найдено",
     "promoted": "Рекламное",
+    "beta": "Бета",
     "searchLabel": "Поиск приложений",
     "searchClear": "Очистить поиск",
     "searchPlaceholder": "Поиск приложений...",

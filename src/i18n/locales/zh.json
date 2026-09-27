@@ -214,6 +214,7 @@
     "noImage": "无图片",
     "noResultsFor": "未找到关于“{{query}}”的结果",
     "promoted": "推广",
+    "beta": "测试版",
     "searchLabel": "搜索应用",
     "searchClear": "清除搜索",
     "searchPlaceholder": "搜索应用...",

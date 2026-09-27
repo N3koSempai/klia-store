@@ -216,6 +216,7 @@
     "offline": "Sin conexión — mostrando contenido guardado",
     "noResultsFor": "No se encontraron resultados para \"{{query}}\"",
     "promoted": "Promocionado",
+    "beta": "Beta",
     "searchLabel": "Buscar aplicaciones",
     "searchClear": "Limpiar búsqueda",
     "searchPlaceholder": "Buscar aplicaciones...",
