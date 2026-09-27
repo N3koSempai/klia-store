@@ -83,20 +83,41 @@ jobs:
             sudo apt-get install -y flatpak flatpak-builder
 
             flatpak-builder --version
+            flatpak --version
 
             flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
         # 4. Instalar SDKs (Ahora irán al disco gigante)
         - name: Install Runtime & SDKs
           run: |
-            flatpak install --user -y flathub org.gnome.Sdk//51 org.gnome.Platform//51
-            flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
-            flatpak install --user -y flathub org.freedesktop.Sdk.Extension.node22//26.08
+            set -euo pipefail
+
+            # Flathub a veces publica el commit de un ref en el summary antes de
+            # que sus objetos estén servidos por el CDN, y el pull responde 404
+            # aunque la rama exista. Reintentar es lo que lo resuelve.
+            install_with_retry() {
+              local ref="$1"
+              local attempt
+              for attempt in 1 2 3; do
+                if flatpak install --user -y --noninteractive flathub "$ref"; then
+                  return 0
+                fi
+                echo "Intento ${attempt} fallido para ${ref}, reintentando en 20s..."
+                sleep 20
+              done
+              echo "No se pudo instalar ${ref} tras 3 intentos"
+              return 1
+            }
+
+            install_with_retry org.gnome.Sdk//51
+            install_with_retry org.gnome.Platform//51
+            install_with_retry org.freedesktop.Sdk.Extension.rust-stable//26.08
+            install_with_retry org.freedesktop.Sdk.Extension.node22//26.08
 
         # 5. Compilar (Usando --sandbox para aislar)
         - name: Build Flatpak
           run: |
-            flatpak-builder --user --repo=repo --force-clean build-dir io.github.N3kosempai.klia-store.yml
+            flatpak-builder --user --repo=repo --force-clean --install-deps-from=flathub build-dir io.github.N3kosempai.klia-store.yml
 
             flatpak build-bundle repo Klia-Store-${{ needs.check-release.outputs.version }}.flatpak io.github.N3kosempai.klia-store
 
