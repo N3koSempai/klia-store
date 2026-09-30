@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
 import { ExtensionsPopover } from "../../../components/ExtensionsPopover";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
+import { DebAppIcon } from "./DebAppIcon";
 
 interface InstalledAppCardProps {
 	app: InstalledAppInfo;
@@ -35,6 +36,10 @@ interface InstalledAppCardProps {
 		developerName: string,
 		appId: string,
 	) => void;
+	// "deb" renders a placeholder icon and hides the flatpak-only actions
+	// (extensions, uninstall); update/release-notes never show because
+	// hasUpdate is false for deb entries.
+	mode?: "flatpak" | "deb";
 }
 
 const InstalledAppCardComponent = ({
@@ -47,6 +52,7 @@ const InstalledAppCardComponent = ({
 	onUninstall,
 	onShowReleaseNotes,
 	onDeveloperClick,
+	mode = "flatpak",
 }: InstalledAppCardProps) => {
 	const { t } = useTranslation();
 	const [extensionsAnchorEl, setExtensionsAnchorEl] =
@@ -89,23 +95,25 @@ const InstalledAppCardComponent = ({
 				sx={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}
 			>
 				{/* Botón para ver extensiones */}
-				<Tooltip title={t("extensions.title")}>
-					<IconButton
-						onClick={handleExtensionsClick}
-						size="small"
-						sx={{
-							color: "text.secondary",
-							border: "1px solid rgba(255,255,255,0.1)",
-							"&:hover": {
-								color: "#FFD700",
-								backgroundColor: "rgba(255, 215, 0, 0.1)",
-								borderColor: "#FFD700",
-							},
-						}}
-					>
-						<Extension fontSize="small" />
-					</IconButton>
-				</Tooltip>
+				{mode === "flatpak" && (
+					<Tooltip title={t("extensions.title")}>
+						<IconButton
+							onClick={handleExtensionsClick}
+							size="small"
+							sx={{
+								color: "text.secondary",
+								border: "1px solid rgba(255,255,255,0.1)",
+								"&:hover": {
+									color: "#FFD700",
+									backgroundColor: "rgba(255, 215, 0, 0.1)",
+									borderColor: "#FFD700",
+								},
+							}}
+						>
+							<Extension fontSize="small" />
+						</IconButton>
+					</Tooltip>
+				)}
 
 				{/* Botón para ver el Changelog/Release Notes */}
 				{hasUpdate && (
@@ -129,25 +137,27 @@ const InstalledAppCardComponent = ({
 				)}
 
 				{/* Botón de Eliminar */}
-				<Tooltip title={t("appDetails.uninstall")}>
-					<IconButton
-						onClick={onUninstall}
-						disabled={isUninstalling}
-						size="small"
-						sx={{
-							color: "text.secondary",
-							"&:hover": {
-								color: "error.main",
-								backgroundColor: "rgba(255, 107, 107, 0.1)",
-							},
-							"&.Mui-disabled": {
-								color: "grey.500",
-							},
-						}}
-					>
-						<DeleteOutline fontSize="small" />
-					</IconButton>
-				</Tooltip>
+				{mode === "flatpak" && (
+					<Tooltip title={t("appDetails.uninstall")}>
+						<IconButton
+							onClick={onUninstall}
+							disabled={isUninstalling}
+							size="small"
+							sx={{
+								color: "text.secondary",
+								"&:hover": {
+									color: "error.main",
+									backgroundColor: "rgba(255, 107, 107, 0.1)",
+								},
+								"&.Mui-disabled": {
+									color: "grey.500",
+								},
+							}}
+						>
+							<DeleteOutline fontSize="small" />
+						</IconButton>
+					</Tooltip>
+				)}
 			</Stack>
 
 			{/* Extensions Popover */}
@@ -179,17 +189,25 @@ const InstalledAppCardComponent = ({
 						filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.3))",
 					}}
 				>
-					<CachedImage
-						appId={app.appId}
-						imageUrl={`https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${app.appId}.png`}
-						alt={app.name}
-						variant="rounded"
-						style={{
-							width: "100%",
-							height: "100%",
-							objectFit: "cover",
-						}}
-					/>
+					{mode === "deb" ? (
+						<DebAppIcon
+							appId={app.appId}
+							iconPath={app.iconPath}
+							name={app.name}
+						/>
+					) : (
+						<CachedImage
+							appId={app.appId}
+							imageUrl={`https://dl.flathub.org/repo/appstream/x86_64/icons/128x128/${app.appId}.png`}
+							alt={app.name}
+							variant="rounded"
+							style={{
+								width: "100%",
+								height: "100%",
+								objectFit: "cover",
+							}}
+						/>
+					)}
 				</Avatar>
 
 				{/* Título */}
@@ -390,9 +408,11 @@ export const InstalledAppCard = memo(
 			prevProps.app.summary === nextProps.app.summary &&
 			prevProps.app.developer === nextProps.app.developer &&
 			prevProps.app.source === nextProps.app.source &&
+			prevProps.app.iconPath === nextProps.app.iconPath &&
 			prevProps.hasUpdate === nextProps.hasUpdate &&
 			prevProps.isUpdating === nextProps.isUpdating &&
 			prevProps.isUninstalling === nextProps.isUninstalling &&
+			prevProps.mode === nextProps.mode &&
 			prevProps.cardHeight === nextProps.cardHeight
 		);
 	},
