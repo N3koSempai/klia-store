@@ -38,7 +38,7 @@ export const SettingsModal = ({ open, onClose }: SettingsModalProps) => {
 	} = useAccessibilityStore();
 
 	return (
-		<Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+		<Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth disableScrollLock>
 			<IconButton
 				aria-label={t("common.close")}
 				onClick={onClose}

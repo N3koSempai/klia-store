@@ -61,8 +61,9 @@ export const Home = ({
 		useState<CategoryApp[]>(initialSearchResults);
 	const [isSearching, setIsSearching] = useState(false);
 	const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
-	const [aboutModalOpen, setAboutModalOpen] = useState(false);
-	const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+	// Un único modal activo: evita que Ajustes y Acerca de puedan estar montados a la vez
+	// (dos MuiDialog con dos backdrops superpuestos = parpadeo de brillo al cerrar/cambiar).
+	const [activeModal, setActiveModal] = useState<"settings" | "about" | null>(null);
 
 	const {
 		notifications,
@@ -184,7 +185,7 @@ export const Home = ({
 
 					<IconButton
 						aria-label={t("settings.title")}
-						onClick={() => setSettingsModalOpen(true)}
+						onClick={() => setActiveModal("settings")}
 						sx={{
 							color: "text.secondary",
 							"&:hover": {
@@ -198,7 +199,7 @@ export const Home = ({
 
 					<IconButton
 						aria-label={t("about.title")}
-						onClick={() => setAboutModalOpen(true)}
+						onClick={() => setActiveModal("about")}
 						sx={{
 							color: "text.secondary",
 							"&:hover": {
@@ -443,14 +444,14 @@ export const Home = ({
 
 				{/* Settings Modal */}
 				<SettingsModal
-					open={settingsModalOpen}
-					onClose={() => setSettingsModalOpen(false)}
+					open={activeModal === "settings"}
+					onClose={() => setActiveModal(null)}
 				/>
 
 				{/* About Modal */}
 				<AboutModal
-					open={aboutModalOpen}
-					onClose={() => setAboutModalOpen(false)}
+					open={activeModal === "about"}
+					onClose={() => setActiveModal(null)}
 				/>
 			</Container>
 		</Box>

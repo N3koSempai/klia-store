@@ -67,8 +67,9 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 	};
 
 	return (
-		<Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+		<Dialog open={open} onClose={onClose} maxWidth="md" fullWidth disableScrollLock>
 			<IconButton
+				aria-label={t("common.close")}
 				onClick={onClose}
 				sx={{
 					position: "absolute",
