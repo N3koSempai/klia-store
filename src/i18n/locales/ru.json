@@ -6,16 +6,18 @@
   },
   "about": {
     "title": "О Klia Store",
-    "availabilityLabel": "Доступность для работы:",
-    "availabilityStatus": {
-      "available": "Доступен для работы",
-      "busy": "Работаю, но открыт для предложений",
-      "unavailable": "Недоступен"
-    },
     "contributing": "Участие в разработке",
-    "createdBy": "Создано:",
+    "contributorTopic": "Тема",
+    "contributorTopics": {
+      "localization": "Локализация"
+    },
+    "contributorUser": "Участник",
+    "contributors": "Участники",
     "description": "Klia Store — это современный магазин приложений для Linux, обеспечивающий простой и интуитивно понятный способ поиска, установки и управления приложениями. Часть программного комплекса Klia Software Suite.",
     "license": "Лицензия",
+    "projectHome": "Сайт проекта",
+    "thanksTo": "Спасибо:",
+    "updatesChannel": "Канал обновлений",
     "version": "Версия",
     "viewContributing": "Посмотреть руководство для разработчиков",
     "viewLicense": "Посмотреть лицензию"

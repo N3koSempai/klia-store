@@ -6,17 +6,18 @@
   },
   "about": {
     "title": "关于 Klia Store",
-    "availabilityLabel": "工作状态：",
-    "availabilityStatus": {
-      "available": "可承接工作",
-      "busy": "工作中，但接受邀请",
-      "unavailable": "暂不可用"
-    },
-    "contactMe": "联系我",
     "contributing": "贡献",
-    "createdBy": "创建者",
+    "contributorTopic": "主题",
+    "contributorTopics": {
+      "localization": "本地化"
+    },
+    "contributorUser": "贡献者",
+    "contributors": "贡献者",
     "description": "Klia Store 是一款现代化的 Linux 应用商店，提供简单直观的方式来发现、安装和管理应用程序。它是 Klia 软件套件的一部分。",
     "license": "许可证",
+    "projectHome": "项目主页",
+    "thanksTo": "感谢：",
+    "updatesChannel": "更新频道",
     "version": "版本",
     "viewContributing": "查看贡献指南",
     "viewLicense": "查看许可证"

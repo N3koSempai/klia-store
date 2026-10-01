@@ -6,16 +6,18 @@
   },
   "about": {
     "title": "Klia Storeについて",
-    "availabilityLabel": "仕事の可否：",
-    "availabilityStatus": {
-      "available": "仕事可能",
-      "busy": "仕事中だが、オファーを受付中",
-      "unavailable": "現在対応不可"
-    },
     "contributing": "貢献する",
-    "createdBy": "作成者",
+    "contributorTopic": "テーマ",
+    "contributorTopics": {
+      "localization": "ローカライゼーション"
+    },
+    "contributorUser": "コントリビューター",
+    "contributors": "コントリビューター",
     "description": "Klia StoreはLinux向けの最新のアプリケーションストアで、アプリケーションの検索、インストール、管理を簡単かつ直感的に行うことができます。Kliaソフトウェアスイートの一部です。",
     "license": "ライセンス",
+    "projectHome": "プロジェクトサイト",
+    "thanksTo": "感謝：",
+    "updatesChannel": "アップデートチャンネル",
     "version": "バージョン",
     "viewContributing": "貢献ガイドラインを見る",
     "viewLicense": "ライセンスを見る"

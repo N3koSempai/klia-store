@@ -1,5 +1,6 @@
 import CloseIcon from "@mui/icons-material/Close";
-import EmailIcon from "@mui/icons-material/Email";
+import LanguageRounded from "@mui/icons-material/LanguageRounded";
+import SendRounded from "@mui/icons-material/SendRounded";
 import {
 	Box,
 	Button,
@@ -9,54 +10,30 @@ import {
 	IconButton,
 	Link,
 	Paper,
-	styled,
 	Typography,
 	useTheme,
 } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import packageJson from "../../package.json";
+import { CONTRIBUTORS } from "../data/contributors";
 
 interface AboutModalProps {
 	open: boolean;
 	onClose: () => void;
 }
 
-type AvailabilityStatus = "available" | "busy" | "unavailable";
-
-const StatusIndicator = styled(Box)<{ status: AvailabilityStatus }>(
-	({ status }) => {
-		const colors = {
-			available: "#4ade80",
-			busy: "#fbbf24",
-			unavailable: "#f87171",
-		};
-
-		return {
-			width: 16,
-			height: 16,
-			borderRadius: "50%",
-			backgroundColor: colors[status],
-			boxShadow: `0 0 10px ${colors[status]}, 0 0 20px ${colors[status]}`,
-			animation: "pulse 2s ease-in-out infinite",
-			"@keyframes pulse": {
-				"0%, 100%": {
-					opacity: 1,
-					boxShadow: `0 0 10px ${colors[status]}, 0 0 20px ${colors[status]}`,
-				},
-				"50%": {
-					opacity: 0.7,
-					boxShadow: `0 0 15px ${colors[status]}, 0 0 25px ${colors[status]}`,
-				},
-			},
-		};
-	},
-);
+const PROJECT_HOME_URL = "https://kliahub.xyz/";
+const UPDATES_CHANNEL_URL = "https://t.me/klia_software";
+const LICENSE_URL =
+	"https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md";
+const CONTRIBUTING_URL =
+	"https://github.com/N3koSempai/KliaStore/blob/master/CONTRIBUTING.md";
 
 export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 	const { t } = useTranslation();
 	const theme = useTheme();
-	const currentStatus: AvailabilityStatus = "busy";
 
 	const handleOpenLink = async (url: string) => {
 		try {
@@ -67,7 +44,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 	};
 
 	return (
-		<Dialog open={open} onClose={onClose} maxWidth="md" fullWidth disableScrollLock>
+		<Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth disableScrollLock>
 			<IconButton
 				aria-label={t("common.close")}
 				onClick={onClose}
@@ -91,7 +68,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 						gap: 2,
 					}}
 				>
-					{/* Main Title */}
+					{/* Software name — first thing the eye should land on */}
 					<Typography
 						variant="h3"
 						component="h1"
@@ -106,10 +83,33 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 						Klia Store
 					</Typography>
 
-					{/* Version */}
-					<Typography variant="body1" color="text.secondary">
-						{t("about.version")} {packageJson.version}
-					</Typography>
+					{/* Version — second focus of the dialog, right under the name */}
+					<Box
+						sx={{
+							display: "flex",
+							alignItems: "center",
+							gap: 1,
+							px: 2,
+							py: 0.5,
+							borderRadius: "999px",
+							border: `1px solid ${theme.palette.primary.dark}66`,
+							backgroundColor: `${theme.palette.primary.dark}1A`,
+						}}
+					>
+						<Typography
+							variant="body2"
+							color="text.secondary"
+							sx={{ textTransform: "uppercase", letterSpacing: 1 }}
+						>
+							{t("about.version")}
+						</Typography>
+						<Typography
+							variant="body1"
+							sx={{ fontWeight: "bold", color: theme.palette.primary.light }}
+						>
+							{packageJson.version}
+						</Typography>
+					</Box>
 
 					{/* Description */}
 					<Typography
@@ -125,99 +125,64 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 						{t("about.description")}
 					</Typography>
 
-					{/* Creator Section - Highlighted */}
-					<Paper
-						elevation={3}
+					{/* Primary links: project home + updates channel */}
+					<Box
 						sx={{
-							p: 3,
-							width: "100%",
-							maxWidth: "500px",
-							textAlign: "center",
-							background:
-								`linear-gradient(135deg, ${theme.palette.primary.dark}1A 0%, ${theme.palette.primary.main}0D 100%)`,
-							border: `1px solid ${theme.palette.primary.dark}33`,
-							mt: 2,
+							display: "flex",
+							gap: 1.5,
+							flexWrap: "wrap",
+							justifyContent: "center",
+							mt: 0.5,
 						}}
 					>
-						<Typography
-							variant="body2"
-							color="text.secondary"
-							sx={{ mb: 2, textTransform: "uppercase", letterSpacing: 1 }}
-						>
-							{t("about.createdBy")}
-						</Typography>
-
-						<Link
-							onClick={() => handleOpenLink("https://alvaromweb3.com/")}
-							sx={{
-								fontSize: "1.5rem",
-								fontWeight: "bold",
-								mb: 3,
-								cursor: "pointer",
-								display: "inline-block",
-							}}
-						>
-							@N3koSempai
-						</Link>
-
-						{/* Availability Status */}
-						<Box
-							sx={{
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								gap: 2,
-								mt: 2,
-								p: 2,
-								borderRadius: 2,
-								bgcolor: "rgba(0, 0, 0, 0.2)",
-							}}
-						>
-							<StatusIndicator status={currentStatus} />
-							<Box sx={{ textAlign: "left" }}>
-								<Typography
-									variant="caption"
-									color="text.secondary"
-									sx={{ display: "block", mb: 0.5 }}
-								>
-									{t("about.availabilityLabel")}
-								</Typography>
-								<Typography variant="body2" sx={{ fontWeight: "bold" }}>
-									{t(`about.availabilityStatus.${currentStatus}`)}
-								</Typography>
-							</Box>
-						</Box>
-
-						{/* Contact Button */}
 						<Button
 							variant="contained"
-							startIcon={<EmailIcon />}
-							onClick={() => handleOpenLink("mailto:me@nekosempai.addy.io")}
+							size="small"
+							startIcon={<LanguageRounded sx={{ fontSize: 16 }} />}
+							onClick={() => handleOpenLink(PROJECT_HOME_URL)}
 							sx={{
-								mt: 2,
-								px: 4,
-								py: 1.5,
+								px: 2.5,
 								borderRadius: 2,
-								background:
-									`linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
 								textTransform: "none",
-								fontSize: "1rem",
-								fontWeight: "bold",
-								boxShadow: `0 4px 15px ${theme.palette.primary.dark}4D`,
+								fontSize: "0.8125rem",
+								fontWeight: 600,
+								background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+								boxShadow: `0 2px 8px ${theme.palette.primary.dark}40`,
 								"&:hover": {
-									background:
-										`linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.dark} 100%)`,
-									boxShadow: `0 6px 20px ${theme.palette.primary.dark}66`,
+									background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.dark} 100%)`,
+									boxShadow: `0 3px 12px ${theme.palette.primary.dark}59`,
 								},
 							}}
 						>
-							{t("about.contactMe")}
+							{t("about.projectHome")}
 						</Button>
-					</Paper>
+
+						<Button
+							variant="contained"
+							size="small"
+							startIcon={<SendRounded sx={{ fontSize: 16 }} />}
+							onClick={() => handleOpenLink(UPDATES_CHANNEL_URL)}
+							sx={{
+								px: 2.5,
+								borderRadius: 2,
+								textTransform: "none",
+								fontSize: "0.8125rem",
+								fontWeight: 600,
+								background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+								boxShadow: `0 2px 8px ${theme.palette.primary.dark}40`,
+								"&:hover": {
+									background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.dark} 100%)`,
+									boxShadow: `0 3px 12px ${theme.palette.primary.dark}59`,
+								},
+							}}
+						>
+							{t("about.updatesChannel")}
+						</Button>
+					</Box>
 
 					<Divider sx={{ width: "100%", my: 1 }} />
 
-					{/* Links Section */}
+					{/* Secondary links */}
 					<Box
 						sx={{
 							display: "flex",
@@ -235,11 +200,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 								{t("about.license")}
 							</Typography>
 							<Link
-								onClick={() =>
-									handleOpenLink(
-										"https://github.com/N3koSempai/KliaStore/blob/master/LICENSE.md",
-									)
-								}
+								onClick={() => handleOpenLink(LICENSE_URL)}
 								sx={{ cursor: "pointer" }}
 							>
 								{t("about.viewLicense")}
@@ -255,16 +216,137 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 								{t("about.contributing")}
 							</Typography>
 							<Link
-								onClick={() =>
-									handleOpenLink(
-										"https://github.com/N3koSempai/KliaStore/blob/master/CONTRIBUTING.md",
-									)
-								}
+								onClick={() => handleOpenLink(CONTRIBUTING_URL)}
 								sx={{ cursor: "pointer" }}
 							>
 								{t("about.viewContributing")}
 							</Link>
 						</Box>
+					</Box>
+
+					{/* Contributors — label sits outside the box, above it */}
+					<Box
+						sx={{
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+							gap: 0.75,
+							width: "100%",
+						}}
+					>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{
+								textTransform: "uppercase",
+								letterSpacing: 1,
+								fontWeight: "bold",
+								textAlign: "center",
+							}}
+						>
+							{t("about.contributors")} — {t("about.thanksTo")}
+						</Typography>
+
+						<Paper
+							elevation={0}
+							sx={{
+								width: "50%",
+								py: 1,
+								px: 1.5,
+								borderRadius: 2,
+								backgroundColor: "rgba(0, 0, 0, 0.15)",
+								border: "1px solid #21262d",
+							}}
+						>
+							<Box
+								sx={{
+									display: "grid",
+									gridTemplateColumns: "1fr auto",
+									alignItems: "center",
+									maxHeight: 132,
+									overflowY: "auto",
+									scrollbarWidth: "thin",
+									"&::-webkit-scrollbar": { width: 6 },
+									"&::-webkit-scrollbar-track": {
+										backgroundColor: "transparent",
+									},
+									"&::-webkit-scrollbar-thumb": {
+										backgroundColor: "#30363d",
+										borderRadius: 3,
+									},
+									// separador de filas; la última no lo lleva
+									"& > :nth-child(n+3):nth-last-child(n+3)": {
+										borderBottom: "1px solid #21262d",
+									},
+								}}
+							>
+								<Typography
+									variant="caption"
+									color="text.secondary"
+									sx={{
+										pr: 2,
+										pb: 0.5,
+										borderBottom: "1px solid #21262d",
+										fontSize: "0.625rem",
+										textTransform: "uppercase",
+										letterSpacing: 0.5,
+									}}
+								>
+									{t("about.contributorUser")}
+								</Typography>
+								<Typography
+									variant="caption"
+									color="text.secondary"
+									sx={{
+										pl: 2,
+										pb: 0.5,
+										borderBottom: "1px solid #21262d",
+										fontSize: "0.625rem",
+										textTransform: "uppercase",
+										letterSpacing: 0.5,
+									}}
+								>
+									{t("about.contributorTopic")}
+								</Typography>
+
+								{CONTRIBUTORS.map((contributor) => (
+									<Fragment key={contributor.user}>
+										<Link
+											onClick={() => handleOpenLink(contributor.url)}
+											title={contributor.url}
+											underline="hover"
+											sx={{
+												cursor: "pointer",
+												minWidth: 0,
+												py: 0.5,
+												pr: 2,
+												fontSize: "0.8125rem",
+												lineHeight: 1.4,
+												color: theme.palette.primary.light,
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
+											}}
+										>
+											{contributor.user}
+										</Link>
+										<Typography
+											variant="caption"
+											title={t(contributor.topicKey)}
+											sx={{
+												pl: 2,
+												py: 0.5,
+												fontSize: "0.75rem",
+												color: "text.secondary",
+												whiteSpace: "nowrap",
+											}}
+										>
+											{t(contributor.topicKey)}
+										</Typography>
+									</Fragment>
+								))}
+							</Box>
+						</Paper>
 					</Box>
 				</Box>
 			</DialogContent>
