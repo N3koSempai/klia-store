@@ -16,6 +16,7 @@
 		"core:window:allow-is-maximized",
 		"core:window:allow-set-decorations",
 		"opener:default",
+		"os:default",
 		"shell:allow-execute",
 		"dialog:allow-save",
 		"fs:allow-write-text-file",
