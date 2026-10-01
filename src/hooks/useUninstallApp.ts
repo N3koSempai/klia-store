@@ -1,8 +1,15 @@
 import { useCallback, useState } from "react";
-import { uninstallFlatpakApp } from "../utils/flatpakOperations";
+import {
+	uninstallDebPackage,
+	uninstallFlatpakApp,
+} from "../utils/flatpakOperations";
 
 interface UseUninstallAppReturn {
-	uninstallApp: (appId: string, appName?: string) => Promise<boolean>;
+	uninstallApp: (
+		appId: string,
+		appName?: string,
+		mode?: "flatpak" | "deb",
+	) => Promise<boolean>;
 	uninstallingApp: string | null;
 	isUninstalling: boolean;
 	uninstallOutput: string[];
@@ -14,46 +21,56 @@ export function useUninstallApp(): UseUninstallAppReturn {
 	const [isUninstalling, setIsUninstalling] = useState(false);
 	const [uninstallOutput, setUninstallOutput] = useState<string[]>([]);
 
-	const uninstallApp = useCallback(async (appId: string, appName?: string) => {
-		setUninstallingApp(appId);
-		setIsUninstalling(true);
-		setUninstallOutput([
-			`Preparando desinstalación de ${appName || appId}...`,
-			"",
-		]);
-
-		try {
-			const result = await uninstallFlatpakApp(appId);
-
-			// Set final output from the operation
-			setUninstallOutput(result.output);
-
-			if (result.success) {
-				setUninstallOutput((prev) => [
-					...prev,
-					"",
-					"✓ Desinstalación completada exitosamente",
-				]);
-			} else {
-				setUninstallOutput((prev) => [
-					...prev,
-					"",
-					`✗ Error en la desinstalación (código: ${result.exitCode})`,
-				]);
-			}
-
-			setIsUninstalling(false);
-			return result.success;
-		} catch (error) {
-			setUninstallOutput((prev) => [
-				...prev,
+	const uninstallApp = useCallback(
+		async (
+			appId: string,
+			appName?: string,
+			mode: "flatpak" | "deb" = "flatpak",
+		) => {
+			setUninstallingApp(appId);
+			setIsUninstalling(true);
+			setUninstallOutput([
+				`Preparando desinstalación de ${appName || appId}...`,
 				"",
-				`✗ Error al ejecutar comando: ${error}`,
 			]);
-			setIsUninstalling(false);
-			return false;
-		}
-	}, []);
+
+			try {
+				const result =
+					mode === "deb"
+						? await uninstallDebPackage(appId)
+						: await uninstallFlatpakApp(appId);
+
+				// Set final output from the operation
+				setUninstallOutput(result.output);
+
+				if (result.success) {
+					setUninstallOutput((prev) => [
+						...prev,
+						"",
+						"✓ Desinstalación completada exitosamente",
+					]);
+				} else {
+					setUninstallOutput((prev) => [
+						...prev,
+						"",
+						`✗ Error en la desinstalación (código: ${result.exitCode})`,
+					]);
+				}
+
+				setIsUninstalling(false);
+				return result.success;
+			} catch (error) {
+				setUninstallOutput((prev) => [
+					...prev,
+					"",
+					`✗ Error al ejecutar comando: ${error}`,
+				]);
+				setIsUninstalling(false);
+				return false;
+			}
+		},
+		[],
+	);
 
 	const clearUninstall = useCallback(() => {
 		setUninstallingApp(null);

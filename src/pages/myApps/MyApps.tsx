@@ -165,8 +165,8 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const [debApps, setDebApps] = useState<InstalledAppInfo[] | null>(null);
 	const [isLoadingDebs, setIsLoadingDebs] = useState(false);
 
-	const loadDebApps = async () => {
-		if (debApps !== null) return;
+	const loadDebApps = async (force = false) => {
+		if (!force && debApps !== null) return;
 		setIsLoadingDebs(true);
 		try {
 			const response = await invoke<DebAppRust[]>("get_installed_debs");
@@ -365,11 +365,25 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		[uninstallApp, installedApps],
 	);
 
+	// Modo deb: el "appId" es el nombre del paquete dpkg y la desinstalación
+	// pasa por apt en el host (pkexec/polkit), no por flatpak.
+	const handleUninstallDeb = useCallback(
+		async (packageName: string) => {
+			const app = debApps?.find((a) => a.appId === packageName);
+			await uninstallApp(packageName, app?.name, "deb");
+		},
+		[uninstallApp, debApps],
+	);
+
 	const handleCloseUninstallDialog = useCallback(async () => {
 		clearUninstall();
 		// Reload installed apps list after uninstall
 		await reloadInstalledApps();
-	}, [clearUninstall, reloadInstalledApps]);
+		// Si se desinstaló una app deb, refrescar esa lista también.
+		if (source === "deb") {
+			void loadDebApps(true);
+		}
+	}, [clearUninstall, reloadInstalledApps, source]);
 
 	const handleUpdateAll = useCallback(() => {
 		setUpdateAllModalOpen(true);
@@ -677,10 +691,12 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 									app={app}
 									hasUpdate={false}
 									isUpdating={false}
-									isUninstalling={false}
+									isUninstalling={
+										isUninstalling && uninstallingApp === app.appId
+									}
 									cardHeight={CARD_HEIGHT}
 									onUpdate={() => {}}
-									onUninstall={() => {}}
+									onUninstall={() => handleUninstallDeb(app.appId)}
 									onShowReleaseNotes={() => {}}
 									mode="deb"
 								/>

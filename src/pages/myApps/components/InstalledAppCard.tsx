@@ -136,28 +136,26 @@ const InstalledAppCardComponent = ({
 					</Tooltip>
 				)}
 
-				{/* Botón de Eliminar */}
-				{mode === "flatpak" && (
-					<Tooltip title={t("appDetails.uninstall")}>
-						<IconButton
-							onClick={onUninstall}
-							disabled={isUninstalling}
-							size="small"
-							sx={{
-								color: "text.secondary",
-								"&:hover": {
-									color: "error.main",
-									backgroundColor: "rgba(255, 107, 107, 0.1)",
-								},
-								"&.Mui-disabled": {
-									color: "grey.500",
-								},
-							}}
-						>
-							<DeleteOutline fontSize="small" />
-						</IconButton>
-					</Tooltip>
-				)}
+				{/* Botón de Eliminar (flatpak y deb) */}
+				<Tooltip title={t("appDetails.uninstall")}>
+					<IconButton
+						onClick={onUninstall}
+						disabled={isUninstalling}
+						size="small"
+						sx={{
+							color: "text.secondary",
+							"&:hover": {
+								color: "error.main",
+								backgroundColor: "rgba(255, 107, 107, 0.1)",
+							},
+							"&.Mui-disabled": {
+								color: "grey.500",
+							},
+						}}
+					>
+						<DeleteOutline fontSize="small" />
+					</IconButton>
+				</Tooltip>
 			</Stack>
 
 			{/* Extensions Popover */}

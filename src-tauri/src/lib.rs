@@ -1230,6 +1230,149 @@ async fn cache_deb_icon(
     Ok(canonical_path_string(&dest_path))
 }
 
+/// Accepts only well-formed Debian package names, so nothing user-supplied can
+/// smuggle extra arguments into the host shell.
+fn is_valid_deb_package_name(name: &str) -> bool {
+    match name.chars().next() {
+        Some(c) if c.is_ascii_alphanumeric() => {}
+        _ => return false,
+    }
+    name.len() <= 200
+        && name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '+' | '-' | '.'))
+}
+
+/// Uninstalls a deb package. Nothing is touched until two read-only gates pass:
+/// the package must not be `Essential: yes`, and its apt simulation must not
+/// drag essential packages or a system metapackage (`Section: metapackages`,
+/// e.g. `pantheon` / `elementary-desktop`) down with it. The removal itself
+/// runs on the host as `flatpak-spawn --host pkexec apt-get remove`, so polkit
+/// authenticates through the desktop's own agent: no setuid inside the sandbox
+/// and no change to the flatpak manifest. Progress is streamed over the same
+/// `install-output` / `install-completed` events the flatpak flow already uses.
+#[tauri::command]
+async fn uninstall_deb_package(app: tauri::AppHandle, package: String) -> Result<(), String> {
+    if !is_valid_deb_package_name(&package) {
+        return Err(format!("Nombre de paquete inválido: {package}"));
+    }
+
+    // One read-only host shell: essential flag, metapackage section, and the
+    // simulated removal set. `$1` is validated above, so no injection surface.
+    const CHECK: &str = r#"LANG=C
+pkg="$1"
+ess=$(dpkg-query -W -f='${Essential}' "$pkg" 2>/dev/null)
+sec=$(dpkg-query -W -f='${Section}' "$pkg" 2>/dev/null)
+if [ "$ess" = "yes" ]; then
+  printf 'BLOCKED|%s es un paquete esencial del sistema y no se puede desinstalar\n' "$pkg"
+  exit 0
+fi
+if [ "$sec" = "metapackages" ]; then
+  printf 'BLOCKED|%s es un metapaquete del sistema (Section=metapackages): desinstalarlo arrastraria el escritorio\n' "$pkg"
+  exit 0
+fi
+sim=$(apt-get -s remove "$pkg" 2>&1)
+removed=$(printf '%s\n' "$sim" | awk '/^Remv /{print $2}')
+ess_all=$(dpkg-query -W -f='${Package}\t${Essential}\n' 2>/dev/null | awk -F'\t' '$2=="yes"{print $1}')
+hit=""
+for r in $removed; do
+  printf '%s\n' "$ess_all" | grep -qx "$r" && hit="$hit $r"
+done
+if [ -n "$hit" ]; then
+  printf 'BLOCKED|la desinstalacion arrastraria paquetes esenciales:%s\n' "$hit"
+  exit 0
+fi
+printf 'OK|%s\n' "$(printf '%s\n' "$removed" | grep -c .)"
+printf '%s\n' "$removed""#;
+
+    let check_output = if is_running_in_flatpak() {
+        app.shell()
+            .command("flatpak-spawn")
+            .args(["--host", "sh", "-c", CHECK, "sh", &package])
+            .output()
+            .await
+            .map_err(|e| format!("Failed to execute flatpak-spawn: {e}"))?
+    } else {
+        app.shell()
+            .command("sh")
+            .args(["-c", CHECK, "sh", &package])
+            .output()
+            .await
+            .map_err(|e| format!("Failed to execute sh: {e}"))?
+    };
+
+    let stdout = String::from_utf8_lossy(&check_output.stdout);
+    let mut lines = stdout.lines();
+    let verdict = lines.next().unwrap_or("").to_string();
+
+    if let Some(reason) = verdict.strip_prefix("BLOCKED|") {
+        let _ = app.emit("install-output", format!("\u{2717} {reason}"));
+        let _ = app.emit("install-completed", 1);
+        return Ok(());
+    }
+
+    let _ = app.emit(
+        "install-output",
+        format!("Paquetes que se eliminaran al desinstalar {package}:\n"),
+    );
+    for line in lines {
+        let name = line.trim();
+        if !name.is_empty() {
+            let _ = app.emit("install-output", format!("  - {name}"));
+        }
+    }
+
+    let _ = app.emit(
+        "install-output",
+        "\nSolicitando autenticacion (pkexec/polkit)...\n\n".to_string(),
+    );
+
+    // Reuse `sh` (already granted to the shell plugin) to launch pkexec, both
+    // sandboxed (through the host) and unsandboxed.
+    let shell = app.shell();
+    let (mut rx, _child) = if is_running_in_flatpak() {
+        shell
+            .command("flatpak-spawn")
+            .args([
+                "--host",
+                "sh",
+                "-c",
+                "exec pkexec apt-get remove -y \"$1\"",
+                "sh",
+                &package,
+            ])
+            .spawn()
+            .map_err(|e| format!("Failed to spawn flatpak-spawn: {e}"))?
+    } else {
+        shell
+            .command("sh")
+            .args(["-c", "exec pkexec apt-get remove -y \"$1\"", "sh", &package])
+            .spawn()
+            .map_err(|e| format!("Failed to spawn pkexec: {e}"))?
+    };
+
+    while let Some(event) = rx.recv().await {
+        match event {
+            tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
+                let _ = app.emit("install-output", String::from_utf8_lossy(&line).to_string());
+            }
+            tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                let _ = app.emit("install-output", String::from_utf8_lossy(&line).to_string());
+            }
+            tauri_plugin_shell::process::CommandEvent::Error(err) => {
+                let _ = app.emit("install-error", err);
+            }
+            tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                let _ = app.emit("install-completed", payload.code.unwrap_or(-1));
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 async fn get_install_dependencies(
     app: tauri::AppHandle,
@@ -3916,6 +4059,7 @@ pub fn run() {
             get_installed_flatpaks,
             get_installed_debs,
             cache_deb_icon,
+            uninstall_deb_package,
             get_install_dependencies,
             get_app_remote_metadata,
             get_installable_extensions,

@@ -249,6 +249,20 @@ export async function uninstallFlatpakApp(
 }
 
 /**
+ * Uninstall a deb package through the host (apt). Polkit authenticates the
+ * user through the desktop agent, so no flatpak manifest change is needed.
+ */
+export async function uninstallDebPackage(
+	packageName: string,
+	onProgress?: (progress: FlatpakOperationProgress) => void,
+): Promise<FlatpakOperationResult> {
+	return executeFlatpakOperation(
+		() => invoke("uninstall_deb_package", { package: packageName }),
+		onProgress,
+	);
+}
+
+/**
  * Install a flatpak extension
  */
 export async function installExtension(
