@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 import en from "./locales/en.json";
 import es from "./locales/es.json";
 import hi from "./locales/hi.json";
+import ja from "./locales/ja.json";
 import pt from "./locales/pt.json";
 import ru from "./locales/ru.json";
 import zh from "./locales/zh.json";
@@ -14,6 +15,9 @@ const resources = {
 	},
 	es: {
 		translation: es,
+	},
+	ja: {
+		translation: ja,
 	},
 	pt: {
 		translation: pt,
