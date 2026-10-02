@@ -27,10 +27,11 @@ interface UpdateSourceInfo {
 // cascada de decisión en cada hook.
 export function resolveGithubRepoForUpdate(
 	appId: string,
-	installSource: "flathub" | "github" | undefined,
+	installSource: "flathub" | "github" | "deb" | undefined,
 	updateInfo: UpdateSourceInfo | undefined,
 ): string | undefined {
-	if (installSource === "flathub") return undefined;
+	// "deb" son paquetes del sistema (dpkg), nunca se actualizan vía GitHub.
+	if (installSource === "flathub" || installSource === "deb") return undefined;
 	if (installSource === "github") {
 		return updateInfo?.githubRepo ?? getGitHubReleaseRepo(appId);
 	}

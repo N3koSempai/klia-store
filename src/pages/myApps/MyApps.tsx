@@ -12,6 +12,8 @@ import {
 	DialogContent,
 	IconButton,
 	Stack,
+	ToggleButton,
+	ToggleButtonGroup,
 	Typography,
 	useTheme,
 } from "@mui/material";
@@ -50,6 +52,14 @@ interface InstalledPackagesResponse {
 	apps: InstalledAppRust[];
 	runtimes: string[];
 	extensions: InstalledExtensionRust[];
+}
+
+interface DebAppRust {
+	package: string;
+	name: string;
+	version: string;
+	summary?: string;
+	icon_path?: string;
 }
 
 interface MyAppsProps {
@@ -149,6 +159,36 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const [selectedAppForNotes, setSelectedAppForNotes] = useState<string | null>(
 		null,
 	);
+
+	// Fuente activa: "flatpak" (comportamiento actual) o "deb" (apps .deb).
+	const [source, setSource] = useState<"flatpak" | "deb">("flatpak");
+	const [debApps, setDebApps] = useState<InstalledAppInfo[] | null>(null);
+	const [isLoadingDebs, setIsLoadingDebs] = useState(false);
+
+	const loadDebApps = async (force = false) => {
+		if (!force && debApps !== null) return;
+		setIsLoadingDebs(true);
+		try {
+			const response = await invoke<DebAppRust[]>("get_installed_debs");
+			setDebApps(
+				response.map((d) => ({
+					instanceId: `deb-${d.package}`,
+					appId: d.package,
+					name: d.name,
+					version: d.version,
+					summary: d.summary,
+					developer: undefined,
+					source: "deb",
+					iconPath: d.icon_path,
+				})),
+			);
+		} catch (error) {
+			console.error("Error loading deb apps:", error);
+			setDebApps([]);
+		} finally {
+			setIsLoadingDebs(false);
+		}
+	};
 
 	// Fixed card height for consistent rendering
 	const CARD_HEIGHT = 340;
@@ -325,11 +365,25 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		[uninstallApp, installedApps],
 	);
 
+	// Modo deb: el "appId" es el nombre del paquete dpkg y la desinstalación
+	// pasa por apt en el host (pkexec/polkit), no por flatpak.
+	const handleUninstallDeb = useCallback(
+		async (packageName: string) => {
+			const app = debApps?.find((a) => a.appId === packageName);
+			await uninstallApp(packageName, app?.name, "deb");
+		},
+		[uninstallApp, debApps],
+	);
+
 	const handleCloseUninstallDialog = useCallback(async () => {
 		clearUninstall();
 		// Reload installed apps list after uninstall
 		await reloadInstalledApps();
-	}, [clearUninstall, reloadInstalledApps]);
+		// Si se desinstaló una app deb, refrescar esa lista también.
+		if (source === "deb") {
+			void loadDebApps(true);
+		}
+	}, [clearUninstall, reloadInstalledApps, source]);
 
 	const handleUpdateAll = useCallback(() => {
 		setUpdateAllModalOpen(true);
@@ -396,6 +450,15 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		});
 	}, [installedApps, availableUpdates, isLoadingUpdates]);
 
+	// Apps .deb: solo orden alfabético, sin lógica de actualizaciones.
+	const sortedDebApps = useMemo(() => {
+		const apps = debApps ?? [];
+		return [...apps].sort((a, b) => a.name.localeCompare(b.name));
+	}, [debApps]);
+
+	const displayedCount =
+		source === "deb" ? (debApps?.length ?? 0) : installedApps.length;
+
 	return (
 		<Box
 			sx={{
@@ -446,12 +509,12 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 								{/* Contador de Apps estilo Chip */}
 								<Chip
 									label={
-										installedApps.length === 1
+										displayedCount === 1
 											? t("myApps.appInstalled", {
-													count: installedApps.length,
+													count: displayedCount,
 												})
 											: t("myApps.appsInstalled", {
-													count: installedApps.length,
+													count: displayedCount,
 												})
 									}
 									size="small"
@@ -471,11 +534,70 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 							>
 								{t("myApps.subtitle")}
 							</Typography>
+
+							{/* Selector de fuente: Flatpak (actual) / Deb */}
+							<ToggleButtonGroup
+								value={source}
+								exclusive
+								onChange={(_event, newSource) => {
+									if (newSource !== "flatpak" && newSource !== "deb") {
+										return;
+									}
+									setSource(newSource);
+									if (newSource === "deb") void loadDebApps();
+								}}
+								size="small"
+								aria-label="app source"
+								sx={{
+									mt: 1.5,
+									bgcolor: "rgba(255, 255, 255, 0.04)",
+									border: "1px solid rgba(255, 255, 255, 0.12)",
+									borderRadius: 2,
+									p: 0.5,
+								}}
+							>
+								<ToggleButton
+									value="flatpak"
+									sx={{
+										textTransform: "none",
+										fontWeight: 600,
+										px: 2,
+										py: 0.5,
+										border: "none",
+										borderRadius: 1.5,
+										"&.Mui-selected": {
+											bgcolor: "primary.main",
+											color: "#fff",
+											"&:hover": { bgcolor: "primary.main" },
+										},
+									}}
+								>
+									Flatpak
+								</ToggleButton>
+								<ToggleButton
+									value="deb"
+									sx={{
+										textTransform: "none",
+										fontWeight: 600,
+										px: 2,
+										py: 0.5,
+										border: "none",
+										borderRadius: 1.5,
+										"&.Mui-selected": {
+											bgcolor: "primary.main",
+											color: "#fff",
+											"&:hover": { bgcolor: "primary.main" },
+										},
+									}}
+								>
+									Deb
+								</ToggleButton>
+							</ToggleButtonGroup>
 						</Box>
 					</Stack>
 
 					{/* DERECHA: Botón de Actualizar y Texto de Sistema */}
-					{(updateCount > 0 || isLoadingUpdates) && (
+					{source === "flatpak" && (updateCount > 0 || isLoadingUpdates) && (
 						<Stack alignItems={{ xs: "flex-start", md: "flex-end" }}>
 							<Button
 								variant="contained"
@@ -542,7 +664,52 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 				</Box>
 
 				{/* Apps grid - simple CSS grid for better performance */}
-				{installedApps.length > 0 ? (
+				{source === "deb" ? (
+					isLoadingDebs ? (
+						<Box sx={{ textAlign: "center", py: 8 }}>
+							<CircularProgress />
+						</Box>
+					) : (debApps?.length ?? 0) > 0 ? (
+						<Box
+							sx={{
+								display: "grid",
+								gridTemplateColumns: {
+									xs: "1fr",
+									sm: "repeat(2, 1fr)",
+									md: "repeat(3, 1fr)",
+									lg: "repeat(4, 1fr)",
+									xl: "repeat(5, 1fr)",
+								},
+								gap: 2,
+								width: "100%",
+								boxSizing: "border-box",
+							}}
+						>
+							{sortedDebApps.map((app) => (
+								<InstalledAppCard
+									key={app.instanceId}
+									app={app}
+									hasUpdate={false}
+									isUpdating={false}
+									isUninstalling={
+										isUninstalling && uninstallingApp === app.appId
+									}
+									cardHeight={CARD_HEIGHT}
+									onUpdate={() => {}}
+									onUninstall={() => handleUninstallDeb(app.appId)}
+									onShowReleaseNotes={() => {}}
+									mode="deb"
+								/>
+							))}
+						</Box>
+					) : (
+						<Box sx={{ textAlign: "center", py: 8 }}>
+							<Typography variant="h6" color="text.secondary">
+								{t("myApps.noAppsInstalledMessage")}
+							</Typography>
+						</Box>
+					)
+				) : installedApps.length > 0 ? (
 					<Box
 						sx={{
 							display: "grid",

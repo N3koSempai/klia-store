@@ -6,16 +6,18 @@
   },
   "about": {
     "title": "Sobre a Klia Store",
-    "availabilityLabel": "Disponibilidade de trabalho:",
-    "availabilityStatus": {
-      "available": "Disponível para trabalhar",
-      "busy": "Trabalhando, mas aberto a ofertas",
-      "unavailable": "Não disponível"
-    },
     "contributing": "Contribuição",
-    "createdBy": "Criado por",
+    "contributorTopic": "Tema",
+    "contributorTopics": {
+      "localization": "Localização"
+    },
+    "contributorUser": "Contribuidor",
+    "contributors": "Contribuidores",
     "description": "Klia Store é uma loja de aplicativos moderna para Linux, proporcionando uma maneira fácil e intuitiva de descobrir, instalar e gerenciar aplicativos. Parte da Klia Software Suite.",
     "license": "Licença",
+    "projectHome": "Site do projeto",
+    "thanksTo": "Agradecimentos a:",
+    "updatesChannel": "Canal de atualizações",
     "version": "Versão",
     "viewContributing": "Ver Diretrizes de Contribuição",
     "viewLicense": "Ver Licença"

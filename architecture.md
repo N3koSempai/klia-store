@@ -416,9 +416,9 @@ flatpak build-bundle ~/.local/share/flatpak/repo klia-store.flatpak io.github.N3
 #### Build Configuration
 
 The manifest uses:
-- **Runtime**: GNOME Platform 49
-- **SDK**: GNOME SDK 49
-- **Node**: Node 20.x via SDK extension
+- **Runtime**: GNOME Platform 51
+- **SDK**: GNOME SDK 51
+- **Node**: Node 24.x (active LTS) via SDK extension node24, freedesktop 26.08
 - **Rust**: Rust stable via SDK extension
 - **Package Manager**: npm (migrated from pnpm for Flathub compatibility)
 
@@ -437,8 +437,12 @@ The manifest uses:
    source venv/bin/activate
    pip install .
 
-   # Generate npm offline sources (--no-xdg-layout is CRITICAL)
-   python3 -m flatpak_node_generator --no-xdg-layout --no-requests-cache --retries 10 npm /path/to/package-lock.json -o generated-sources.json
+   # Generate npm offline sources. Use a current upstream checkout: an old
+   # ~/.local install (0.1.0) writes wrong cacache "size" metadata. The
+   # vendored file carries the node-gyp helper (setup_sdk_node_headers.sh),
+   # which the generator only emits with the default layout; --no-xdg-layout
+   # drops it and changes nothing else (npm cache paths are identical).
+   python3 -m flatpak_node_generator --no-requests-cache --retries 10 npm /path/to/package-lock.json -o generated-sources.json
 
    # Generate Cargo offline sources
    pip3 install tomlkit  # Required dependency
@@ -505,7 +509,7 @@ sudo dpkg -i src-tauri/target/release/bundle/deb/klia-store_0.1.0_amd64.deb
 **Symptoms**: `npm cache verify` shows "Content verified: 0 (0 bytes)", build fails offline
 
 **Root Causes**:
-1. `generated-sources.json` created without `--no-xdg-layout` flag
+1. `generated-sources.json` created without `--no-xdg-layout` flag (older generator versions; with current upstream both layouts write the npm cache to `flatpak-node/npm-cache/_cacache`)
 2. `npm_config_cache` environment variable pointing to wrong directory
 3. Using old `flatpak-npm-generator.py` instead of modern `flatpak_node_generator`
 

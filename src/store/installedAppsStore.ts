@@ -29,7 +29,13 @@ function pickNewerUpdate(
 		: existing;
 }
 
+// Fuente de una actualización pendiente: solo flathub o github (nunca "deb",
+// los paquetes del sistema no se actualizan por esta vía).
 export type UpdateSource = "flathub" | "github";
+
+// Fuente de una app instalada: añade "deb" para paquetes dpkg listados en la
+// pestaña Deb de "Mis apps" (no alimentan el flujo de actualizaciones).
+export type InstallSource = "flathub" | "github" | "deb";
 
 export interface InstalledAppInfo {
 	instanceId: string; // Unique identifier for each app instance (handles duplicates)
@@ -44,7 +50,10 @@ export interface InstalledAppInfo {
 	// origin es un remote real de flathub, "github" si es un remote efímero
 	// autogenerado por `flatpak install <bundle>.flatpak` (sufijo "-origin").
 	// Se recalcula en cada refresh de get_installed_flatpaks, nunca se persiste.
-	source: UpdateSource;
+	source: InstallSource;
+	// Solo para apps deb: ruta absoluta del icono en el host, resuelta por el
+	// backend al listar. La tarjeta deb la copia y la sirve; el resto la ignora.
+	iconPath?: string;
 }
 
 export interface InstalledExtensionInfo {
@@ -92,7 +101,7 @@ interface InstalledAppsStore {
 	clearAvailableUpdate: (appId: string) => void;
 	setIsLoadingUpdates: (isLoading: boolean) => void;
 	setInstalledRuntimes: (runtimes: string[]) => void;
-	getInstallSource: (appId: string) => UpdateSource | undefined;
+	getInstallSource: (appId: string) => InstallSource | undefined;
 	isAppInstalled: (appId: string) => boolean;
 	getInstalledAppsInfo: () => InstalledAppInfo[];
 	getInstalledExtensionsForApp: (appId: string) => InstalledExtensionInfo[];

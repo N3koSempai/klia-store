@@ -6,16 +6,18 @@
   },
   "about": {
     "title": "Klia Store के बारे में",
-    "availabilityLabel": "कार्य उपलब्धता:",
-    "availabilityStatus": {
-      "available": "कार्य के लिए उपलब्ध",
-      "busy": "कार्यरत, लेकिन प्रस्तावों के लिए खुला",
-      "unavailable": "उपलब्ध नहीं"
-    },
     "contributing": "योगदान",
-    "createdBy": "द्वारा बनाया गया",
+    "contributorTopic": "विषय",
+    "contributorTopics": {
+      "localization": "स्थानीयकरण"
+    },
+    "contributorUser": "योगदानकर्ता",
+    "contributors": "योगदानकर्ता",
     "description": "Klia Store लिनक्स के लिए एक आधुनिक एप्लिकेशन स्टोर है, जो एप्लिकेशन खोजने, इंस्टॉल करने और प्रबंधित करने का एक आसान और सहज तरीका प्रदान करता है। Klia सॉफ्टवेयर सूट का हिस्सा।",
     "license": "लाइसेंस",
+    "projectHome": "प्रोजेक्ट होम",
+    "thanksTo": "धन्यवाद:",
+    "updatesChannel": "अपडेट चैनल",
     "version": "संस्करण",
     "viewContributing": "योगदान दिशानिर्देश देखें",
     "viewLicense": "लाइसेंस देखें"

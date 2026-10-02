@@ -47,6 +47,15 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.14.0" date="2026-10-01">
+      <description>
+        <p>My Apps now shows two lists: your Flatpak applications, and the applications you installed from .deb packages. Every one of them appears with its own name, version and icon.</p>
+        <p>The .deb uninstall runs on the host as pkexec apt-get remove. Its safety constraints, in the order they are applied: the package name is validated before it reaches the shell; packages marked "Essential: yes" are refused; packages with "Section: metapackages" (the desktop metapackage) are refused; and the removal is cancelled when the simulated "apt-get -s remove" set would include an essential package. Only after all of them pass is the resolved package list reported and the removal authorized through polkit.</p>
+        <p>The About window got a fresh look. It now opens with the project website and the channel where updates are announced, and it thanks the people who have helped with the project.</p>
+        <p>Language detection was fixed, so the store now follows the language you have configured in your system. Japanese is now available, and the Chinese translation was updated to match the rest of the app.</p>
+        <p>Multiple bug fixes and stability improvements across the app.</p>
+      </description>
+    </release>
     <release version="2.13.1" date="2026-09-27">
       <description>
         <p>Fixed the Flathub package, which was still being built against the previous GNOME platform even though the app itself had already moved on. The Flatpak version now really runs on GNOME 51, the same platform the other packages use.</p>
