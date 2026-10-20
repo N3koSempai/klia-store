@@ -18,7 +18,7 @@ import {
 	useTheme,
 } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
@@ -27,40 +27,18 @@ import { useAppVerification } from "../../hooks/useAppVerification";
 import { useUninstallApp } from "../../hooks/useUninstallApp";
 import { useUpdateAll } from "../../hooks/useUpdateAll";
 import { useUpdateApp } from "../../hooks/useUpdateApp";
-import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
+import { AppCardWrapper } from "./components/AppCardWrapper";
 import { InstalledAppCard } from "./components/InstalledAppCard";
-
-interface InstalledAppRust {
-	app_id: string;
-	name: string;
-	version: string;
-	summary?: string;
-	developer?: string;
-	source: "flathub" | "github";
-}
-
-interface InstalledExtensionRust {
-	extension_id: string;
-	name: string;
-	version: string;
-	parent_app_id: string;
-}
-
-interface InstalledPackagesResponse {
-	apps: InstalledAppRust[];
-	runtimes: string[];
-	extensions: InstalledExtensionRust[];
-}
-
-interface DebAppRust {
-	package: string;
-	name: string;
-	version: string;
-	summary?: string;
-	icon_path?: string;
-}
+import { useDebApps } from "./hooks/useDebApps";
+import type { InstalledPackagesResponse } from "./types";
+import {
+	sortDebApps,
+	sortInstalledApps,
+	toInstalledAppInfo,
+	toInstalledExtensionInfo,
+} from "./utils/installedApps";
 
 interface MyAppsProps {
 	onBack: () => void;
@@ -70,64 +48,6 @@ interface MyAppsProps {
 		appId: string,
 	) => void;
 }
-
-// Memoized wrapper for app card to prevent recreating callbacks
-interface AppCardWrapperProps {
-	app: InstalledAppInfo;
-	hasUpdate: boolean;
-	isUpdating: boolean;
-	isUninstalling: boolean;
-	cardHeight: number;
-	onUpdate: (appId: string) => void;
-	onUninstall: (appId: string) => void;
-	onShowReleaseNotes: (appId: string) => void;
-	onDeveloperClick?: (
-		developerId: string,
-		developerName: string,
-		appId: string,
-	) => void;
-}
-
-const AppCardWrapper = memo(
-	({
-		app,
-		hasUpdate,
-		isUpdating,
-		isUninstalling,
-		cardHeight,
-		onUpdate,
-		onUninstall,
-		onShowReleaseNotes,
-		onDeveloperClick,
-	}: AppCardWrapperProps) => {
-		const handleUpdate = useCallback(
-			() => onUpdate(app.appId),
-			[onUpdate, app.appId],
-		);
-		const handleUninstall = useCallback(
-			() => onUninstall(app.appId),
-			[onUninstall, app.appId],
-		);
-		const handleShowReleaseNotes = useCallback(
-			() => onShowReleaseNotes(app.appId),
-			[onShowReleaseNotes, app.appId],
-		);
-
-		return (
-			<InstalledAppCard
-				app={app}
-				hasUpdate={hasUpdate}
-				isUpdating={isUpdating}
-				isUninstalling={isUninstalling}
-				cardHeight={cardHeight}
-				onUpdate={handleUpdate}
-				onUninstall={handleUninstall}
-				onShowReleaseNotes={handleShowReleaseNotes}
-				onDeveloperClick={onDeveloperClick}
-			/>
-		);
-	},
-);
 
 export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const { t } = useTranslation();
@@ -162,33 +82,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 
 	// Fuente activa: "flatpak" (comportamiento actual) o "deb" (apps .deb).
 	const [source, setSource] = useState<"flatpak" | "deb">("flatpak");
-	const [debApps, setDebApps] = useState<InstalledAppInfo[] | null>(null);
-	const [isLoadingDebs, setIsLoadingDebs] = useState(false);
-
-	const loadDebApps = async (force = false) => {
-		if (!force && debApps !== null) return;
-		setIsLoadingDebs(true);
-		try {
-			const response = await invoke<DebAppRust[]>("get_installed_debs");
-			setDebApps(
-				response.map((d) => ({
-					instanceId: `deb-${d.package}`,
-					appId: d.package,
-					name: d.name,
-					version: d.version,
-					summary: d.summary,
-					developer: undefined,
-					source: "deb",
-					iconPath: d.icon_path,
-				})),
-			);
-		} catch (error) {
-			console.error("Error loading deb apps:", error);
-			setDebApps([]);
-		} finally {
-			setIsLoadingDebs(false);
-		}
-	};
+	const { debApps, isLoadingDebs, loadDebApps } = useDebApps();
 
 	// Fixed card height for consistent rendering
 	const CARD_HEIGHT = 340;
@@ -237,25 +131,10 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 				"get_installed_flatpaks",
 			);
 
-			// Convert from Rust format to TypeScript format
-			const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
-				(app) => ({
-					instanceId: `${app.app_id}-${app.version}`,
-					appId: app.app_id,
-					name: app.name,
-					version: app.version,
-					summary: app.summary,
-					developer: app.developer,
-					source: app.source,
-				}),
+			const installedAppsInfo = response.apps.map(toInstalledAppInfo);
+			const installedExtensionsInfo = response.extensions.map(
+				toInstalledExtensionInfo,
 			);
-
-			const installedExtensionsInfo = response.extensions.map((ext) => ({
-				extensionId: ext.extension_id,
-				name: ext.name,
-				version: ext.version,
-				parentAppId: ext.parent_app_id,
-			}));
 
 			setInstalledAppsInfo(installedAppsInfo);
 			setInstalledExtensions(installedExtensionsInfo);
@@ -383,7 +262,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		if (source === "deb") {
 			void loadDebApps(true);
 		}
-	}, [clearUninstall, reloadInstalledApps, source]);
+	}, [clearUninstall, reloadInstalledApps, source, loadDebApps]);
 
 	const handleUpdateAll = useCallback(() => {
 		setUpdateAllModalOpen(true);
@@ -433,28 +312,13 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	);
 
 	// Sort apps: those with updates first, then alphabetically
-	const sortedApps = useMemo(() => {
-		const apps = [...installedApps];
-		if (isLoadingUpdates) {
-			return apps.sort((a, b) => a.name.localeCompare(b.name));
-		}
-		return apps.sort((a, b) => {
-			const aHasUpdate = a.appId in availableUpdates;
-			const bHasUpdate = b.appId in availableUpdates;
-
-			if (aHasUpdate && !bHasUpdate) return -1;
-			if (!aHasUpdate && bHasUpdate) return 1;
-
-			// Secondary sort: alphabetical by name
-			return a.name.localeCompare(b.name);
-		});
-	}, [installedApps, availableUpdates, isLoadingUpdates]);
+	const sortedApps = useMemo(
+		() => sortInstalledApps(installedApps, availableUpdates, isLoadingUpdates),
+		[installedApps, availableUpdates, isLoadingUpdates],
+	);
 
 	// Apps .deb: solo orden alfabético, sin lógica de actualizaciones.
-	const sortedDebApps = useMemo(() => {
-		const apps = debApps ?? [];
-		return [...apps].sort((a, b) => a.name.localeCompare(b.name));
-	}, [debApps]);
+	const sortedDebApps = useMemo(() => sortDebApps(debApps ?? []), [debApps]);
 
 	const displayedCount =
 		source === "deb" ? (debApps?.length ?? 0) : installedApps.length;

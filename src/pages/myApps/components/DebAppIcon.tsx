@@ -1,5 +1,5 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { Box, Skeleton, Typography } from "@mui/material";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { memo, useEffect, useState } from "react";
 
 // In-memory caches so a card scrolling out and back never re-invokes the
