@@ -12,8 +12,6 @@ import {
 	DialogContent,
 	IconButton,
 	Stack,
-	ToggleButton,
-	ToggleButtonGroup,
 	Typography,
 	useTheme,
 } from "@mui/material";
@@ -31,6 +29,7 @@ import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
 import { AppCardWrapper } from "./components/AppCardWrapper";
 import { InstalledAppCard } from "./components/InstalledAppCard";
+import { SourceToggle } from "./components/SourceToggle";
 import { useDebApps } from "./hooks/useDebApps";
 import type { InstalledPackagesResponse } from "./types";
 import {
@@ -400,63 +399,13 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 							</Typography>
 
 							{/* Selector de fuente: Flatpak (actual) / Deb */}
-							<ToggleButtonGroup
+							<SourceToggle
 								value={source}
-								exclusive
-								onChange={(_event, newSource) => {
-									if (newSource !== "flatpak" && newSource !== "deb") {
-										return;
-									}
+								onChange={(newSource) => {
 									setSource(newSource);
 									if (newSource === "deb") void loadDebApps();
 								}}
-								size="small"
-								aria-label="app source"
-								sx={{
-									mt: 1.5,
-									bgcolor: "rgba(255, 255, 255, 0.04)",
-									border: "1px solid rgba(255, 255, 255, 0.12)",
-									borderRadius: 2,
-									p: 0.5,
-								}}
-							>
-								<ToggleButton
-									value="flatpak"
-									sx={{
-										textTransform: "none",
-										fontWeight: 600,
-										px: 2,
-										py: 0.5,
-										border: "none",
-										borderRadius: 1.5,
-										"&.Mui-selected": {
-											bgcolor: "primary.main",
-											color: "#fff",
-											"&:hover": { bgcolor: "primary.main" },
-										},
-									}}
-								>
-									Flatpak
-								</ToggleButton>
-								<ToggleButton
-									value="deb"
-									sx={{
-										textTransform: "none",
-										fontWeight: 600,
-										px: 2,
-										py: 0.5,
-										border: "none",
-										borderRadius: 1.5,
-										"&.Mui-selected": {
-											bgcolor: "primary.main",
-											color: "#fff",
-											"&:hover": { bgcolor: "primary.main" },
-										},
-									}}
-								>
-									Deb
-								</ToggleButton>
-							</ToggleButtonGroup>
+							/>
 						</Box>
 					</Stack>
 
