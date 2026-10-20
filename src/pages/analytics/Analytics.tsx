@@ -1,13 +1,16 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Box, IconButton, Paper, Typography } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { dbCacheManager } from "../../utils/dbCache";
-import { DataCube } from "./components/DataCube";
 import { SystemTerminal } from "./components/SystemTerminal";
+
+const DataCube = lazy(() =>
+	import("./components/DataCube").then((m) => ({ default: m.DataCube })),
+);
 
 interface AnalyticsProps {
 	onBack: () => void;
@@ -285,6 +288,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 						overflow: "hidden",
 					}}
 				>
+					<Suspense fallback={null}>
 					<DataCube
 						installedApps={installedAppsInfo}
 						loading={loading || loadingPermissions}
@@ -292,6 +296,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 						onPermissionFilterChange={setPermissionFilter}
 						selectedApp={selectedApp}
 					/>
+					</Suspense>
 				</Box>
 
 				{/* Right Panel - Terminal (30%) */}
