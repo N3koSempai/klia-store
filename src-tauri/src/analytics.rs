@@ -219,9 +219,10 @@ async fn get_disk_usage() -> Result<DiskUsage, String> {
     }
 
     // Use statvfs to get filesystem stats
-    let output = Command::new("df")
-        .args(["-B1", &home_dir])
-        .output()
+    let df_dir = home_dir.clone();
+    let output = tokio::task::spawn_blocking(move || Command::new("df").args(["-B1", &df_dir]).output())
+        .await
+        .map_err(|e| format!("df task failed: {}", e))?
         .map_err(|e| format!("Failed to execute df: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);

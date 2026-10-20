@@ -863,19 +863,22 @@ async fn launch_flatpak(app_id: String) -> Result<(), String> {
     // Detect if we're running inside a flatpak
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
-    let output = if is_flatpak {
-        // Inside flatpak, use flatpak-spawn to execute on the host
-        Command::new("flatpak-spawn")
-            .args(["--host", "flatpak", "run", &app_id])
-            .output()
-            .map_err(|e| format!("Failed to launch app: {}", e))?
-    } else {
-        // Outside flatpak, use flatpak directly
-        Command::new("flatpak")
-            .args(["run", &app_id])
-            .output()
-            .map_err(|e| format!("Failed to launch app: {}", e))?
-    };
+    // `flatpak run` blocks until the launched app exits; keep that wait off
+    // the async workers.
+    let output = tokio::task::spawn_blocking(move || {
+        if is_flatpak {
+            // Inside flatpak, use flatpak-spawn to execute on the host
+            Command::new("flatpak-spawn")
+                .args(["--host", "flatpak", "run", &app_id])
+                .output()
+        } else {
+            // Outside flatpak, use flatpak directly
+            Command::new("flatpak").args(["run", &app_id]).output()
+        }
+    })
+    .await
+    .map_err(|e| format!("Launch task failed: {}", e))?
+    .map_err(|e| format!("Failed to launch app: {}", e))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
