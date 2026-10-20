@@ -1,7 +1,7 @@
 import { createTheme } from "@mui/material/styles";
 import type { AccessibilityPrefs, ColorBlindMode } from "../store/accessibilityStore";
 
-import IBMPlexSansVariable from "../assets/fonts/IBMPlexSans-VariableFont_wdth,wght.ttf";
+import IBMPlexSansVariable from "../assets/fonts/IBMPlexSans-Variable.woff2";
 
 // Color palettes per color-blind mode
 // Each palette replaces primary/secondary/error with perceptually distinct hues
@@ -80,8 +80,7 @@ export function createAppTheme(prefs?: Partial<AccessibilityPrefs>) {
 						font-style: normal;
 						font-display: swap;
 						font-weight: 100 700;
-						font-stretch: 75% 125%;
-						src: url(${IBMPlexSansVariable}) format('truetype-variations');
+						src: url(${IBMPlexSansVariable}) format('woff2');
 					}
 
 					body {
