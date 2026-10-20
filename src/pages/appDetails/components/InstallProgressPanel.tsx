@@ -4,8 +4,8 @@ import type { TFunction } from "i18next";
 import { memo } from "react";
 import errorAnim from "../../../assets/animations/Error.lottie";
 import successAnim from "../../../assets/animations/success.lottie";
-import { Terminal } from "../../../components/Terminal";
 import { LazyLottie } from "../../../components/LazyLottie";
+import { Terminal } from "../../../components/Terminal";
 
 export type InstallStatus =
 	| "idle"

@@ -289,13 +289,13 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 					}}
 				>
 					<Suspense fallback={null}>
-					<DataCube
-						installedApps={installedAppsInfo}
-						loading={loading || loadingPermissions}
-						onAppSelect={setSelectedApp}
-						onPermissionFilterChange={setPermissionFilter}
-						selectedApp={selectedApp}
-					/>
+						<DataCube
+							installedApps={installedAppsInfo}
+							loading={loading || loadingPermissions}
+							onAppSelect={setSelectedApp}
+							onPermissionFilterChange={setPermissionFilter}
+							selectedApp={selectedApp}
+						/>
 					</Suspense>
 				</Box>
 

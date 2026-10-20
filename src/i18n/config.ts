@@ -1,38 +1,19 @@
+import { isTauri } from "@tauri-apps/api/core";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import { isTauri } from "@tauri-apps/api/core";
-import en from "./locales/en.json";
-import es from "./locales/es.json";
-import hi from "./locales/hi.json";
-import ja from "./locales/ja.json";
-import pt from "./locales/pt.json";
-import ru from "./locales/ru.json";
-import zh from "./locales/zh.json";
 
-// Define resources type
-const resources = {
-	en: {
-		translation: en,
-	},
-	es: {
-		translation: es,
-	},
-	ja: {
-		translation: ja,
-	},
-	pt: {
-		translation: pt,
-	},
-	ru: {
-		translation: ru,
-	},
-	zh: {
-		translation: zh,
-	},
-	hi: {
-		translation: hi,
-	},
-} as const;
+// Each locale is its own chunk; only English (fallback) and the detected
+// language are loaded at startup.
+const loaders = import.meta.glob<{ default: Record<string, unknown> }>(
+	"./locales/*.json",
+);
+
+const loadLocale = async (
+	lang: string,
+): Promise<Record<string, unknown> | undefined> => {
+	const loader = loaders[`./locales/${lang}.json`];
+	return loader ? (await loader()).default : undefined;
+};
 
 // Get the system language, preferring the OS locale reported by Tauri.
 // On Linux (WebKitGTK), `navigator.language` only follows LC_ALL and
@@ -63,9 +44,18 @@ const getSystemLanguage = async (): Promise<string> => {
 	return lang.split("-")[0]; // Use 'es' instead of 'es-ES'
 };
 
+const lng = await getSystemLanguage(); // Auto-detect language
+const [en, detected] = await Promise.all([
+	loadLocale("en"),
+	lng === "en" ? undefined : loadLocale(lng),
+]);
+
 await i18n.use(initReactI18next).init({
-	resources,
-	lng: await getSystemLanguage(), // Auto-detect language
+	resources: {
+		en: { translation: en ?? {} },
+		...(detected ? { [lng]: { translation: detected } } : {}),
+	},
+	lng,
 	fallbackLng: "en",
 	interpolation: {
 		escapeValue: false, // React already escapes values
