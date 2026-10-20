@@ -433,44 +433,49 @@ async fn get_app_permissions_batch(
     _app: tauri::AppHandle,
     app_ids: Vec<String>,
 ) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
-    use std::collections::HashMap;
-    use std::sync::{Arc, Mutex};
-    use std::thread;
+    // Blocking subprocess + thread joins: keep them off the async workers.
+    tokio::task::spawn_blocking(move || {
+        use std::collections::HashMap;
+        use std::sync::{Arc, Mutex};
+        use std::thread;
 
-    let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
-    let result = Arc::new(Mutex::new(HashMap::new()));
+        let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
+        let result = Arc::new(Mutex::new(HashMap::new()));
 
-    // Parallelize permission fetching using native threads
-    // Limit concurrent threads to avoid overwhelming the system
-    let chunk_size = 10; // Process 10 apps at a time
-    let mut app_id_chunks: Vec<Vec<String>> = Vec::new();
+        // Parallelize permission fetching using native threads
+        // Limit concurrent threads to avoid overwhelming the system
+        let chunk_size = 10; // Process 10 apps at a time
+        let mut app_id_chunks: Vec<Vec<String>> = Vec::new();
 
-    for chunk in app_ids.chunks(chunk_size) {
-        app_id_chunks.push(chunk.to_vec());
-    }
-
-    for chunk in app_id_chunks.iter() {
-        let mut handles = Vec::new();
-
-        for app_id in chunk {
-            let result_clone = Arc::clone(&result);
-            let app_id_clone = app_id.clone();
-            let handle = thread::spawn(move || {
-                if let Some(perms) = get_app_permissions(&app_id_clone, is_flatpak) {
-                    result_clone.lock().unwrap().insert(app_id_clone, perms);
-                }
-            });
-            handles.push(handle);
+        for chunk in app_ids.chunks(chunk_size) {
+            app_id_chunks.push(chunk.to_vec());
         }
 
-        // Wait for this chunk to complete
-        for handle in handles {
-            let _ = handle.join();
-        }
-    }
+        for chunk in app_id_chunks.iter() {
+            let mut handles = Vec::new();
 
-    let final_result = result.lock().unwrap().clone();
-    Ok(final_result)
+            for app_id in chunk {
+                let result_clone = Arc::clone(&result);
+                let app_id_clone = app_id.clone();
+                let handle = thread::spawn(move || {
+                    if let Some(perms) = get_app_permissions(&app_id_clone, is_flatpak) {
+                        result_clone.lock().unwrap().insert(app_id_clone, perms);
+                    }
+                });
+                handles.push(handle);
+            }
+
+            // Wait for this chunk to complete
+            for handle in handles {
+                let _ = handle.join();
+            }
+        }
+
+        let final_result = result.lock().unwrap().clone();
+        Ok(final_result)
+    })
+    .await
+    .map_err(|e| format!("Permission task failed: {}", e))?
 }
 
 #[tauri::command]
