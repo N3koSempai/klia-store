@@ -1,9 +1,9 @@
-import type { InstalledAppInfo } from "../../../store/installedAppsStore.ts";
+import type { InstalledAppInfo } from "../store/installedAppsStore.ts";
 import type {
 	DebAppRust,
 	InstalledAppRust,
 	InstalledExtensionRust,
-} from "../types.ts";
+} from "../types/installedPackages.ts";
 
 export const toInstalledAppInfo = (
 	app: InstalledAppRust,

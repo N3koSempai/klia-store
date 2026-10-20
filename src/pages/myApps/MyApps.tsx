@@ -15,29 +15,23 @@ import {
 	Typography,
 	useTheme,
 } from "@mui/material";
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
 import { UpdateAllModal } from "../../components/UpdateAllModal";
 import { useAppVerification } from "../../hooks/useAppVerification";
+import { useReloadInstalledApps } from "../../hooks/useReloadInstalledApps";
 import { useUninstallApp } from "../../hooks/useUninstallApp";
 import { useUpdateAll } from "../../hooks/useUpdateAll";
 import { useUpdateApp } from "../../hooks/useUpdateApp";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
+import { sortDebApps, sortInstalledApps } from "../../utils/installedApps";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
 import { AppCardWrapper } from "./components/AppCardWrapper";
 import { InstalledAppCard } from "./components/InstalledAppCard";
 import { SourceToggle } from "./components/SourceToggle";
 import { useDebApps } from "./hooks/useDebApps";
-import type { InstalledPackagesResponse } from "./types";
-import {
-	sortDebApps,
-	sortInstalledApps,
-	toInstalledAppInfo,
-	toInstalledExtensionInfo,
-} from "./utils/installedApps";
 
 interface MyAppsProps {
 	onBack: () => void;
@@ -64,12 +58,6 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const getUpdateInfo = useInstalledAppsStore((state) => state.getUpdateInfo);
 	const setAvailableUpdates = useInstalledAppsStore(
 		(state) => state.setAvailableUpdates,
-	);
-	const setInstalledAppsInfo = useInstalledAppsStore(
-		(state) => state.setInstalledAppsInfo,
-	);
-	const setInstalledExtensions = useInstalledAppsStore(
-		(state) => state.setInstalledExtensions,
 	);
 	const isLoadingUpdates = useInstalledAppsStore(
 		(state) => state.isLoadingUpdates,
@@ -124,27 +112,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		clearUpdateAll,
 	} = useUpdateAll();
 
-	const reloadInstalledApps = useCallback(async () => {
-		try {
-			const response = await invoke<InstalledPackagesResponse>(
-				"get_installed_flatpaks",
-			);
-
-			const installedAppsInfo = response.apps.map(toInstalledAppInfo);
-			const installedExtensionsInfo = response.extensions.map(
-				toInstalledExtensionInfo,
-			);
-
-			setInstalledAppsInfo(installedAppsInfo);
-			setInstalledExtensions(installedExtensionsInfo);
-
-			// After loading installed apps, check for available updates
-			const updates = await checkAvailableUpdates();
-			setAvailableUpdates(updates);
-		} catch (error) {
-			console.error("Error reloading installed apps:", error);
-		}
-	}, [setInstalledAppsInfo, setInstalledExtensions, setAvailableUpdates]);
+	const reloadInstalledApps = useReloadInstalledApps();
 
 	const reloadAvailableUpdates = useCallback(async () => {
 		try {

@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useState } from "react";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
-import type { DebAppRust } from "../types";
-import { toDebAppInfo } from "../utils/installedApps";
+import type { DebAppRust } from "../../../types/installedPackages";
+import { toDebAppInfo } from "../../../utils/installedApps";
 
 // Lazily loaded list of installed .deb packages. `load(true)` forces a refresh.
 export const useDebApps = () => {
