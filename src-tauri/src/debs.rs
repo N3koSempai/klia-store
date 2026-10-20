@@ -2,6 +2,7 @@ use serde::Serialize;
 use std::fs;
 use tauri::{Emitter, Manager};
 use tauri_plugin_shell::ShellExt;
+use crate::image_cache::canonical_path_string;
 use crate::*;
 
 #[derive(Serialize)]
