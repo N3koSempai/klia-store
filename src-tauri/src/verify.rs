@@ -554,10 +554,7 @@ async fn get_tag_commit_with_fallback(
 /// Versión legacy que crea su propio cliente (mantenida por compatibilidad si es necesaria)
 #[allow(dead_code)]
 async fn get_github_tag_commit(owner: &str, repo: &str, tag: &str) -> Result<String, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let client = crate::http::verification_client();
 
     get_tag_commit_with_fallback(&client, &GitPlatform::GitHub, owner, repo, tag).await
 }
@@ -803,10 +800,7 @@ pub async fn verify_app_hash(app_id: String) -> Result<VerificationResult, Strin
     debug_println!("[verify_app_hash] Starting hash verification for: {}", app_id);
 
     // Creamos un único cliente HTTP para todas las operaciones
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let client = crate::http::verification_client();
 
     // Fetch the manifest from flathub (reusando el cliente)
     let manifest_content = match fetch_manifest_from_flathub(&client, &app_id).await {

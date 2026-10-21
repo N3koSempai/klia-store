@@ -4,6 +4,7 @@ mod backup;
 mod donations;
 mod analytics;
 mod debs;
+mod http;
 mod image_cache;
 mod verify;
 
@@ -15,7 +16,6 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager, State};
-use tauri_plugin_http::reqwest;
 use tauri_plugin_shell::ShellExt;
 
 #[cfg(target_os = "linux")]
@@ -1356,10 +1356,7 @@ async fn download_flatpak_release(github_repo: String, app_id: String) -> Result
     // Resolve latest release from GitHub API
     let api_url = format!("https://api.github.com/repos/{}/releases/latest", github_repo);
 
-    let client = reqwest::Client::builder()
-        .user_agent("klia-store")
-        .build()
-        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+    let client = http::github_client();
 
     let release: serde_json::Value = {
         let text = client
@@ -1452,10 +1449,7 @@ async fn check_github_updates(
     // List of (app_id, github_repo) pairs to check, e.g. [["io.github.N3kosempai.klia-kompress", "N3koSempai/klia-kompress"]]
     apps: Vec<(String, String)>,
 ) -> Result<Vec<GitHubUpdateInfo>, String> {
-    let client = reqwest::Client::builder()
-        .user_agent("klia-store")
-        .build()
-        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+    let client = http::github_client();
 
     let mut results = Vec::new();
 

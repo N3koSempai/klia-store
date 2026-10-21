@@ -1,4 +1,3 @@
-use tauri_plugin_http::reqwest;
 
 // ─── BTC ─────────────────────────────────────────────────────────────────────
 
@@ -16,7 +15,7 @@ pub async fn verify_btc_donation(
     // 1 BTC = 100_000_000 satoshis
     let target_satoshis = (amount_f64 * 100_000_000.0).round() as u64;
 
-    let client = reqwest::Client::new();
+    let client = crate::http::default_client();
 
     let endpoints = [
         format!("https://blockstream.info/api/address/{}/txs", wallet),
@@ -108,7 +107,7 @@ pub async fn verify_usdt_eth_donation(
         wallet.trim_start_matches("0x").to_lowercase()
     );
 
-    let client = reqwest::Client::new();
+    let client = crate::http::default_client();
 
     for rpc_url in &rpc_endpoints {
         // 1. Get latest block number

@@ -1,6 +1,5 @@
 use std::fs;
 use tauri::Manager;
-use tauri_plugin_http::reqwest;
 
 #[tauri::command]
 pub fn get_cache_image_dir(app: tauri::AppHandle) -> Result<String, String> {
@@ -98,7 +97,7 @@ pub async fn download_and_cache_image(
     }
 
     // Descargar la imagen
-    let client = reqwest::Client::new();
+    let client = crate::http::default_client();
     let response = client
         .get(&image_url)
         .send()
