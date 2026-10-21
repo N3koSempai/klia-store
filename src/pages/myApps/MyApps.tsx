@@ -12,13 +12,10 @@ import {
 	DialogContent,
 	IconButton,
 	Stack,
-	ToggleButton,
-	ToggleButtonGroup,
 	Typography,
 	useTheme,
 } from "@mui/material";
-import { invoke } from "@tauri-apps/api/core";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
@@ -27,40 +24,14 @@ import { useAppVerification } from "../../hooks/useAppVerification";
 import { useUninstallApp } from "../../hooks/useUninstallApp";
 import { useUpdateAll } from "../../hooks/useUpdateAll";
 import { useUpdateApp } from "../../hooks/useUpdateApp";
-import type { InstalledAppInfo } from "../../store/installedAppsStore";
+import { refreshInstalledPackages } from "../../services/installedPackages";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
+import { sortDebApps, sortInstalledApps } from "../../utils/installedApps";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
+import { AppCardWrapper } from "./components/AppCardWrapper";
 import { InstalledAppCard } from "./components/InstalledAppCard";
-
-interface InstalledAppRust {
-	app_id: string;
-	name: string;
-	version: string;
-	summary?: string;
-	developer?: string;
-	source: "flathub" | "github";
-}
-
-interface InstalledExtensionRust {
-	extension_id: string;
-	name: string;
-	version: string;
-	parent_app_id: string;
-}
-
-interface InstalledPackagesResponse {
-	apps: InstalledAppRust[];
-	runtimes: string[];
-	extensions: InstalledExtensionRust[];
-}
-
-interface DebAppRust {
-	package: string;
-	name: string;
-	version: string;
-	summary?: string;
-	icon_path?: string;
-}
+import { SourceToggle } from "./components/SourceToggle";
+import { useDebApps } from "./hooks/useDebApps";
 
 interface MyAppsProps {
 	onBack: () => void;
@@ -70,64 +41,6 @@ interface MyAppsProps {
 		appId: string,
 	) => void;
 }
-
-// Memoized wrapper for app card to prevent recreating callbacks
-interface AppCardWrapperProps {
-	app: InstalledAppInfo;
-	hasUpdate: boolean;
-	isUpdating: boolean;
-	isUninstalling: boolean;
-	cardHeight: number;
-	onUpdate: (appId: string) => void;
-	onUninstall: (appId: string) => void;
-	onShowReleaseNotes: (appId: string) => void;
-	onDeveloperClick?: (
-		developerId: string,
-		developerName: string,
-		appId: string,
-	) => void;
-}
-
-const AppCardWrapper = memo(
-	({
-		app,
-		hasUpdate,
-		isUpdating,
-		isUninstalling,
-		cardHeight,
-		onUpdate,
-		onUninstall,
-		onShowReleaseNotes,
-		onDeveloperClick,
-	}: AppCardWrapperProps) => {
-		const handleUpdate = useCallback(
-			() => onUpdate(app.appId),
-			[onUpdate, app.appId],
-		);
-		const handleUninstall = useCallback(
-			() => onUninstall(app.appId),
-			[onUninstall, app.appId],
-		);
-		const handleShowReleaseNotes = useCallback(
-			() => onShowReleaseNotes(app.appId),
-			[onShowReleaseNotes, app.appId],
-		);
-
-		return (
-			<InstalledAppCard
-				app={app}
-				hasUpdate={hasUpdate}
-				isUpdating={isUpdating}
-				isUninstalling={isUninstalling}
-				cardHeight={cardHeight}
-				onUpdate={handleUpdate}
-				onUninstall={handleUninstall}
-				onShowReleaseNotes={handleShowReleaseNotes}
-				onDeveloperClick={onDeveloperClick}
-			/>
-		);
-	},
-);
 
 export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const { t } = useTranslation();
@@ -146,12 +59,6 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const setAvailableUpdates = useInstalledAppsStore(
 		(state) => state.setAvailableUpdates,
 	);
-	const setInstalledAppsInfo = useInstalledAppsStore(
-		(state) => state.setInstalledAppsInfo,
-	);
-	const setInstalledExtensions = useInstalledAppsStore(
-		(state) => state.setInstalledExtensions,
-	);
 	const isLoadingUpdates = useInstalledAppsStore(
 		(state) => state.isLoadingUpdates,
 	);
@@ -162,33 +69,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 
 	// Fuente activa: "flatpak" (comportamiento actual) o "deb" (apps .deb).
 	const [source, setSource] = useState<"flatpak" | "deb">("flatpak");
-	const [debApps, setDebApps] = useState<InstalledAppInfo[] | null>(null);
-	const [isLoadingDebs, setIsLoadingDebs] = useState(false);
-
-	const loadDebApps = async (force = false) => {
-		if (!force && debApps !== null) return;
-		setIsLoadingDebs(true);
-		try {
-			const response = await invoke<DebAppRust[]>("get_installed_debs");
-			setDebApps(
-				response.map((d) => ({
-					instanceId: `deb-${d.package}`,
-					appId: d.package,
-					name: d.name,
-					version: d.version,
-					summary: d.summary,
-					developer: undefined,
-					source: "deb",
-					iconPath: d.icon_path,
-				})),
-			);
-		} catch (error) {
-			console.error("Error loading deb apps:", error);
-			setDebApps([]);
-		} finally {
-			setIsLoadingDebs(false);
-		}
-	};
+	const { debApps, isLoadingDebs, loadDebApps } = useDebApps();
 
 	// Fixed card height for consistent rendering
 	const CARD_HEIGHT = 340;
@@ -230,43 +111,6 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		updateSummary,
 		clearUpdateAll,
 	} = useUpdateAll();
-
-	const reloadInstalledApps = useCallback(async () => {
-		try {
-			const response = await invoke<InstalledPackagesResponse>(
-				"get_installed_flatpaks",
-			);
-
-			// Convert from Rust format to TypeScript format
-			const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
-				(app) => ({
-					instanceId: `${app.app_id}-${app.version}`,
-					appId: app.app_id,
-					name: app.name,
-					version: app.version,
-					summary: app.summary,
-					developer: app.developer,
-					source: app.source,
-				}),
-			);
-
-			const installedExtensionsInfo = response.extensions.map((ext) => ({
-				extensionId: ext.extension_id,
-				name: ext.name,
-				version: ext.version,
-				parentAppId: ext.parent_app_id,
-			}));
-
-			setInstalledAppsInfo(installedAppsInfo);
-			setInstalledExtensions(installedExtensionsInfo);
-
-			// After loading installed apps, check for available updates
-			const updates = await checkAvailableUpdates();
-			setAvailableUpdates(updates);
-		} catch (error) {
-			console.error("Error reloading installed apps:", error);
-		}
-	}, [setInstalledAppsInfo, setInstalledExtensions, setAvailableUpdates]);
 
 	const reloadAvailableUpdates = useCallback(async () => {
 		try {
@@ -378,12 +222,12 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const handleCloseUninstallDialog = useCallback(async () => {
 		clearUninstall();
 		// Reload installed apps list after uninstall
-		await reloadInstalledApps();
+		await refreshInstalledPackages();
 		// Si se desinstaló una app deb, refrescar esa lista también.
 		if (source === "deb") {
 			void loadDebApps(true);
 		}
-	}, [clearUninstall, reloadInstalledApps, source]);
+	}, [clearUninstall, source, loadDebApps]);
 
 	const handleUpdateAll = useCallback(() => {
 		setUpdateAllModalOpen(true);
@@ -433,28 +277,24 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	);
 
 	// Sort apps: those with updates first, then alphabetically
-	const sortedApps = useMemo(() => {
-		const apps = [...installedApps];
-		if (isLoadingUpdates) {
-			return apps.sort((a, b) => a.name.localeCompare(b.name));
-		}
-		return apps.sort((a, b) => {
-			const aHasUpdate = a.appId in availableUpdates;
-			const bHasUpdate = b.appId in availableUpdates;
-
-			if (aHasUpdate && !bHasUpdate) return -1;
-			if (!aHasUpdate && bHasUpdate) return 1;
-
-			// Secondary sort: alphabetical by name
-			return a.name.localeCompare(b.name);
-		});
-	}, [installedApps, availableUpdates, isLoadingUpdates]);
+	const sortedApps = useMemo(
+		() => sortInstalledApps(installedApps, availableUpdates, isLoadingUpdates),
+		[installedApps, availableUpdates, isLoadingUpdates],
+	);
 
 	// Apps .deb: solo orden alfabético, sin lógica de actualizaciones.
-	const sortedDebApps = useMemo(() => {
-		const apps = debApps ?? [];
-		return [...apps].sort((a, b) => a.name.localeCompare(b.name));
-	}, [debApps]);
+	const sortedDebApps = useMemo(() => sortDebApps(debApps ?? []), [debApps]);
+
+	// Updates that aren't for a user-installed app (runtimes, extensions...).
+	const systemUpdates = useMemo(
+		() =>
+			updateCount -
+			installedApps.reduce(
+				(n, app) => n + (app.appId in availableUpdates ? 1 : 0),
+				0,
+			),
+		[updateCount, installedApps, availableUpdates],
+	);
 
 	const displayedCount =
 		source === "deb" ? (debApps?.length ?? 0) : installedApps.length;
@@ -536,63 +376,13 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 							</Typography>
 
 							{/* Selector de fuente: Flatpak (actual) / Deb */}
-							<ToggleButtonGroup
+							<SourceToggle
 								value={source}
-								exclusive
-								onChange={(_event, newSource) => {
-									if (newSource !== "flatpak" && newSource !== "deb") {
-										return;
-									}
+								onChange={(newSource) => {
 									setSource(newSource);
 									if (newSource === "deb") void loadDebApps();
 								}}
-								size="small"
-								aria-label="app source"
-								sx={{
-									mt: 1.5,
-									bgcolor: "rgba(255, 255, 255, 0.04)",
-									border: "1px solid rgba(255, 255, 255, 0.12)",
-									borderRadius: 2,
-									p: 0.5,
-								}}
-							>
-								<ToggleButton
-									value="flatpak"
-									sx={{
-										textTransform: "none",
-										fontWeight: 600,
-										px: 2,
-										py: 0.5,
-										border: "none",
-										borderRadius: 1.5,
-										"&.Mui-selected": {
-											bgcolor: "primary.main",
-											color: "#fff",
-											"&:hover": { bgcolor: "primary.main" },
-										},
-									}}
-								>
-									Flatpak
-								</ToggleButton>
-								<ToggleButton
-									value="deb"
-									sx={{
-										textTransform: "none",
-										fontWeight: 600,
-										px: 2,
-										py: 0.5,
-										border: "none",
-										borderRadius: 1.5,
-										"&.Mui-selected": {
-											bgcolor: "primary.main",
-											color: "#fff",
-											"&:hover": { bgcolor: "primary.main" },
-										},
-									}}
-								>
-									Deb
-								</ToggleButton>
-							</ToggleButtonGroup>
+							/>
 						</Box>
 					</Stack>
 
@@ -632,33 +422,24 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 							</Button>
 
 							{/* El texto explicativo debajo del botón */}
-							{(() => {
-								const userAppUpdates = installedApps.filter((app) =>
-									hasUpdate(app.appId),
-								).length;
-								const systemUpdates = updateCount - userAppUpdates;
-								return systemUpdates > 0 ? (
-									<Stack
-										direction="row"
-										alignItems="center"
-										spacing={0.5}
-										sx={{ mt: 1, mr: 0.5 }}
+							{systemUpdates > 0 && (
+								<Stack
+									direction="row"
+									alignItems="center"
+									spacing={0.5}
+									sx={{ mt: 1, mr: 0.5 }}
+								>
+									<InfoOutlined
+										sx={{ fontSize: 14, color: "text.secondary" }}
+									/>
+									<Typography
+										variant="caption"
+										sx={{ color: "text.secondary", fontWeight: 500 }}
 									>
-										<InfoOutlined
-											sx={{ fontSize: 14, color: "text.secondary" }}
-										/>
-										<Typography
-											variant="caption"
-											sx={{
-												color: "text.secondary",
-												fontWeight: 500,
-											}}
-										>
-											{t("myApps.systemUpdates", { count: systemUpdates })}
-										</Typography>
-									</Stack>
-								) : null;
-							})()}
+										{t("myApps.systemUpdates", { count: systemUpdates })}
+									</Typography>
+								</Stack>
+							)}
 						</Stack>
 					)}
 				</Box>

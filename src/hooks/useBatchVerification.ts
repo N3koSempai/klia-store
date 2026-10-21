@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useRef, useState } from "react";
+import {
+	classifyVerification,
+	type RawVerificationResult,
+} from "../utils/verification";
 
 export interface SourceVerification {
 	url: string;
@@ -71,33 +75,11 @@ export function useBatchVerification(): UseBatchVerificationReturn {
 				setCurrentlyVerifying(app.appId);
 
 				try {
-					const raw = await invoke<{
-						verified: boolean;
-						app_id: string;
-						sources: Array<{
-							url: string;
-							commit: string;
-							verified: boolean;
-							remote_commit?: string;
-							error?: string;
-							platform?: string;
-						}>;
-						error?: string;
-					}>("verify_app_hash", { appId: app.appId });
-
-					const errorMsg = raw.sources[0]?.error || raw.error || "";
-					const platform = raw.sources[0]?.platform || "unknown";
-
-					const isUnsupportedPlatform = platform === "unsupported";
-					const isHashMismatch =
-						errorMsg.toLowerCase().includes("hash mismatch") ||
-						errorMsg.toLowerCase().includes("mismatch");
-					const isSourceUnavailable =
-						!isHashMismatch &&
-						(errorMsg.toLowerCase().includes("tag") ||
-							errorMsg.toLowerCase().includes("could not verify") ||
-							errorMsg.toLowerCase().includes("not found") ||
-							errorMsg.toLowerCase().includes("failed to fetch"));
+					const raw = await invoke<RawVerificationResult>("verify_app_hash", {
+						appId: app.appId,
+					});
+					const { isHashMismatch, isUnsupportedPlatform, isSourceUnavailable } =
+						classifyVerification(raw);
 
 					const result: BatchVerificationResult = {
 						appId: raw.app_id,

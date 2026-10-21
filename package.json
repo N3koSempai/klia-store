@@ -1,12 +1,13 @@
 {
   "name": "klia-store",
   "private": true,
-  "version": "2.14.0",
+  "version": "2.15.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\"",
     "tauri": "tauri"
   },
   "dependencies": {

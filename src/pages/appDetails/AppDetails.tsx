@@ -27,7 +27,11 @@ import { GitHubStarBadge } from "../../components/GitHubStarBadge";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
 import { useRepoStats } from "../../hooks/useRepoStats";
 import { useRuntimeCheck } from "../../hooks/useRuntimeCheck";
-import { reportNetworkFailure, reportNetworkSuccess } from "../../store/connectivityStore";
+import { fetchInstalledPackages } from "../../services/installedPackages";
+import {
+	reportNetworkFailure,
+	reportNetworkSuccess,
+} from "../../store/connectivityStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { AppStream, CategoryApp } from "../../types";
 import { GITHUB_RELEASE_REPOS } from "../../utils/githubReleaseApps";
@@ -38,6 +42,7 @@ import {
 	type VerificationResult,
 } from "./components/InstallProgressPanel";
 import { ScreenshotCarousel } from "./components/ScreenshotCarousel";
+import { appendPtyLine } from "./utils/ptyOutput";
 
 interface AppDetailsProps {
 	app: CategoryApp;
@@ -197,57 +202,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 					(appId === app.app_id || appId === installSessionId.current) &&
 					isInstallingRef.current;
 				if (isOurProcess) {
-					// Split by \r to handle multiple updates in a single emission
-					const parts = line.split("\r");
-
-					for (let i = 0; i < parts.length; i++) {
-						const part = parts[i];
-						const cleanPart = stripAnsi(part);
-
-						// Only add non-empty lines
-						if (cleanPart.trim()) {
-							setInstallOutput((prev) => {
-								// If it's not the first part of a split by \r, or the original line started with \r
-								// we overwrite the last line in the terminal.
-								if ((i > 0 || line.startsWith("\r")) && prev.length > 0) {
-									const newOutput = [...prev];
-									newOutput[newOutput.length - 1] = cleanPart;
-									return newOutput;
-								}
-
-								// Deduplication logic for multi-line blocks (like permissions/dependency lists)
-								const isProgress =
-									cleanPart.includes("%") ||
-									cleanPart.includes("/") ||
-									cleanPart.includes("Installing") ||
-									cleanPart.includes("Updating");
-
-								if (!isProgress) {
-									// If this exact line exists anywhere in the last 15 lines, skip it
-									const isHeaderOrInfo =
-										cleanPart.includes("permissions:") ||
-										cleanPart.includes("ID") ||
-										cleanPart.includes("Branch") ||
-										cleanPart.includes("Remote") ||
-										/^\s*\d+\./.test(cleanPart);
-
-									if (isHeaderOrInfo) {
-										const existsRecently = prev
-											.slice(-15)
-											.some((l) => l.trim() === cleanPart.trim());
-										if (existsRecently) return prev;
-									}
-
-									// Simple consecutive deduplication
-									if (prev.length > 0 && prev[prev.length - 1] === cleanPart) {
-										return prev;
-									}
-								}
-
-								return [...prev, cleanPart];
-							});
-						}
-					}
+					setInstallOutput((prev) => appendPtyLine(prev, line));
 				}
 			},
 		);
@@ -275,9 +230,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				setTimeout(async () => {
 					try {
 						// Check if app was actually installed by querying the system
-						const installed = await invoke<{ apps: Array<{ app_id: string }> }>(
-							"get_installed_flatpaks",
-						);
+						const installed = await fetchInstalledPackages();
 						const isNowInstalled = installed.apps.some(
 							(a) => a.app_id === app.app_id,
 						);
@@ -325,27 +278,6 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		const tmp = document.createElement("div");
 		tmp.innerHTML = html;
 		return tmp.textContent || tmp.innerText || "";
-	};
-
-	// Function to strip ANSI escape codes while preserving Unicode block characters for progress bars
-	const stripAnsi = (str: string) => {
-		return (
-			str
-				// Remove ANSI escape sequences (ESC[...m for colors/formatting)
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI stripping
-				.replace(/\x1b\[[0-9;]*m/g, "")
-				// Remove cursor control sequences (ESC[...H, ESC[...A, etc.)
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI stripping
-				.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "")
-				// Remove sequences with ? prefix (like ESC[?25l for cursor hide)
-				// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI stripping
-				.replace(/\x1b\[(\?)?[0-9;]*[A-Za-z]/g, "")
-				// Remove device status report sequences ([6n)
-				.replace(/\[(\d+)n/g, "")
-				// Normalize non-breaking spaces to regular spaces
-				.replace(/\u00a0/g, " ")
-			// Note: We intentionally preserve Unicode block characters (█, ▓, ▒, ░) for progress bars
-		);
 	};
 
 	const startInstallation = async () => {

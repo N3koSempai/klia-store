@@ -12,7 +12,6 @@ import {
 	Button,
 	Checkbox,
 	Chip,
-	CircularProgress,
 	Container,
 	Dialog,
 	DialogActions,
@@ -33,97 +32,15 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ProgressStage } from "../../hooks/useBackups";
 import { useBackups } from "../../hooks/useBackups";
-import type { InstalledAppInfo } from "../../store/installedAppsStore";
+import { refreshInstalledPackages } from "../../services/installedPackages";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { BackupAppRequest } from "../../types";
-import { checkAvailableUpdates } from "../../utils/updateChecker";
-
-interface InstalledAppRust {
-	app_id: string;
-	name: string;
-	version: string;
-	summary?: string;
-	developer?: string;
-	source: "flathub" | "github";
-}
-
-interface InstalledExtensionRust {
-	extension_id: string;
-	name: string;
-	version: string;
-	parent_app_id: string;
-}
-
-interface InstalledPackagesResponse {
-	apps: InstalledAppRust[];
-	runtimes: string[];
-	extensions: InstalledExtensionRust[];
-}
+import { formatBytes } from "../../utils/formatBytes";
+import { StageIndicator } from "./components/StageIndicator";
 
 interface BackupsProps {
 	onBack: () => void;
-}
-
-function formatBytes(bytes: number): string {
-	if (bytes === 0) return "0 B";
-	const units = ["B", "KB", "MB", "GB"];
-	const exponent = Math.min(
-		Math.floor(Math.log(bytes) / Math.log(1024)),
-		units.length - 1,
-	);
-	const value = bytes / 1024 ** exponent;
-	return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
-}
-
-// Replaces the old raw console-log view: instead of a scrolling terminal of
-// every backend message, only the current stage is shown — a spinner, the
-// latest action as a single line that swaps in place, and (when the backend
-// reports [i/total]) which app of the batch is being processed. Matches the
-// "one big step, not a log" pattern of installer-style progress UIs.
-function StageIndicator({
-	stage,
-	fallback,
-}: {
-	stage: ProgressStage;
-	fallback: string;
-}) {
-	const { t } = useTranslation();
-	return (
-		<Stack direction="row" alignItems="flex-start" spacing={2} sx={{ py: 1 }}>
-			<CircularProgress
-				size={28}
-				thickness={4}
-				sx={{ mt: "2px", flexShrink: 0 }}
-			/>
-			<Box sx={{ minWidth: 0, flex: 1 }}>
-				{stage.stepTotal !== null && (
-					<Typography
-						variant="overline"
-						color="primary"
-						sx={{ display: "block", lineHeight: 1.4, fontWeight: 700 }}
-					>
-						{t("backups.stepCount", {
-							index: stage.stepIndex,
-							total: stage.stepTotal,
-						})}
-					</Typography>
-				)}
-				<Typography
-					variant="body2"
-					sx={{
-						fontWeight: 600,
-						lineHeight: 1.5,
-						wordBreak: "break-word",
-						overflowWrap: "anywhere",
-					}}
-				>
-					{stage.message || fallback}
-				</Typography>
-			</Box>
-		</Stack>
-	);
 }
 
 export const Backups = ({ onBack }: BackupsProps) => {
@@ -132,15 +49,6 @@ export const Backups = ({ onBack }: BackupsProps) => {
 
 	const installedApps = useInstalledAppsStore(
 		(state) => state.installedAppsInfo,
-	);
-	const setInstalledAppsInfo = useInstalledAppsStore(
-		(state) => state.setInstalledAppsInfo,
-	);
-	const setInstalledExtensions = useInstalledAppsStore(
-		(state) => state.setInstalledExtensions,
-	);
-	const setAvailableUpdates = useInstalledAppsStore(
-		(state) => state.setAvailableUpdates,
 	);
 
 	const [activeTab, setActiveTab] = useState<"backup" | "restore">("backup");
@@ -303,41 +211,6 @@ export const Backups = ({ onBack }: BackupsProps) => {
 	// if a runtime got pulled in), the installed-apps store is stale — reload
 	// it the same way MyApps does after install/uninstall, so AppDetail stops
 	// showing "Install" for an app that was just restored.
-	const reloadInstalledApps = useCallback(async () => {
-		try {
-			const response = await invoke<InstalledPackagesResponse>(
-				"get_installed_flatpaks",
-			);
-
-			const installedAppsInfo: InstalledAppInfo[] = response.apps.map(
-				(app) => ({
-					instanceId: `${app.app_id}-${app.version}`,
-					appId: app.app_id,
-					name: app.name,
-					version: app.version,
-					summary: app.summary,
-					developer: app.developer,
-					source: app.source,
-				}),
-			);
-
-			const installedExtensionsInfo = response.extensions.map((ext) => ({
-				extensionId: ext.extension_id,
-				name: ext.name,
-				version: ext.version,
-				parentAppId: ext.parent_app_id,
-			}));
-
-			setInstalledAppsInfo(installedAppsInfo);
-			setInstalledExtensions(installedExtensionsInfo);
-
-			const updates = await checkAvailableUpdates();
-			setAvailableUpdates(updates);
-		} catch (error) {
-			console.error("Error reloading installed apps:", error);
-		}
-	}, [setInstalledAppsInfo, setInstalledExtensions, setAvailableUpdates]);
-
 	const handlePickRestoreSource = useCallback(async () => {
 		const selected = await open({
 			multiple: false,
@@ -363,12 +236,11 @@ export const Backups = ({ onBack }: BackupsProps) => {
 		if (restoreSourcePath) {
 			await reloadBackups(restoreSourcePath);
 		}
-		await reloadInstalledApps();
+		await refreshInstalledPackages();
 	}, [
 		clearRestoreBackup,
 		restoreSourcePath,
 		reloadBackups,
-		reloadInstalledApps,
 	]);
 
 	const handleRequestDelete = useCallback((archivePath: string) => {

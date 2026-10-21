@@ -1,10 +1,10 @@
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import VolunteerActivism from "@mui/icons-material/VolunteerActivism";
 import { Box, Button, Typography } from "@mui/material";
 import type { TFunction } from "i18next";
 import { memo } from "react";
 import errorAnim from "../../../assets/animations/Error.lottie";
 import successAnim from "../../../assets/animations/success.lottie";
+import { LazyLottie } from "../../../components/LazyLottie";
 import { Terminal } from "../../../components/Terminal";
 
 export type InstallStatus =
@@ -490,7 +490,7 @@ export const InstallProgressPanel = memo(
 				>
 					{/* Animación */}
 					<Box sx={{ width: 300, height: 300 }}>
-						<DotLottieReact
+						<LazyLottie
 							key={installStatus}
 							src={installStatus === "success" ? successAnim : errorAnim}
 							loop={false}

@@ -22,7 +22,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { refreshInstalledPackages } from "../hooks/useInstalledApps";
+import { refreshInstalledPackages } from "../services/installedPackages";
 import { Terminal } from "./Terminal";
 
 interface LocalFlatpakPermissions {
@@ -64,7 +64,9 @@ interface PermissionEntry {
 	level: "safe" | "medium" | "high" | "critical";
 }
 
-function classifyPermissions(perms: LocalFlatpakPermissions): PermissionEntry[] {
+function classifyPermissions(
+	perms: LocalFlatpakPermissions,
+): PermissionEntry[] {
 	const entries: PermissionEntry[] = [];
 
 	if (perms.network) {
@@ -160,12 +162,17 @@ function classifyPermissions(perms: LocalFlatpakPermissions): PermissionEntry[] 
 	return entries;
 }
 
-function riskScore(entries: PermissionEntry[]): { score: "low" | "medium" | "high" | "critical"; label: string } {
-	if (entries.some((e) => e.level === "critical")) return { score: "critical", label: "Critical risk" };
+function riskScore(entries: PermissionEntry[]): {
+	score: "low" | "medium" | "high" | "critical";
+	label: string;
+} {
+	if (entries.some((e) => e.level === "critical"))
+		return { score: "critical", label: "Critical risk" };
 	const highCount = entries.filter((e) => e.level === "high").length;
 	if (highCount >= 2) return { score: "high", label: "High risk" };
 	if (highCount === 1) return { score: "high", label: "Elevated risk" };
-	if (entries.some((e) => e.level === "medium")) return { score: "medium", label: "Moderate risk" };
+	if (entries.some((e) => e.level === "medium"))
+		return { score: "medium", label: "Moderate risk" };
 	return { score: "low", label: "Low risk" };
 }
 
@@ -197,7 +204,10 @@ interface LocalFlatpakInstallModalProps {
 
 type Phase = "loading" | "review" | "installing" | "done" | "error";
 
-export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInstallModalProps) {
+export function LocalFlatpakInstallModal({
+	filePath,
+	onClose,
+}: LocalFlatpakInstallModalProps) {
 	const [phase, setPhase] = useState<Phase>("loading");
 	const [info, setInfo] = useState<LocalFlatpakInfo | null>(null);
 	const [loadError, setLoadError] = useState<string | null>(null);
@@ -236,20 +246,26 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 
 		const unlisteners: UnlistenFn[] = [];
 
-		const unlistenOutput = await listen<[string, string]>("pty-output", (event) => {
-			const [key, line] = event.payload;
-			if (key === processKey.current) {
-				setTerminalLines((prev) => [...prev, line]);
-			}
-		});
+		const unlistenOutput = await listen<[string, string]>(
+			"pty-output",
+			(event) => {
+				const [key, line] = event.payload;
+				if (key === processKey.current) {
+					setTerminalLines((prev) => [...prev, line]);
+				}
+			},
+		);
 		unlisteners.push(unlistenOutput);
 
-		const unlistenError = await listen<[string, string]>("pty-error", (event) => {
-			const [key, line] = event.payload;
-			if (key === processKey.current) {
-				setTerminalLines((prev) => [...prev, `[stderr] ${line}`]);
-			}
-		});
+		const unlistenError = await listen<[string, string]>(
+			"pty-error",
+			(event) => {
+				const [key, line] = event.payload;
+				if (key === processKey.current) {
+					setTerminalLines((prev) => [...prev, `[stderr] ${line}`]);
+				}
+			},
+		);
 		unlisteners.push(unlistenError);
 
 		const unlistenDone = await listen<string>("pty-terminated", (event) => {
@@ -337,7 +353,9 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 				{phase === "loading" && (
 					<Box sx={{ px: 3, py: 5, textAlign: "center" }}>
 						<CircularProgress size={36} sx={{ color: "#4A86CF", mb: 2 }} />
-						<Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem" }}>
+						<Typography
+							sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem" }}
+						>
 							Analyzing package…
 						</Typography>
 					</Box>
@@ -346,14 +364,21 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 				{/* Error loading */}
 				{phase === "error" && !info && (
 					<Box sx={{ px: 3, py: 4, textAlign: "center" }}>
-						<ErrorOutlineIcon sx={{ color: "#FF5252", fontSize: "2.5rem", mb: 1.5 }} />
+						<ErrorOutlineIcon
+							sx={{ color: "#FF5252", fontSize: "2.5rem", mb: 1.5 }}
+						/>
 						<Typography sx={{ color: "#FF5252", fontWeight: 600, mb: 1 }}>
 							Could not read package
 						</Typography>
-						<Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem" }}>
+						<Typography
+							sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem" }}
+						>
 							{loadError}
 						</Typography>
-						<Button onClick={onClose} sx={{ mt: 3, color: "rgba(255,255,255,0.6)" }}>
+						<Button
+							onClick={onClose}
+							sx={{ mt: 3, color: "rgba(255,255,255,0.6)" }}
+						>
 							Close
 						</Button>
 					</Box>
@@ -388,27 +413,55 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 										{info.app_id}
 									</Typography>
 
-									<Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: "wrap", gap: 0.75 }}>
+									<Stack
+										direction="row"
+										spacing={1}
+										sx={{ mt: 1.5, flexWrap: "wrap", gap: 0.75 }}
+									>
 										<Chip
 											label={`Branch: ${info.branch || "master"}`}
 											size="small"
-											sx={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.65rem", backgroundColor: "rgba(74,134,207,0.15)", color: "#58A6FF", border: "1px solid rgba(74,134,207,0.3)" }}
+											sx={{
+												fontFamily: "JetBrains Mono, monospace",
+												fontSize: "0.65rem",
+												backgroundColor: "rgba(74,134,207,0.15)",
+												color: "#58A6FF",
+												border: "1px solid rgba(74,134,207,0.3)",
+											}}
 										/>
 										<Chip
 											label={`Runtime: ${info.runtime.split("/")[0]}`}
 											size="small"
-											sx={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.65rem", backgroundColor: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
+											sx={{
+												fontFamily: "JetBrains Mono, monospace",
+												fontSize: "0.65rem",
+												backgroundColor: "rgba(255,255,255,0.05)",
+												color: "rgba(255,255,255,0.5)",
+												border: "1px solid rgba(255,255,255,0.1)",
+											}}
 										/>
 										<Chip
 											label={`File: ${formatBytes(info.file_size_bytes)}`}
 											size="small"
-											sx={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.65rem", backgroundColor: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
+											sx={{
+												fontFamily: "JetBrains Mono, monospace",
+												fontSize: "0.65rem",
+												backgroundColor: "rgba(255,255,255,0.05)",
+												color: "rgba(255,255,255,0.5)",
+												border: "1px solid rgba(255,255,255,0.1)",
+											}}
 										/>
 										{info.already_installed && (
 											<Chip
 												label="Already installed"
 												size="small"
-												sx={{ fontFamily: "IBM Plex Sans, sans-serif", fontSize: "0.65rem", backgroundColor: "rgba(76,175,80,0.15)", color: "#4CAF50", border: "1px solid rgba(76,175,80,0.3)" }}
+												sx={{
+													fontFamily: "IBM Plex Sans, sans-serif",
+													fontSize: "0.65rem",
+													backgroundColor: "rgba(76,175,80,0.15)",
+													color: "#4CAF50",
+													border: "1px solid rgba(76,175,80,0.3)",
+												}}
 											/>
 										)}
 									</Stack>
@@ -420,8 +473,18 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 
 						{/* Security analysis */}
 						<Box sx={{ px: 3, py: 2.5 }}>
-							<Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-								<SecurityIcon sx={{ fontSize: "1rem", color: risk ? riskColor[risk.score] : "#fff" }} />
+							<Stack
+								direction="row"
+								spacing={1}
+								alignItems="center"
+								sx={{ mb: 2 }}
+							>
+								<SecurityIcon
+									sx={{
+										fontSize: "1rem",
+										color: risk ? riskColor[risk.score] : "#fff",
+									}}
+								/>
 								<Typography
 									sx={{
 										fontFamily: "IBM Plex Sans, sans-serif",
@@ -461,15 +524,24 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 
 							{permEntries.length === 0 ? (
 								<Stack direction="row" spacing={1} alignItems="center">
-									<CheckCircleIcon sx={{ color: "#4CAF50", fontSize: "1rem" }} />
-									<Typography sx={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)" }}>
+									<CheckCircleIcon
+										sx={{ color: "#4CAF50", fontSize: "1rem" }}
+									/>
+									<Typography
+										sx={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)" }}
+									>
 										No special permissions requested
 									</Typography>
 								</Stack>
 							) : (
 								<Stack spacing={0.75}>
 									{permEntries.map((entry) => (
-										<Tooltip key={entry.label} title={entry.description} placement="right" arrow>
+										<Tooltip
+											key={entry.label}
+											title={entry.description}
+											placement="right"
+											arrow
+										>
 											<Box
 												sx={{
 													display: "flex",
@@ -502,7 +574,12 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 												>
 													{entry.label}
 												</Typography>
-												<InfoOutlinedIcon sx={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.2)" }} />
+												<InfoOutlinedIcon
+													sx={{
+														fontSize: "0.85rem",
+														color: "rgba(255,255,255,0.2)",
+													}}
+												/>
 											</Box>
 										</Tooltip>
 									))}
@@ -523,11 +600,15 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 											fontSize: "0.8rem",
 											fontFamily: "IBM Plex Sans, sans-serif",
 											p: 0,
-											"&:hover": { color: "rgba(255,255,255,0.8)", background: "none" },
+											"&:hover": {
+												color: "rgba(255,255,255,0.8)",
+												background: "none",
+											},
 										}}
 									>
 										<NetworkCheckIcon sx={{ fontSize: "0.9rem", mr: 0.75 }} />
-										{info.dependencies.length} runtime{info.dependencies.length !== 1 ? "s" : ""} required
+										{info.dependencies.length} runtime
+										{info.dependencies.length !== 1 ? "s" : ""} required
 										{showDeps ? " ▲" : " ▼"}
 									</Button>
 									<Collapse in={showDeps}>
@@ -592,16 +673,37 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 								alignItems: "flex-start",
 							}}
 						>
-							<WarningAmberIcon sx={{ fontSize: "0.9rem", color: "#F6D32D", mt: 0.15, flexShrink: 0 }} />
-							<Typography sx={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>
-								This package is from a <strong style={{ color: "rgba(255,255,255,0.75)" }}>local file</strong>,
-								not from Flathub. Only install software from sources you trust.
+							<WarningAmberIcon
+								sx={{
+									fontSize: "0.9rem",
+									color: "#F6D32D",
+									mt: 0.15,
+									flexShrink: 0,
+								}}
+							/>
+							<Typography
+								sx={{
+									fontSize: "0.75rem",
+									color: "rgba(255,255,255,0.55)",
+									lineHeight: 1.5,
+								}}
+							>
+								This package is from a{" "}
+								<strong style={{ color: "rgba(255,255,255,0.75)" }}>
+									local file
+								</strong>
+								, not from Flathub. Only install software from sources you
+								trust.
 							</Typography>
 						</Box>
 
 						{/* Actions */}
 						<Divider sx={{ borderColor: "rgba(255,255,255,0.06)" }} />
-						<Stack direction="row" spacing={1.5} sx={{ px: 3, py: 2, justifyContent: "flex-end" }}>
+						<Stack
+							direction="row"
+							spacing={1.5}
+							sx={{ px: 3, py: 2, justifyContent: "flex-end" }}
+						>
 							<Button
 								onClick={onClose}
 								sx={{
@@ -620,9 +722,11 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 									textTransform: "none",
 									fontFamily: "IBM Plex Sans, sans-serif",
 									fontWeight: 600,
-									backgroundColor: risk?.score === "critical" ? "#FF5252" : "#4A86CF",
+									backgroundColor:
+										risk?.score === "critical" ? "#FF5252" : "#4A86CF",
 									"&:hover": {
-										backgroundColor: risk?.score === "critical" ? "#E53935" : "#3d74b8",
+										backgroundColor:
+											risk?.score === "critical" ? "#E53935" : "#3d74b8",
 									},
 								}}
 							>
@@ -636,11 +740,18 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 				{(phase === "installing" || (phase === "done" && info)) && (
 					<Box>
 						<Box sx={{ px: 3, py: 2.5 }}>
-							<Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+							<Stack
+								direction="row"
+								spacing={1.5}
+								alignItems="center"
+								sx={{ mb: 2 }}
+							>
 								{phase === "installing" ? (
 									<CircularProgress size={18} sx={{ color: "#4A86CF" }} />
 								) : (
-									<CheckCircleIcon sx={{ color: "#4CAF50", fontSize: "1.2rem" }} />
+									<CheckCircleIcon
+										sx={{ color: "#4CAF50", fontSize: "1.2rem" }}
+									/>
 								)}
 								<Typography
 									sx={{
@@ -650,7 +761,9 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 										color: phase === "done" ? "#4CAF50" : "#FFFFFF",
 									}}
 								>
-									{phase === "installing" ? `Installing ${info?.name ?? ""}…` : "Installation complete"}
+									{phase === "installing"
+										? `Installing ${info?.name ?? ""}…`
+										: "Installation complete"}
 								</Typography>
 							</Stack>
 
@@ -674,15 +787,28 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 									fontSize: "0.75rem",
 									fontFamily: "JetBrains Mono, monospace",
 									p: 0,
-									"&:hover": { color: "rgba(255,255,255,0.7)", background: "none" },
+									"&:hover": {
+										color: "rgba(255,255,255,0.7)",
+										background: "none",
+									},
 								}}
 							>
 								{showTerminal ? "Hide output ▲" : "Show output ▼"}
 							</Button>
 
 							<Collapse in={showTerminal}>
-								<Box sx={{ mt: 1.5, borderRadius: 1.5, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
-									<Terminal output={terminalLines} isRunning={phase === "installing"} />
+								<Box
+									sx={{
+										mt: 1.5,
+										borderRadius: 1.5,
+										overflow: "hidden",
+										border: "1px solid rgba(255,255,255,0.08)",
+									}}
+								>
+									<Terminal
+										output={terminalLines}
+										isRunning={phase === "installing"}
+									/>
 								</Box>
 							</Collapse>
 						</Box>
@@ -690,7 +816,14 @@ export function LocalFlatpakInstallModal({ filePath, onClose }: LocalFlatpakInst
 						{phase === "done" && (
 							<>
 								<Divider sx={{ borderColor: "rgba(255,255,255,0.06)" }} />
-								<Box sx={{ px: 3, py: 2, display: "flex", justifyContent: "flex-end" }}>
+								<Box
+									sx={{
+										px: 3,
+										py: 2,
+										display: "flex",
+										justifyContent: "flex-end",
+									}}
+								>
 									<Button
 										onClick={onClose}
 										variant="contained"

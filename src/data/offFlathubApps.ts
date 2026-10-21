@@ -1,5 +1,5 @@
 import kliaKompressLogo from "../assets/internalPromo/klia_kompress_logo.png";
-import kliaTranscribeLogo from "../assets/internalPromo/klia_transcribe_logo.png";
+import kliaTranscribeLogo from "../assets/internalPromo/klia_transcribe_logo.webp";
 import type { CategoryApp } from "../types";
 
 const GITHUB_RAW = "https://raw.githubusercontent.com/N3koSempai/klia-kompress/main";

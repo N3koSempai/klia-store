@@ -47,6 +47,18 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.15.0" date="2026-10-20">
+      <description>
+        <p>Klia Store now opens faster and uses less memory at startup. The 3D analytics view and the install animations are only loaded when you actually open them, and the app downloads only your language instead of all seven.</p>
+        <p>The app is noticeably lighter: the font and several images were slimmed down, and unused files were removed, making the whole package about a fifth smaller.</p>
+        <p>The app details page loads much quicker, since it no longer carries the weight of the 3D engine.</p>
+        <p>Fixed an issue where, after uninstalling an app or restoring a backup, the sizes shown in the 3D analytics view were lost and every app looked empty.</p>
+        <p>The app list no longer reloads and flickers every time the installed apps are refreshed.</p>
+        <p>Launching an app, checking disk usage and loading permissions no longer make the rest of the store feel sluggish while they work.</p>
+        <p>Update checks and hash verifications now reuse network connections, which makes verifying several apps in a row faster.</p>
+        <p>Multiple internal improvements and stability fixes across the app.</p>
+      </description>
+    </release>
     <release version="2.14.0" date="2026-10-01">
       <description>
         <p>My Apps now shows two lists: your Flatpak applications, and the applications you installed from .deb packages. Every one of them appears with its own name, version and icon.</p>
