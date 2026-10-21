@@ -15,15 +15,6 @@ export default defineConfig(async () => ({
   ],
   assetsInclude: ["**/*.lottie"],
 
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          mui: ["@mui/material", "@emotion/react", "@emotion/styled"],
-        },
-      },
-    },
-  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
