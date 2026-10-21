@@ -47,6 +47,13 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.15.1" date="2026-10-20">
+      <description>
+        <p>Patch release that fixes a serious problem with the GNOME 51 runtime and Tauri: the app's web engine got stuck at 100% CPU and the app never finished rendering, leaving a blank window.</p>
+        <p>The fix is a rollback of the GNOME Platform: Klia Store now runs on the GNOME 50 runtime again, where it opens and renders normally with regular CPU use.</p>
+        <p>No changes to features or data: your installed apps, backups and settings are untouched.</p>
+      </description>
+    </release>
     <release version="2.15.0" date="2026-10-20">
       <description>
         <p>Klia Store now opens faster and uses less memory at startup. The 3D analytics view and the install animations are only loaded when you actually open them, and the app downloads only your language instead of all seven.</p>

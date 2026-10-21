@@ -386,8 +386,8 @@ KliaStore can be distributed as a Flatpak package. The build process is complex 
 sudo apt install flatpak flatpak-builder
 
 # Install runtime and SDK
-flatpak install --user flathub org.gnome.Platform//51
-flatpak install --user flathub org.gnome.Sdk//51
+flatpak install --user flathub org.gnome.Platform//50
+flatpak install --user flathub org.gnome.Sdk//50
 
 # Install SDK extensions for Rust and Node
 flatpak install --user flathub org.freedesktop.Sdk.Extension.rust-stable//26.08
@@ -416,8 +416,8 @@ flatpak build-bundle ~/.local/share/flatpak/repo klia-store.flatpak io.github.N3
 #### Build Configuration
 
 The manifest uses:
-- **Runtime**: GNOME Platform 51
-- **SDK**: GNOME SDK 51
+- **Runtime**: GNOME Platform 50
+- **SDK**: GNOME SDK 50
 - **Node**: Node 24.x (active LTS) via SDK extension node24, freedesktop 26.08
 - **Rust**: Rust stable via SDK extension
 - **Package Manager**: npm (migrated from pnpm for Flathub compatibility)
