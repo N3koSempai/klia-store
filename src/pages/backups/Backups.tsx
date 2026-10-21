@@ -241,7 +241,6 @@ export const Backups = ({ onBack }: BackupsProps) => {
 		clearRestoreBackup,
 		restoreSourcePath,
 		reloadBackups,
-		refreshInstalledPackages,
 	]);
 
 	const handleRequestDelete = useCallback((archivePath: string) => {
