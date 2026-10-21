@@ -285,6 +285,17 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	// Apps .deb: solo orden alfabético, sin lógica de actualizaciones.
 	const sortedDebApps = useMemo(() => sortDebApps(debApps ?? []), [debApps]);
 
+	// Updates that aren't for a user-installed app (runtimes, extensions...).
+	const systemUpdates = useMemo(
+		() =>
+			updateCount -
+			installedApps.reduce(
+				(n, app) => n + (app.appId in availableUpdates ? 1 : 0),
+				0,
+			),
+		[updateCount, installedApps, availableUpdates],
+	);
+
 	const displayedCount =
 		source === "deb" ? (debApps?.length ?? 0) : installedApps.length;
 
@@ -411,33 +422,24 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 							</Button>
 
 							{/* El texto explicativo debajo del botón */}
-							{(() => {
-								const userAppUpdates = installedApps.filter((app) =>
-									hasUpdate(app.appId),
-								).length;
-								const systemUpdates = updateCount - userAppUpdates;
-								return systemUpdates > 0 ? (
-									<Stack
-										direction="row"
-										alignItems="center"
-										spacing={0.5}
-										sx={{ mt: 1, mr: 0.5 }}
+							{systemUpdates > 0 && (
+								<Stack
+									direction="row"
+									alignItems="center"
+									spacing={0.5}
+									sx={{ mt: 1, mr: 0.5 }}
+								>
+									<InfoOutlined
+										sx={{ fontSize: 14, color: "text.secondary" }}
+									/>
+									<Typography
+										variant="caption"
+										sx={{ color: "text.secondary", fontWeight: 500 }}
 									>
-										<InfoOutlined
-											sx={{ fontSize: 14, color: "text.secondary" }}
-										/>
-										<Typography
-											variant="caption"
-											sx={{
-												color: "text.secondary",
-												fontWeight: 500,
-											}}
-										>
-											{t("myApps.systemUpdates", { count: systemUpdates })}
-										</Typography>
-									</Stack>
-								) : null;
-							})()}
+										{t("myApps.systemUpdates", { count: systemUpdates })}
+									</Typography>
+								</Stack>
+							)}
 						</Stack>
 					)}
 				</Box>
