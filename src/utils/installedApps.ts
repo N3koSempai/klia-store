@@ -7,15 +7,35 @@ import type {
 
 export const toInstalledAppInfo = (
 	app: InstalledAppRust,
+	occurrence = 0,
 ): InstalledAppInfo => ({
-	instanceId: `${app.app_id}-${app.version}`,
+	// Deterministic so React keeps the same card across refreshes; the
+	// occurrence suffix disambiguates the same app+version installed twice
+	// (e.g. user and system installations).
+	instanceId:
+		occurrence === 0
+			? `${app.app_id}-${app.version}`
+			: `${app.app_id}-${app.version}#${occurrence}`,
 	appId: app.app_id,
 	name: app.name,
 	version: app.version,
 	summary: app.summary,
 	developer: app.developer,
+	installedSize: app.installed_size,
 	source: app.source,
 });
+
+export const toInstalledAppInfos = (
+	apps: InstalledAppRust[],
+): InstalledAppInfo[] => {
+	const seen = new Map<string, number>();
+	return apps.map((app) => {
+		const key = `${app.app_id}-${app.version}`;
+		const occurrence = seen.get(key) ?? 0;
+		seen.set(key, occurrence + 1);
+		return toInstalledAppInfo(app, occurrence);
+	});
+};
 
 export const toInstalledExtensionInfo = (ext: InstalledExtensionRust) => ({
 	extensionId: ext.extension_id,

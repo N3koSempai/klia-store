@@ -5,6 +5,7 @@ import {
 	sortInstalledApps,
 	toDebAppInfo,
 	toInstalledAppInfo,
+	toInstalledAppInfos,
 } from "./installedApps.ts";
 
 test("toInstalledAppInfo builds instanceId from id and version", () => {
@@ -60,5 +61,30 @@ test("sortDebApps sorts alphabetically", () => {
 	assert.deepEqual(
 		sortDebApps([{ name: "b" }, { name: "a" }]).map((x) => x.name),
 		["a", "b"],
+	);
+});
+
+test("toInstalledAppInfo keeps the installed size", () => {
+	const info = toInstalledAppInfo({
+		app_id: "a.b.C",
+		name: "C",
+		version: "1",
+		installed_size: 42,
+		source: "flathub",
+	});
+	assert.equal(info.installedSize, 42);
+});
+
+test("toInstalledAppInfos gives stable, unique ids for duplicate installs", () => {
+	const raw = [
+		{ app_id: "a.b.C", name: "C", version: "1", source: "flathub" as const },
+		{ app_id: "a.b.C", name: "C", version: "1", source: "flathub" as const },
+		{ app_id: "a.b.D", name: "D", version: "2", source: "github" as const },
+	];
+	const ids = toInstalledAppInfos(raw).map((a) => a.instanceId);
+	assert.deepEqual(ids, ["a.b.C-1", "a.b.C-1#1", "a.b.D-2"]);
+	assert.deepEqual(
+		toInstalledAppInfos(raw).map((a) => a.instanceId),
+		ids,
 	);
 });

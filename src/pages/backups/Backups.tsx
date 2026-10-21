@@ -33,7 +33,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useBackups } from "../../hooks/useBackups";
-import { useReloadInstalledApps } from "../../hooks/useReloadInstalledApps";
+import { refreshInstalledPackages } from "../../services/installedPackages";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import type { BackupAppRequest } from "../../types";
 import { formatBytes } from "../../utils/formatBytes";
@@ -211,8 +211,6 @@ export const Backups = ({ onBack }: BackupsProps) => {
 	// if a runtime got pulled in), the installed-apps store is stale — reload
 	// it the same way MyApps does after install/uninstall, so AppDetail stops
 	// showing "Install" for an app that was just restored.
-	const reloadInstalledApps = useReloadInstalledApps();
-
 	const handlePickRestoreSource = useCallback(async () => {
 		const selected = await open({
 			multiple: false,
@@ -238,12 +236,12 @@ export const Backups = ({ onBack }: BackupsProps) => {
 		if (restoreSourcePath) {
 			await reloadBackups(restoreSourcePath);
 		}
-		await reloadInstalledApps();
+		await refreshInstalledPackages();
 	}, [
 		clearRestoreBackup,
 		restoreSourcePath,
 		reloadBackups,
-		reloadInstalledApps,
+		refreshInstalledPackages,
 	]);
 
 	const handleRequestDelete = useCallback((archivePath: string) => {

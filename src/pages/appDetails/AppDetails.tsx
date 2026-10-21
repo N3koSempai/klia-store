@@ -27,6 +27,7 @@ import { GitHubStarBadge } from "../../components/GitHubStarBadge";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
 import { useRepoStats } from "../../hooks/useRepoStats";
 import { useRuntimeCheck } from "../../hooks/useRuntimeCheck";
+import { fetchInstalledPackages } from "../../services/installedPackages";
 import {
 	reportNetworkFailure,
 	reportNetworkSuccess,
@@ -229,9 +230,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				setTimeout(async () => {
 					try {
 						// Check if app was actually installed by querying the system
-						const installed = await invoke<{ apps: Array<{ app_id: string }> }>(
-							"get_installed_flatpaks",
-						);
+						const installed = await fetchInstalledPackages();
 						const isNowInstalled = installed.apps.some(
 							(a) => a.app_id === app.app_id,
 						);

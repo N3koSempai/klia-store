@@ -21,10 +21,10 @@ import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
 import { Terminal } from "../../components/Terminal";
 import { UpdateAllModal } from "../../components/UpdateAllModal";
 import { useAppVerification } from "../../hooks/useAppVerification";
-import { useReloadInstalledApps } from "../../hooks/useReloadInstalledApps";
 import { useUninstallApp } from "../../hooks/useUninstallApp";
 import { useUpdateAll } from "../../hooks/useUpdateAll";
 import { useUpdateApp } from "../../hooks/useUpdateApp";
+import { refreshInstalledPackages } from "../../services/installedPackages";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
 import { sortDebApps, sortInstalledApps } from "../../utils/installedApps";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
@@ -111,8 +111,6 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		updateSummary,
 		clearUpdateAll,
 	} = useUpdateAll();
-
-	const reloadInstalledApps = useReloadInstalledApps();
 
 	const reloadAvailableUpdates = useCallback(async () => {
 		try {
@@ -224,12 +222,12 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const handleCloseUninstallDialog = useCallback(async () => {
 		clearUninstall();
 		// Reload installed apps list after uninstall
-		await reloadInstalledApps();
+		await refreshInstalledPackages();
 		// Si se desinstaló una app deb, refrescar esa lista también.
 		if (source === "deb") {
 			void loadDebApps(true);
 		}
-	}, [clearUninstall, reloadInstalledApps, source, loadDebApps]);
+	}, [clearUninstall, source, loadDebApps]);
 
 	const handleUpdateAll = useCallback(() => {
 		setUpdateAllModalOpen(true);

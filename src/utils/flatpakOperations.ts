@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { fetchInstalledPackages } from "../services/installedPackages";
 
 export interface FlatpakOperationProgress {
 	output: string;
@@ -165,9 +166,7 @@ export async function installFromGitHubRelease(
 		const settle = async () => {
 			cleanup();
 			try {
-				const installed = await invoke<{ apps: Array<{ app_id: string }> }>(
-					"get_installed_flatpaks",
-				);
+				const installed = await fetchInstalledPackages();
 				const isNowInstalled = installed.apps.some((a) => a.app_id === appId);
 				resolve({
 					success: isNowInstalled,

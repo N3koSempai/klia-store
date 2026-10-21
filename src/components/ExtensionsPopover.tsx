@@ -14,23 +14,16 @@ import {
 	Typography,
 	useTheme,
 } from "@mui/material";
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppExtensions } from "../hooks/useAppExtensions";
+import { refreshInstalledPackages } from "../services/installedPackages";
 import type { InstalledExtensionInfo } from "../store/installedAppsStore";
 import { useInstalledAppsStore } from "../store/installedAppsStore";
 import {
 	installExtension,
 	uninstallExtension,
 } from "../utils/flatpakOperations";
-
-interface InstalledExtensionRust {
-	extension_id: string;
-	name: string;
-	version: string;
-	parent_app_id: string;
-}
 
 interface ExtensionsPopoverProps {
 	appId: string;
@@ -57,9 +50,6 @@ export const ExtensionsPopover = ({
 		useAppExtensions();
 	const getInstalledExtensionsForApp = useInstalledAppsStore(
 		(state) => state.getInstalledExtensionsForApp,
-	);
-	const setInstalledExtensions = useInstalledAppsStore(
-		(state) => state.setInstalledExtensions,
 	);
 
 	// Track state for each extension
@@ -123,23 +113,7 @@ export const ExtensionsPopover = ({
 
 			if (result.success) {
 				// Reload installed extensions from system
-				try {
-					const response = await invoke<{
-						extensions: InstalledExtensionRust[];
-					}>("get_installed_flatpaks");
-					const installedExtensionsInfo = response.extensions.map((ext) => ({
-						extensionId: ext.extension_id,
-						name: ext.name,
-						version: ext.version,
-						parentAppId: ext.parent_app_id,
-					}));
-					setInstalledExtensions(installedExtensionsInfo);
-				} catch (error) {
-					console.error(
-						"[ExtensionsPopover] Error reloading extensions:",
-						error,
-					);
-				}
+				await refreshInstalledPackages({ checkUpdates: false });
 
 				// Mark as finished installing
 				setExtensionStates((prev) => ({
@@ -212,23 +186,7 @@ export const ExtensionsPopover = ({
 
 			if (result.success) {
 				// Reload installed extensions from system
-				try {
-					const response = await invoke<{
-						extensions: InstalledExtensionRust[];
-					}>("get_installed_flatpaks");
-					const installedExtensionsInfo = response.extensions.map((ext) => ({
-						extensionId: ext.extension_id,
-						name: ext.name,
-						version: ext.version,
-						parentAppId: ext.parent_app_id,
-					}));
-					setInstalledExtensions(installedExtensionsInfo);
-				} catch (error) {
-					console.error(
-						"[ExtensionsPopover] Error reloading extensions:",
-						error,
-					);
-				}
+				await refreshInstalledPackages({ checkUpdates: false });
 
 				// Mark as finished uninstalling
 				setExtensionStates((prev) => ({

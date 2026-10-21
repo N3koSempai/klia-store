@@ -4,6 +4,7 @@ export interface InstalledAppRust {
 	version: string;
 	summary?: string;
 	developer?: string;
+	installed_size?: number;
 	source: "flathub" | "github";
 }
 
