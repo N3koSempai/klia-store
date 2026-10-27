@@ -2,15 +2,31 @@
 // (█, ▓, ▒, ░) used for progress bars.
 export const stripAnsi = (str: string): string =>
 	str
+		// OSC sequences (ESC ] ... terminated by BEL or ESC \). flatpak emits
+		// `ESC ] 9;4;N ESC \` as a terminal progress indicator; without this the
+		// payload leaks into the output as visible text like `]9;4;0\`.
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI stripping
+		.replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
+		// Unterminated OSC at the end of a chunk.
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI stripping
+		.replace(/\x1b\][^\x07\x1b]*$/g, "")
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI stripping
 		.replace(/\x1b\[[0-9;]*m/g, "")
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI stripping
 		.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "")
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI stripping
 		.replace(/\x1b\[(\?)?[0-9;]*[A-Za-z]/g, "")
+		// Charset selection (ESC ( B) and keypad mode (ESC = / ESC >)
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional ANSI stripping
+		.replace(/\x1b[()][0-9A-Za-z]|\x1b[=>]/g, "")
 		// Device status report sequences ([6n)
 		.replace(/\[(\d+)n/g, "")
-		.replace(/ /g, " ");
+		// Leftover control characters (stray ESC, BEL, backspace...). Keeps \t,
+		// \n and \r, which the callers handle.
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional control stripping
+		.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
+		// Non-breaking space -> regular space
+		.replace(/\u00a0/g, " ");
 
 // Merges one chunk of PTY output (which may hold several `\r`-separated
 // updates) into the terminal lines: `\r` overwrites the last line, and

@@ -9,6 +9,28 @@ test("stripAnsi removes colors, cursor codes and keeps block chars", () => {
 	assert.equal(stripAnsi("██░░ 50%"), "██░░ 50%");
 });
 
+test("stripAnsi removes OSC sequences (ST and BEL terminated)", () => {
+	// flatpak's terminal progress indicator, as captured from a real install
+	assert.equal(stripAnsi("\x1b]9;4;0\x1b\\\x1b[?25h"), "");
+	assert.equal(stripAnsi("a\x1b]9;4;1;50\x1b\\b"), "ab");
+	assert.equal(stripAnsi("\x1b]0;title\x07text"), "text");
+	// unterminated OSC at the end of a chunk
+	assert.equal(stripAnsi("done\x1b]9;4;0"), "done");
+});
+
+test("stripAnsi removes charset escapes and stray control characters", () => {
+	assert.equal(stripAnsi("\x1b(Bhello"), "hello");
+	assert.equal(stripAnsi("a\x07b\x08c\x1bd"), "abcd");
+	// tabs are kept
+	assert.equal(stripAnsi("a\tb"), "a\tb");
+});
+
+test("real flatpak error line renders without escape leftovers", () => {
+	const raw =
+		"\x1b]9;4;0\x1b\\\x1b[?25h\x1b[31m\x1b[1merror: \x1b[22m\x1b[0mFailed to open file";
+	assert.deepEqual(appendPtyLine([], raw), ["error: Failed to open file"]);
+});
+
 test("appendPtyLine appends new lines and skips blank ones", () => {
 	assert.deepEqual(appendPtyLine([], "hello"), ["hello"]);
 	assert.deepEqual(appendPtyLine(["a"], "   "), ["a"]);
