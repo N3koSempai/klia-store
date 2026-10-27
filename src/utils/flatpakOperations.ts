@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { stripAnsi } from "../pages/appDetails/utils/ptyOutput";
 import { fetchInstalledPackages } from "../services/installedPackages";
 
 export interface FlatpakOperationProgress {
@@ -182,11 +183,17 @@ export async function installFromGitHubRelease(
 		(async () => {
 			unlistenOutput = await listen<[string, string]>("pty-output", (event) => {
 				const [key, line] = event.payload;
-				if (key === processKey) emit(line);
+				if (key !== processKey) return;
+				// El PTY manda escapes ANSI/OSC y \r de progreso: se limpian antes
+				// de mostrarlos en la terminal.
+				for (const part of line.split("\r")) {
+					const clean = stripAnsi(part);
+					if (clean.trim()) emit(clean);
+				}
 			});
 			unlistenError = await listen<[string, string]>("pty-error", (event) => {
 				const [key, line] = event.payload;
-				if (key === processKey) emit(`Error: ${line}`);
+				if (key === processKey) emit(`Error: ${stripAnsi(line)}`);
 			});
 			unlistenTerminated = await listen<string>("pty-terminated", (event) => {
 				if (event.payload === processKey) {

@@ -26,6 +26,7 @@ import { useUpdateAll } from "../../hooks/useUpdateAll";
 import { useUpdateApp } from "../../hooks/useUpdateApp";
 import { refreshInstalledPackages } from "../../services/installedPackages";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
+import { resolveGithubRepoForUpdate } from "../../utils/githubReleaseApps";
 import { sortDebApps, sortInstalledApps } from "../../utils/installedApps";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
 import { AppCardWrapper } from "./components/AppCardWrapper";
@@ -56,6 +57,9 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		(state) => state.availableUpdates,
 	);
 	const getUpdateInfo = useInstalledAppsStore((state) => state.getUpdateInfo);
+	const getInstallSource = useInstalledAppsStore(
+		(state) => state.getInstallSource,
+	);
 	const setAvailableUpdates = useInstalledAppsStore(
 		(state) => state.setAvailableUpdates,
 	);
@@ -136,16 +140,6 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 	const [showVerificationDetails, setShowVerificationDetails] = useState(false);
 	const autoUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const handleUpdate = useCallback(
-		(appId: string) => {
-			setUpdateDialogAppId(appId);
-			verificationReset();
-			clearUpdate();
-			verifyApp(appId);
-		},
-		[verifyApp, verificationReset, clearUpdate],
-	);
-
 	const executeUpdate = useCallback(
 		async (appId: string) => {
 			const app = installedApps.find((a) => a.appId === appId);
@@ -157,6 +151,33 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 			}
 		},
 		[updateApp, installedApps, reloadAvailableUpdates],
+	);
+
+	// La verificación compara el manifest de Flathub para detectar ataques a su
+	// cadena de suministro. Las apps que se actualizan desde GitHub no pasan por
+	// Flathub (ni tienen manifest allí), así que no aplica y se omite.
+	const isGithubUpdate = useCallback(
+		(appId: string) =>
+			resolveGithubRepoForUpdate(
+				appId,
+				getInstallSource(appId),
+				getUpdateInfo(appId),
+			) !== undefined,
+		[getInstallSource, getUpdateInfo],
+	);
+
+	const handleUpdate = useCallback(
+		(appId: string) => {
+			setUpdateDialogAppId(appId);
+			verificationReset();
+			clearUpdate();
+			if (isGithubUpdate(appId)) {
+				void executeUpdate(appId);
+				return;
+			}
+			verifyApp(appId);
+		},
+		[verifyApp, verificationReset, clearUpdate, isGithubUpdate, executeUpdate],
 	);
 
 	// Auto-trigger update when verification succeeds
@@ -235,8 +256,12 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 
 	const executeUpdateAll = useCallback(
 		async (appsToInclude: Array<{ appId: string; appName: string }>) => {
-			const appsToUpdate = installedApps.filter((app) =>
-				appsToInclude.some((a) => a.appId === app.appId),
+			// Las apps de GitHub no se verifican (ver isGithubUpdate), así que no
+			// llegan en appsToInclude pero siempre se actualizan.
+			const appsToUpdate = installedApps.filter(
+				(app) =>
+					appsToInclude.some((a) => a.appId === app.appId) ||
+					(hasUpdate(app.appId) && isGithubUpdate(app.appId)),
 			);
 			const initialSystemUpdates = Math.max(
 				0,
@@ -248,7 +273,14 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 			await updateAll(appsToUpdate, initialSystemUpdates);
 			await reloadAvailableUpdates();
 		},
-		[installedApps, updateCount, updateAll, reloadAvailableUpdates],
+		[
+			installedApps,
+			updateCount,
+			updateAll,
+			reloadAvailableUpdates,
+			hasUpdate,
+			isGithubUpdate,
+		],
 	);
 
 	const handleCloseUpdateAllModal = useCallback(async () => {
@@ -1062,7 +1094,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 				<UpdateAllModal
 					open={updateAllModalOpen}
 					appsToVerify={installedApps
-						.filter((app) => hasUpdate(app.appId))
+						.filter((app) => hasUpdate(app.appId) && !isGithubUpdate(app.appId))
 						.map((app) => ({ appId: app.appId, appName: app.name }))}
 					onClose={handleCloseUpdateAllModal}
 					onProceedWithUpdate={executeUpdateAll}

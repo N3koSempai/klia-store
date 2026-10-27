@@ -44,6 +44,63 @@ fn derive_install_source(origin: &str) -> String {
     }
 }
 
+/// Parses `flatpak list --app --columns=application,version` (tab separated)
+/// into an app_id -> installed version map. The first entry wins when an app is
+/// installed twice (e.g. user and system). Apps without a version are kept with
+/// an empty string so callers can tell "installed" from "not installed".
+fn parse_installed_versions(stdout: &str) -> std::collections::HashMap<String, String> {
+    let mut map = std::collections::HashMap::new();
+    for line in stdout.lines() {
+        let mut parts = line.split('\t');
+        let app_id = parts.next().map(str::trim).unwrap_or("");
+        if app_id.is_empty() {
+            continue;
+        }
+        let version = parts.next().map(str::trim).unwrap_or("");
+        map.entry(app_id.to_string())
+            .or_insert_with(|| version.to_string());
+    }
+    map
+}
+
+#[cfg(test)]
+mod installed_versions_tests {
+    use super::parse_installed_versions;
+
+    // Salida real de `flatpak list --app --columns=application,version`.
+    const OUTPUT: &str = "ca.vlacroix.Tally\t1.0\n\
+io.github.N3kosempai.klia-scaler-player\t1.0.0\n\
+io.github.N3kosempai.klia-store\t2.15.1\n\
+io.github.N3kosempai.klia-store\t2.15.0\n\
+org.no.Version\t\n";
+
+    #[test]
+    fn maps_app_ids_to_versions() {
+        let map = parse_installed_versions(OUTPUT);
+        assert_eq!(
+            map.get("io.github.N3kosempai.klia-scaler-player").map(String::as_str),
+            Some("1.0.0")
+        );
+        assert_eq!(map.get("ca.vlacroix.Tally").map(String::as_str), Some("1.0"));
+    }
+
+    #[test]
+    fn first_installation_wins_when_listed_twice() {
+        let map = parse_installed_versions(OUTPUT);
+        assert_eq!(
+            map.get("io.github.N3kosempai.klia-store").map(String::as_str),
+            Some("2.15.1")
+        );
+    }
+
+    #[test]
+    fn keeps_apps_without_version_and_skips_missing_ones() {
+        let map = parse_installed_versions(OUTPUT);
+        assert_eq!(map.get("org.no.Version").map(String::as_str), Some(""));
+        assert!(!map.contains_key("io.github.N3kosempai.not-installed"));
+    }
+}
+
 #[cfg(test)]
 mod install_source_tests {
     use super::derive_install_source;
@@ -1451,20 +1508,24 @@ async fn check_github_updates(
 ) -> Result<Vec<GitHubUpdateInfo>, String> {
     let client = http::github_client();
 
+    // `flatpak info` has no option to print only the version, so list the
+    // installed apps once and look each one up (same approach as backup.rs).
+    let output = run_flatpak_async(&app, &["list", "--app", "--columns=application,version"]).await?;
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to list installed apps: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    let installed_versions = parse_installed_versions(&String::from_utf8_lossy(&output.stdout));
+
     let mut results = Vec::new();
 
     for (app_id, github_repo) in apps {
-        // Get installed version via flatpak info
-        let output = run_flatpak_async(&app, &["info", "--show-version", &app_id]).await;
-
-        let installed_version = match output {
-            Ok(o) if o.status.success() => {
-                String::from_utf8_lossy(&o.stdout).trim().to_string()
-            }
-            _ => {
-                // App not installed, skip
-                continue;
-            }
+        let installed_version = match installed_versions.get(&app_id) {
+            Some(v) if !v.is_empty() => v.clone(),
+            // Not installed (or no version to compare against), skip
+            _ => continue,
         };
 
         // Get latest release tag from GitHub API

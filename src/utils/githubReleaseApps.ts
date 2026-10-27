@@ -5,6 +5,7 @@
 export const GITHUB_RELEASE_REPOS: Record<string, string> = {
 	"io.github.N3kosempai.klia-kompress": "N3koSempai/klia-kompress",
 	"io.github.N3kosempai.klia-transcribe": "N3koSempai/klia_transcription",
+	"io.github.N3kosempai.klia-scaler-player": "N3koSempai/klia-scaler-player",
 };
 
 export const getGitHubReleaseRepo = (appId: string): string | undefined =>

@@ -201,6 +201,11 @@
     "installing": "Installing",
     "install": "Install"
   },
+  "klia": {
+    "back": "Back",
+    "tagline": "Tools built with privacy and speed in mind: local, fast and under your control.",
+    "title": "Klia Apps"
+  },
   "home": {
     "appOfTheDay": "App of the day",
     "appsOfTheWeek": "Apps of the week",

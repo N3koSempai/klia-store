@@ -201,6 +201,11 @@
     "title": "Extensiones",
     "uninstalling": "Desinstalando"
   },
+  "klia": {
+    "back": "Volver",
+    "tagline": "Herramientas creadas con la privacidad y la velocidad en mente: locales, rápidas y bajo tu control.",
+    "title": "Apps Klia"
+  },
   "home": {
     "appOfTheDay": "Aplicación del día",
     "appsOfTheWeek": "Aplicaciones de la semana",

@@ -201,6 +201,11 @@
     "installing": "正在安装",
     "install": "安装"
   },
+  "klia": {
+    "back": "返回",
+    "tagline": "注重隐私与速度的工具:本地运行、快速高效,完全由你掌控。",
+    "title": "Klia 应用"
+  },
   "home": {
     "appOfTheDay": "今日推荐",
     "appsOfTheWeek": "本周热门",

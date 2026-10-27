@@ -42,6 +42,10 @@ function HomeRoute() {
 		navigate({ to: "/my-apps" });
 	};
 
+	const handleKliaClick = () => {
+		navigate({ to: "/klia" });
+	};
+
 	const handleAnalyticsClick = () => {
 		navigate({ to: "/analytics" });
 	};
@@ -55,6 +59,7 @@ function HomeRoute() {
 			onAppSelect={handleAppSelect}
 			onCategorySelect={handleCategorySelect}
 			onMyAppsClick={handleMyAppsClick}
+			onKliaClick={handleKliaClick}
 			onAnalyticsClick={handleAnalyticsClick}
 			onBackupsClick={handleBackupsClick}
 			initialSearchQuery={searchQuery}

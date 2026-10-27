@@ -22,6 +22,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { appendPtyLine, stripAnsi } from "../pages/appDetails/utils/ptyOutput";
 import { refreshInstalledPackages } from "../services/installedPackages";
 import { Terminal } from "./Terminal";
 
@@ -251,7 +252,9 @@ export function LocalFlatpakInstallModal({
 			(event) => {
 				const [key, line] = event.payload;
 				if (key === processKey.current) {
-					setTerminalLines((prev) => [...prev, line]);
+					// Misma limpieza que la instalación desde Flathub: quita los
+					// escapes ANSI/OSC y resuelve los \r de las barras de progreso.
+					setTerminalLines((prev) => appendPtyLine(prev, line));
 				}
 			},
 		);
@@ -262,7 +265,7 @@ export function LocalFlatpakInstallModal({
 			(event) => {
 				const [key, line] = event.payload;
 				if (key === processKey.current) {
-					setTerminalLines((prev) => [...prev, `[stderr] ${line}`]);
+					setTerminalLines((prev) => [...prev, `[stderr] ${stripAnsi(line)}`]);
 				}
 			},
 		);
