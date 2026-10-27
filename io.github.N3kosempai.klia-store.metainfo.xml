@@ -54,6 +54,8 @@
         <p>Fixed updates for apps installed from a GitHub release: they were never detected, so the store never offered the new version. Now they are found and can be updated.</p>
         <p>The My Apps button on the Home screen now shows the number of pending updates by itself, once Flathub and GitHub have both been checked. You no longer need to open My Apps and come back to see the red indicator.</p>
         <p>Fixed stray symbols appearing in the installation terminal when installing a local .flatpak file or installing and updating apps from GitHub.</p>
+        <p>Fixed missing icons in the My Apps list for apps that are not on Flathub, such as Klia Scaler Player and Klia Transcription.</p>
+        <p>Updating an app installed from a GitHub release no longer shows a security verification warning. That check guards against tampering with Flathub's supply chain, which does not apply to apps that do not come from Flathub.</p>
       </description>
     </release>
     <release version="2.15.1" date="2026-10-20">
