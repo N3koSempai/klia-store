@@ -19,6 +19,7 @@ import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
 import { ExtensionsPopover } from "../../../components/ExtensionsPopover";
+import { OFF_FLATHUB_APPS } from "../../../data/offFlathubApps";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
 import { DebAppIcon } from "./DebAppIcon";
 
@@ -192,6 +193,18 @@ const InstalledAppCardComponent = ({
 							appId={app.appId}
 							iconPath={app.iconPath}
 							name={app.name}
+						/>
+					) : OFF_FLATHUB_APPS[app.appId] ? (
+						// Apps que no están en Flathub: no hay icono remoto que pedir,
+						// se usa el empaquetado (no es una URL, así que va sin CachedImage).
+						<img
+							src={OFF_FLATHUB_APPS[app.appId].icon}
+							alt={app.name}
+							style={{
+								width: "100%",
+								height: "100%",
+								objectFit: "contain",
+							}}
 						/>
 					) : (
 						<CachedImage
