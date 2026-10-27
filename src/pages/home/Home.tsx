@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import kliaSoftwareLogo from "../../assets/internalPromo/klia-software.png";
 import { AboutModal } from "../../components/AboutModal";
 import { AppSearchBar } from "../../components/AppSearchBar";
 import { CachedImage } from "../../components/CachedImage";
@@ -38,6 +39,7 @@ interface HomeProps {
 	) => void;
 	onCategorySelect: (categoryId: string) => void;
 	onMyAppsClick: () => void;
+	onKliaClick: () => void;
 	onAnalyticsClick: () => void;
 	onBackupsClick: () => void;
 	initialSearchQuery?: string;
@@ -48,6 +50,7 @@ export const Home = ({
 	onAppSelect,
 	onCategorySelect,
 	onMyAppsClick,
+	onKliaClick,
 	onAnalyticsClick,
 	onBackupsClick,
 	initialSearchQuery = "",
@@ -140,6 +143,31 @@ export const Home = ({
 							/>
 						)}
 					</Paper>
+
+					{/* Sección Klia */}
+					<IconButton
+						aria-label={t("klia.title")}
+						title={t("klia.title")}
+						onClick={onKliaClick}
+						sx={{
+							p: 0,
+							height: 48,
+							width: 48,
+							overflow: "hidden",
+							transition: "all 0.2s",
+							"&:hover": {
+								transform: "translateY(-2px)",
+								boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.6)}`,
+							},
+						}}
+					>
+						<Box
+							component="img"
+							src={kliaSoftwareLogo}
+							alt=""
+							sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+						/>
+					</IconButton>
 
 					{/* Barra de Búsqueda con componente integrado */}
 					<AppSearchBar

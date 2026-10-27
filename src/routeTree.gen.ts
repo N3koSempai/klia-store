@@ -13,6 +13,7 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutAnalyticsRouteImport } from './routes/_layout/analytics'
 import { Route as LayoutBackupsRouteImport } from './routes/_layout/backups'
+import { Route as LayoutKliaRouteImport } from './routes/_layout/klia'
 import { Route as LayoutMyAppsRouteImport } from './routes/_layout/my-apps'
 import { Route as LayoutAppAppIdRouteImport } from './routes/_layout/app.$appId'
 import { Route as LayoutCategoryCategoryIdRouteImport } from './routes/_layout/category.$categoryId'
@@ -35,6 +36,11 @@ const LayoutAnalyticsRoute = LayoutAnalyticsRouteImport.update({
 const LayoutBackupsRoute = LayoutBackupsRouteImport.update({
   id: '/backups',
   path: '/backups',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutKliaRoute = LayoutKliaRouteImport.update({
+  id: '/klia',
+  path: '/klia',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutMyAppsRoute = LayoutMyAppsRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/analytics': typeof LayoutAnalyticsRoute
   '/backups': typeof LayoutBackupsRoute
+  '/klia': typeof LayoutKliaRoute
   '/my-apps': typeof LayoutMyAppsRoute
   '/app/$appId': typeof LayoutAppAppIdRoute
   '/category/$categoryId': typeof LayoutCategoryCategoryIdRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/analytics': typeof LayoutAnalyticsRoute
   '/backups': typeof LayoutBackupsRoute
+  '/klia': typeof LayoutKliaRoute
   '/my-apps': typeof LayoutMyAppsRoute
   '/': typeof LayoutIndexRoute
   '/app/$appId': typeof LayoutAppAppIdRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/analytics': typeof LayoutAnalyticsRoute
   '/_layout/backups': typeof LayoutBackupsRoute
+  '/_layout/klia': typeof LayoutKliaRoute
   '/_layout/my-apps': typeof LayoutMyAppsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/app/$appId': typeof LayoutAppAppIdRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/'
     | '/analytics'
     | '/backups'
+    | '/klia'
     | '/my-apps'
     | '/app/$appId'
     | '/category/$categoryId'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
   to:
     | '/analytics'
     | '/backups'
+    | '/klia'
     | '/my-apps'
     | '/'
     | '/app/$appId'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/_layout/analytics'
     | '/_layout/backups'
+    | '/_layout/klia'
     | '/_layout/my-apps'
     | '/_layout/'
     | '/_layout/app/$appId'
@@ -154,6 +166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutBackupsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/klia': {
+      id: '/_layout/klia'
+      path: '/klia'
+      fullPath: '/klia'
+      preLoaderRoute: typeof LayoutKliaRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/my-apps': {
       id: '/_layout/my-apps'
       path: '/my-apps'
@@ -188,6 +207,7 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutAnalyticsRoute: typeof LayoutAnalyticsRoute
   LayoutBackupsRoute: typeof LayoutBackupsRoute
+  LayoutKliaRoute: typeof LayoutKliaRoute
   LayoutMyAppsRoute: typeof LayoutMyAppsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAppAppIdRoute: typeof LayoutAppAppIdRoute
@@ -198,6 +218,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAnalyticsRoute: LayoutAnalyticsRoute,
   LayoutBackupsRoute: LayoutBackupsRoute,
+  LayoutKliaRoute: LayoutKliaRoute,
   LayoutMyAppsRoute: LayoutMyAppsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAppAppIdRoute: LayoutAppAppIdRoute,

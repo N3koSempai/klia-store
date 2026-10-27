@@ -152,6 +152,11 @@
     "installing": "インストール中",
     "install": "インストール"
   },
+  "klia": {
+    "back": "戻る",
+    "tagline": "プライバシーと速度を重視して作られたツール。ローカルで動作し、高速で、あなたの管理下にあります。",
+    "title": "Klia アプリ"
+  },
   "home": {
     "appOfTheDay": "今日のアプリ",
     "appsOfTheWeek": "今週のアプリ",

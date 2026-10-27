@@ -1,10 +1,14 @@
 import kliaKompressLogo from "../assets/internalPromo/klia_kompress_logo.png";
+import kliaScalerPlayerLogo from "../assets/internalPromo/klia_scaler_player_logo.png";
 import kliaTranscribeLogo from "../assets/internalPromo/klia_transcribe_logo.webp";
 import type { CategoryApp } from "../types";
 
 const GITHUB_RAW = "https://raw.githubusercontent.com/N3koSempai/klia-kompress/main";
 const TRANSCRIBE_GITHUB_RAW =
 	"https://raw.githubusercontent.com/N3koSempai/klia_transcription/main";
+// Este repo usa `master` como rama por defecto.
+const SCALER_GITHUB_RAW =
+	"https://raw.githubusercontent.com/N3koSempai/klia-scaler-player/master";
 
 export const OFF_FLATHUB_APPS: Record<string, CategoryApp> = {
 	"io.github.N3kosempai.klia-kompress": {
@@ -129,6 +133,63 @@ export const OFF_FLATHUB_APPS: Record<string, CategoryApp> = {
 		urls: {
 			homepage: "https://kliahub.xyz",
 			vcs_browser: "https://github.com/N3koSempai/klia_transcription",
+		},
+	},
+	"io.github.N3kosempai.klia-scaler-player": {
+		app_id: "io.github.N3kosempai.klia-scaler-player",
+		name: "Klia Scaler Player",
+		summary: "Video player with real-time AI upscaling",
+		description:
+			"Klia Scaler Player is a video player built on mpv and libplacebo that upscales video in real time on your GPU. Choose FSR, ArtCNN or Anime4K profiles from the player and watch lower-resolution video sharper on a larger screen. SDR and HDR video are supported.",
+		id: "io.github.N3kosempai.klia-scaler-player",
+		type: "desktop-application",
+		translations: {},
+		project_license: "LicenseRef-proprietary",
+		is_free_license: false,
+		icon: kliaScalerPlayerLogo,
+		main_categories: "AudioVideo",
+		sub_categories: [],
+		developer_name: "N3koSempai",
+		verification_verified: true,
+		verification_method: "none",
+		verification_login_name: "N3koSempai",
+		verification_login_provider: "github",
+		verification_login_is_organization: null,
+		verification_website: null,
+		verification_timestamp: null,
+		runtime: "org.gnome.Platform/x86_64/49",
+		updated_at: 1792972800,
+		arches: ["x86_64"],
+		added_at: 1792972800,
+		trending: 0,
+		installs_last_month: 0,
+		isMobileFriendly: false,
+		keywords: ["video", "player", "upscaling", "mpv", "fsr", "anime4k", "hdr"],
+		screenshots: [
+			{
+				sizes: [
+					{
+						width: "1024",
+						height: "640",
+						scale: "1",
+						src: `${SCALER_GITHUB_RAW}/screenshots/klia_scaler_player_1.webp`,
+					},
+				],
+			},
+			{
+				sizes: [
+					{
+						width: "1024",
+						height: "640",
+						scale: "1",
+						src: `${SCALER_GITHUB_RAW}/screenshots/klia_scaler_player_2.webp`,
+					},
+				],
+			},
+		],
+		urls: {
+			homepage: "https://github.com/N3koSempai/klia-scaler-player",
+			vcs_browser: "https://github.com/N3koSempai/klia-scaler-player",
 		},
 	},
 };

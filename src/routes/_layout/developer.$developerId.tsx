@@ -1,7 +1,8 @@
 import { Box } from "@mui/material";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import kliaAnimation from "../../assets/animations/klia.svg";
+import { isKliaDeveloper } from "../../data/kliaApps";
 import type { CategoryApp } from "../../types";
 
 const DeveloperProfile = lazy(() =>
@@ -20,6 +21,15 @@ export const Route = createFileRoute("/_layout/developer/$developerId")({
 		developerName: search.developerName as string | undefined,
 		developerAppId: search.developerAppId as string | undefined,
 	}),
+	// El desarrollador Klia tiene su propia sección en lugar de la lista clásica.
+	beforeLoad: ({ params, search }) => {
+		if (
+			isKliaDeveloper(params.developerId) ||
+			isKliaDeveloper(search.developerName)
+		) {
+			throw redirect({ to: "/klia", replace: true });
+		}
+	},
 	component: DeveloperRoute,
 });
 
