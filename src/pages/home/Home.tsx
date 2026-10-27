@@ -58,8 +58,10 @@ export const Home = ({
 }: HomeProps) => {
 	const { t } = useTranslation();
 	const theme = useTheme();
-	const getUpdateCount = useInstalledAppsStore((state) => state.getUpdateCount);
-	const updateCount = getUpdateCount();
+	// Hay que suscribirse al valor y no a la función getUpdateCount: la referencia
+	// de la función nunca cambia, así que Home no se re-renderizaba cuando las
+	// actualizaciones llegaban después de montarse.
+	const updateCount = useInstalledAppsStore((state) => state.updateCount);
 	const [searchResults, setSearchResults] =
 		useState<CategoryApp[]>(initialSearchResults);
 	const [isSearching, setIsSearching] = useState(false);
