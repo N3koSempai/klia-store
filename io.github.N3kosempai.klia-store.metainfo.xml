@@ -47,6 +47,15 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.16.0" date="2026-10-27">
+      <description>
+        <p>New Klia section: a button with the Klia logo next to My Apps opens a page that gathers all the Klia apps in one place (Klia Store, Klia Kompress, Klia Transcription, Klia Scaler Player and Hetairos AI). Pick any of them to open its usual details page and install it from there. Choosing N3koSempai as the developer of an app now takes you to this section too.</p>
+        <p>Klia Scaler Player is now available in the store: a video player with real-time AI upscaling (FSR, ArtCNN and Anime4K profiles), installed from its GitHub release.</p>
+        <p>Fixed updates for apps installed from a GitHub release: they were never detected, so the store never offered the new version. Now they are found and can be updated.</p>
+        <p>The My Apps button on the Home screen now shows the number of pending updates by itself, once Flathub and GitHub have both been checked. You no longer need to open My Apps and come back to see the red indicator.</p>
+        <p>Fixed stray symbols appearing in the installation terminal when installing a local .flatpak file or installing and updating apps from GitHub.</p>
+      </description>
+    </release>
     <release version="2.15.1" date="2026-10-20">
       <description>
         <p>Patch release that fixes a serious problem with the GNOME 51 runtime and Tauri: the app's web engine got stuck at 100% CPU and the app never finished rendering, leaving a blank window.</p>
