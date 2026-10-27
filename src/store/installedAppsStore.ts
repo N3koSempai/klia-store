@@ -90,6 +90,10 @@ interface InstalledAppsStore {
 	updateCount: number;
 	// Loading state for initial updates check
 	isLoadingUpdates: boolean;
+	// El chequeo de updates de GitHub corre una vez por sesión; esto marca que
+	// ya terminó (con resultados, vacío o fallido) para poder mostrar el
+	// contador solo cuando ambas fuentes respondieron.
+	githubUpdatesSettled: boolean;
 	// Installed runtimes (for dependency checking)
 	installedRuntimes: Set<string>;
 	setInstalledApp: (appId: string, isInstalled: boolean) => void;
@@ -100,6 +104,7 @@ interface InstalledAppsStore {
 	mergeAvailableUpdates: (updates: UpdateAvailableInfo[]) => void;
 	clearAvailableUpdate: (appId: string) => void;
 	setIsLoadingUpdates: (isLoading: boolean) => void;
+	markGithubUpdatesSettled: () => void;
 	setInstalledRuntimes: (runtimes: string[]) => void;
 	getInstallSource: (appId: string) => InstallSource | undefined;
 	isAppInstalled: (appId: string) => boolean;
@@ -118,6 +123,7 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 	availableUpdates: {},
 	updateCount: 0,
 	isLoadingUpdates: true,
+	githubUpdatesSettled: false,
 	installedRuntimes: new Set<string>(),
 
 	setInstalledApp: (appId: string, isInstalled: boolean) =>
@@ -208,6 +214,8 @@ export const useInstalledAppsStore = create<InstalledAppsStore>((set, get) => ({
 
 	setIsLoadingUpdates: (isLoading: boolean) =>
 		set({ isLoadingUpdates: isLoading }),
+
+	markGithubUpdatesSettled: () => set({ githubUpdatesSettled: true }),
 
 	setInstalledRuntimes: (runtimes: string[]) => {
 		console.log(

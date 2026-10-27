@@ -25,7 +25,7 @@ import { CachedImage } from "../../components/CachedImage";
 import { NotificationMenu } from "../../components/NotificationMenu";
 import { SettingsModal } from "../../components/SettingsModal";
 import { useNotifications } from "../../hooks/useNotifications";
-import { useInstalledAppsStore } from "../../store/installedAppsStore";
+import { useUpdateBadgeCount } from "../../hooks/useUpdateBadgeCount";
 import type { CategoryApp } from "../../types";
 import { AppsOfTheDaySection } from "./components/AppsOfTheDaySection";
 import { CategoriesSection } from "./components/CategoriesSection";
@@ -58,10 +58,9 @@ export const Home = ({
 }: HomeProps) => {
 	const { t } = useTranslation();
 	const theme = useTheme();
-	// Hay que suscribirse al valor y no a la función getUpdateCount: la referencia
-	// de la función nunca cambia, así que Home no se re-renderizaba cuando las
-	// actualizaciones llegaban después de montarse.
-	const updateCount = useInstalledAppsStore((state) => state.updateCount);
+	// Espera a que Flathub y GitHub respondan para no mostrar un número que
+	// luego salta (ver useUpdateBadgeCount).
+	const updateCount = useUpdateBadgeCount();
 	const [searchResults, setSearchResults] =
 		useState<CategoryApp[]>(initialSearchResults);
 	const [isSearching, setIsSearching] = useState(false);
