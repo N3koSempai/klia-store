@@ -22,6 +22,7 @@ export const useGitHubUpdates = () => {
 						branch: "stable",
 						source: "github" as const,
 						githubRepo: r.githubRepo,
+						changelog: r.changelog,
 					}));
 
 				if (withUpdate.length > 0) {
