@@ -19,6 +19,7 @@ A modern desktop application for browsing and managing Flatpak applications from
 - **Material UI v7**: Component library
 - **TanStack Query**: Data fetching and caching
 - **npm**: Package manager
+- 
 ## Development
 
 ### Prerequisites
