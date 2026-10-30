@@ -47,6 +47,13 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.17.0" date="2026-10-29">
+      <description>
+        <p>Uninstalling a Flatpak app now asks what to do with its data. A dialog appears from My Apps and from the app page: "Uninstall" keeps your settings, saves and files so you can pick up where you left off if you reinstall, and "Uninstall and delete data" removes them as well.</p>
+        <p>Klia Scaler Player is now the featured app on the Home screen, replacing Klia Transcription.</p>
+        <p>Fixed the release notes of apps installed from GitHub, such as Klia Scaler Player: the notes button in My Apps now shows the description of the new release instead of failing to find notes.</p>
+      </description>
+    </release>
     <release version="2.16.0" date="2026-10-27">
       <description>
         <p>New Klia section: a button with the Klia logo next to My Apps opens a page that gathers all the Klia apps in one place (Klia Store, Klia Kompress, Klia Transcription, Klia Scaler Player and Hetairos AI). Pick any of them to open its usual details page and install it from there. Choosing N3koSempai as the developer of an app now takes you to this section too.</p>
