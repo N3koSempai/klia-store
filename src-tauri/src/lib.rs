@@ -946,7 +946,11 @@ async fn launch_flatpak(app_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), String> {
+async fn uninstall_flatpak(
+    app: tauri::AppHandle,
+    app_id: String,
+    delete_data: Option<bool>,
+) -> Result<(), String> {
     app.emit(
         "install-output",
         format!("Iniciando desinstalación de {}...", app_id),
@@ -958,18 +962,26 @@ async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), 
     // Detect if we're running inside a flatpak
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
+    // Without --delete-data flatpak keeps ~/.var/app/<id> after uninstalling.
+    let mut uninstall_args = vec!["uninstall", "-y"];
+    if delete_data.unwrap_or(false) {
+        uninstall_args.push("--delete-data");
+    }
+    uninstall_args.push(&app_id);
+
     let (mut rx, _child) = if is_flatpak {
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "uninstall", "-y", &app_id])
+            .args(["--host", "flatpak"])
+            .args(&uninstall_args)
             .spawn()
             .map_err(|e| format!("Failed to spawn flatpak-spawn: {}", e))?
     } else {
         // Outside flatpak, use flatpak directly
         shell
             .command("flatpak")
-            .args(["uninstall", "-y", &app_id])
+            .args(&uninstall_args)
             .spawn()
             .map_err(|e| format!("Failed to spawn flatpak: {}", e))?
     };

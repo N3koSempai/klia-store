@@ -455,5 +455,12 @@
       "colorBlindProtanopia": "Protanopia (cego ao vermelho)",
       "colorBlindTritanopia": "Tritanopia (azul-amarelo)"
     }
+  },
+  "uninstallDialog": {
+    "title": "Desinstalar {{name}}?",
+    "description": "Suas configurações, saves e arquivos permanecem no sistema, então você continua de onde parou se reinstalar. Escolha “Desinstalar e apagar dados” para removê-los também; isso não pode ser desfeito.",
+    "cancel": "Cancelar",
+    "confirm": "Desinstalar",
+    "confirmDelete": "Desinstalar e apagar dados"
   }
 }

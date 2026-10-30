@@ -18,6 +18,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
+import { UninstallDialog } from "../../components/UninstallDialog";
 import { Terminal } from "../../components/Terminal";
 import { UpdateAllModal } from "../../components/UpdateAllModal";
 import { useAppVerification } from "../../hooks/useAppVerification";
@@ -67,6 +68,9 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		(state) => state.isLoadingUpdates,
 	);
 
+	const [appPendingUninstall, setAppPendingUninstall] = useState<string | null>(
+		null,
+	);
 	const [selectedAppForNotes, setSelectedAppForNotes] = useState<string | null>(
 		null,
 	);
@@ -222,12 +226,21 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 		clearUpdate();
 	}, [clearUpdate, verificationReset]);
 
-	const handleUninstall = useCallback(
-		async (appId: string) => {
+	// El botón solo abre el diálogo; la desinstalación real corre al confirmar
+	// y el usuario elige si se borran también los datos de la app.
+	const handleUninstall = useCallback((appId: string) => {
+		setAppPendingUninstall(appId);
+	}, []);
+
+	const handleConfirmUninstall = useCallback(
+		async (deleteData: boolean) => {
+			const appId = appPendingUninstall;
+			setAppPendingUninstall(null);
+			if (!appId) return;
 			const app = installedApps.find((a) => a.appId === appId);
-			await uninstallApp(appId, app?.name);
+			await uninstallApp(appId, app?.name, "flatpak", deleteData);
 		},
-		[uninstallApp, installedApps],
+		[uninstallApp, installedApps, appPendingUninstall],
 	);
 
 	// Modo deb: el "appId" es el nombre del paquete dpkg y la desinstalación
@@ -571,6 +584,18 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 						</Typography>
 					</Box>
 				)}
+
+				<UninstallDialog
+					open={appPendingUninstall !== null}
+					appId={appPendingUninstall ?? ""}
+					appName={
+						installedApps.find((a) => a.appId === appPendingUninstall)?.name ??
+						appPendingUninstall ??
+						""
+					}
+					onCancel={() => setAppPendingUninstall(null)}
+					onConfirm={handleConfirmUninstall}
+				/>
 
 				{/* Release Notes Modal */}
 				{selectedApp && updateInfo && (

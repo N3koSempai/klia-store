@@ -246,10 +246,11 @@ export async function updateSystemFlatpaks(
  */
 export async function uninstallFlatpakApp(
 	appId: string,
+	deleteData = false,
 	onProgress?: (progress: FlatpakOperationProgress) => void,
 ): Promise<FlatpakOperationResult> {
 	return executeFlatpakOperation(
-		() => invoke("uninstall_flatpak", { appId }),
+		() => invoke("uninstall_flatpak", { appId, deleteData }),
 		onProgress,
 	);
 }

@@ -458,5 +458,12 @@
       "verify": "Verificar pago",
       "verifying": "Verificando..."
     }
+  },
+  "uninstallDialog": {
+    "title": "¿Desinstalar {{name}}?",
+    "description": "Tus ajustes, partidas y archivos se quedan en tu sistema, así que si reinstalas continúas donde lo dejaste. Elige «Desinstalar y borrar datos» para eliminarlos también; no se puede deshacer.",
+    "cancel": "Cancelar",
+    "confirm": "Desinstalar",
+    "confirmDelete": "Desinstalar y borrar datos"
   }
 }

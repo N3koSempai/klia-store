@@ -458,5 +458,12 @@
       "colorBlindProtanopia": "Protanopia (red-blind)",
       "colorBlindTritanopia": "Tritanopia (blue-yellow)"
     }
+  },
+  "uninstallDialog": {
+    "title": "Uninstall {{name}}?",
+    "description": "Your settings, saves and files stay on your system, so you can pick up where you left off if you reinstall. Choose “Uninstall and delete data” to remove them too; that cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Uninstall",
+    "confirmDelete": "Uninstall and delete data"
   }
 }

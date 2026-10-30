@@ -409,5 +409,12 @@
       "colorBlindProtanopia": "赤色盲",
       "colorBlindTritanopia": "青黄色盲"
     }
+  },
+  "uninstallDialog": {
+    "title": "{{name}} をアンインストールしますか？",
+    "description": "設定、セーブデータ、ファイルはシステムに残るため、再インストールすると続きから使えます。これらも削除するには「アンインストールしてデータを削除」を選んでください。元に戻すことはできません。",
+    "cancel": "キャンセル",
+    "confirm": "アンインストール",
+    "confirmDelete": "アンインストールしてデータを削除"
   }
 }
