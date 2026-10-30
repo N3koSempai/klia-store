@@ -18,21 +18,22 @@ interface PromotedAppCardData {
 	name: string;
 	summary: string;
 	icon: string;
+	beta?: boolean;
 	categoryApp?: CategoryApp;
 }
 
 // Marrón del badge "beta" que acompaña al chip de promocionado.
 const BETA_BROWN = "#B98A5E";
 
-const KLIA_TRANSCRIBE_APP_ID = "io.github.N3kosempai.klia-transcribe";
-const kliaTranscribeData = OFF_FLATHUB_APPS[KLIA_TRANSCRIBE_APP_ID];
+const KLIA_SCALER_PLAYER_APP_ID = "io.github.N3kosempai.klia-scaler-player";
+const kliaScalerPlayerData = OFF_FLATHUB_APPS[KLIA_SCALER_PLAYER_APP_ID];
 
-const KLIA_TRANSCRIBE_PROMO: PromotedAppCardData = {
-	appId: KLIA_TRANSCRIBE_APP_ID,
-	name: kliaTranscribeData.name,
-	summary: kliaTranscribeData.summary,
-	icon: kliaTranscribeData.icon,
-	categoryApp: kliaTranscribeData,
+const KLIA_SCALER_PLAYER_PROMO: PromotedAppCardData = {
+	appId: KLIA_SCALER_PLAYER_APP_ID,
+	name: kliaScalerPlayerData.name,
+	summary: kliaScalerPlayerData.summary,
+	icon: kliaScalerPlayerData.icon,
+	categoryApp: kliaScalerPlayerData,
 };
 
 export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
@@ -40,7 +41,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const theme = useTheme();
 	const { data: appOfTheDay, isLoading, error } = useAppOfTheDay();
 
-	const promotedApp = KLIA_TRANSCRIBE_PROMO;
+	const promotedApp = KLIA_SCALER_PLAYER_PROMO;
 
 	// Carousel state - includes backend app and optional promoted app
 	const [activeSlide, setActiveSlide] = useState(0);
@@ -255,7 +256,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 											borderRadius: 1,
 										}}
 									/>
-									{currentSlide.type === "promoted" && (
+									{currentSlide.type === "promoted" && currentSlide.data.beta && (
 										<Chip
 											label={t("home.beta").toUpperCase()}
 											size="small"

@@ -458,5 +458,12 @@
       "colorBlindProtanopia": "红色盲",
       "colorBlindTritanopia": "蓝黄色盲"
     }
+  },
+  "uninstallDialog": {
+    "title": "卸载 {{name}}？",
+    "description": "你的设置、存档和文件会保留在系统中，重新安装后可以继续使用。选择“卸载并删除数据”可同时删除它们，此操作无法撤销。",
+    "cancel": "取消",
+    "confirm": "卸载",
+    "confirmDelete": "卸载并删除数据"
   }
 }

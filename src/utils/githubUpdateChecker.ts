@@ -9,6 +9,7 @@ interface GitHubUpdateInfoRust {
 	installed_version: string;
 	has_update: boolean;
 	github_repo: string;
+	changelog?: string | null;
 }
 
 export interface GitHubUpdateInfo {
@@ -17,6 +18,7 @@ export interface GitHubUpdateInfo {
 	installedVersion: string;
 	hasUpdate: boolean;
 	githubRepo: string;
+	changelog?: string;
 }
 
 function buildAppsToCheck(): [string, string][] {
@@ -45,6 +47,7 @@ export const checkGitHubUpdates = async (): Promise<GitHubUpdateInfo[]> => {
 			installedVersion: r.installed_version,
 			hasUpdate: r.has_update,
 			githubRepo: r.github_repo,
+			changelog: r.changelog ?? undefined,
 		}));
 	} catch (error) {
 		console.error("[githubUpdateChecker] Failed to check GitHub updates:", error);

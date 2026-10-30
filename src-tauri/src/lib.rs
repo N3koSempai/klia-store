@@ -946,7 +946,11 @@ async fn launch_flatpak(app_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), String> {
+async fn uninstall_flatpak(
+    app: tauri::AppHandle,
+    app_id: String,
+    delete_data: Option<bool>,
+) -> Result<(), String> {
     app.emit(
         "install-output",
         format!("Iniciando desinstalación de {}...", app_id),
@@ -958,18 +962,26 @@ async fn uninstall_flatpak(app: tauri::AppHandle, app_id: String) -> Result<(), 
     // Detect if we're running inside a flatpak
     let is_flatpak = std::env::var("FLATPAK_ID").is_ok();
 
+    // Without --delete-data flatpak keeps ~/.var/app/<id> after uninstalling.
+    let mut uninstall_args = vec!["uninstall", "-y"];
+    if delete_data.unwrap_or(false) {
+        uninstall_args.push("--delete-data");
+    }
+    uninstall_args.push(&app_id);
+
     let (mut rx, _child) = if is_flatpak {
         // Inside flatpak, use flatpak-spawn to execute on the host
         shell
             .command("flatpak-spawn")
-            .args(["--host", "flatpak", "uninstall", "-y", &app_id])
+            .args(["--host", "flatpak"])
+            .args(&uninstall_args)
             .spawn()
             .map_err(|e| format!("Failed to spawn flatpak-spawn: {}", e))?
     } else {
         // Outside flatpak, use flatpak directly
         shell
             .command("flatpak")
-            .args(["uninstall", "-y", &app_id])
+            .args(&uninstall_args)
             .spawn()
             .map_err(|e| format!("Failed to spawn flatpak: {}", e))?
     };
@@ -1496,6 +1508,8 @@ struct GitHubUpdateInfo {
     installed_version: String,
     has_update: bool,
     github_repo: String,
+    /// Release description (markdown) of the latest release, if it has one.
+    changelog: Option<String>,
 }
 
 /// Checks for updates for apps installed from GitHub releases (not Flathub).
@@ -1534,15 +1548,21 @@ async fn check_github_updates(
             github_repo
         );
 
-        let latest_version = match client.get(&api_url).send().await {
+        let (latest_version, changelog) = match client.get(&api_url).send().await {
             Ok(resp) => match resp.text().await {
                 Ok(text) => {
                     let json: serde_json::Value = serde_json::from_str(&text)
                         .unwrap_or(serde_json::Value::Null);
-                    json["tag_name"]
+                    let version = json["tag_name"]
                         .as_str()
                         .map(|v| v.trim_start_matches('v').to_string())
-                        .unwrap_or_default()
+                        .unwrap_or_default();
+                    let body = json["body"]
+                        .as_str()
+                        .map(str::trim)
+                        .filter(|b| !b.is_empty())
+                        .map(String::from);
+                    (version, body)
                 }
                 Err(_) => continue,
             },
@@ -1561,6 +1581,7 @@ async fn check_github_updates(
             installed_version,
             has_update,
             github_repo,
+            changelog,
         });
     }
 

@@ -23,6 +23,7 @@ import { AppMetaCapsule } from "../../components/AppMetaCapsule";
 import { CachedImage } from "../../components/CachedImage";
 import { DependencyInfoPopover } from "../../components/DependencyInfoPopover";
 import { DonationModal } from "../../components/DonationModal";
+import { UninstallDialog } from "../../components/UninstallDialog";
 import { GitHubStarBadge } from "../../components/GitHubStarBadge";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
 import { useRepoStats } from "../../hooks/useRepoStats";
@@ -99,6 +100,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const [installOutput, setInstallOutput] = useState<string[]>([]);
 	const [installStatus, setInstallStatus] = useState<InstallStatus>("idle");
 	const [isUninstalling, setIsUninstalling] = useState(false);
+	const [showUninstallDialog, setShowUninstallDialog] = useState(false);
 	const [showOfflineToast, setShowOfflineToast] = useState(false);
 	const [showDonationModal, setShowDonationModal] = useState(false);
 	const hasCryptoDonation = !!(
@@ -591,11 +593,14 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		}
 	};
 
-	const handleUninstall = async () => {
+	const handleUninstall = async (deleteData: boolean) => {
 		if (isInstalled) {
 			setIsUninstalling(true);
 			try {
-				await invoke("uninstall_flatpak", { appId: app.app_id });
+				await invoke("uninstall_flatpak", {
+					appId: app.app_id,
+					deleteData,
+				});
 				setInstalledApp(app.app_id, false);
 			} catch (error) {
 				console.error("Error uninstalling app:", error);
@@ -624,6 +629,16 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 
 	return (
 		<Box sx={{ p: 3 }}>
+			<UninstallDialog
+				open={showUninstallDialog}
+				appId={app.app_id}
+				appName={app.name}
+				onCancel={() => setShowUninstallDialog(false)}
+				onConfirm={(deleteData) => {
+					setShowUninstallDialog(false);
+					handleUninstall(deleteData);
+				}}
+			/>
 			{/* Botón de regreso */}
 			<IconButton
 				aria-label={t("appDetails.back")}
@@ -766,7 +781,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 						{isInstalled && !isUninstalling && (
 							<Tooltip title={t("appDetails.uninstall")} arrow>
 								<IconButton
-									onClick={handleUninstall}
+									onClick={() => setShowUninstallDialog(true)}
 									sx={{
 										bgcolor: "rgba(255, 255, 255, 0.05)",
 										border: "1px solid rgba(255, 255, 255, 0.1)",

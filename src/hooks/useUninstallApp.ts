@@ -9,6 +9,7 @@ interface UseUninstallAppReturn {
 		appId: string,
 		appName?: string,
 		mode?: "flatpak" | "deb",
+		deleteData?: boolean,
 	) => Promise<boolean>;
 	uninstallingApp: string | null;
 	isUninstalling: boolean;
@@ -26,6 +27,7 @@ export function useUninstallApp(): UseUninstallAppReturn {
 			appId: string,
 			appName?: string,
 			mode: "flatpak" | "deb" = "flatpak",
+			deleteData = false,
 		) => {
 			setUninstallingApp(appId);
 			setIsUninstalling(true);
@@ -38,7 +40,7 @@ export function useUninstallApp(): UseUninstallAppReturn {
 				const result =
 					mode === "deb"
 						? await uninstallDebPackage(appId)
-						: await uninstallFlatpakApp(appId);
+						: await uninstallFlatpakApp(appId, deleteData);
 
 				// Set final output from the operation
 				setUninstallOutput(result.output);
