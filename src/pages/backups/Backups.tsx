@@ -408,11 +408,7 @@ export const Backups = ({ onBack }: BackupsProps) => {
 								{t("backups.installedApps")}
 							</Typography>
 							{filteredApps.length > 0 && (
-								<Button
-									size="small"
-									onClick={toggleSelectAllFiltered}
-									sx={{ textTransform: "none", fontSize: "0.75rem" }}
-								>
+								<Button size="small" onClick={toggleSelectAllFiltered}>
 									{allFilteredSelected
 										? t("backups.deselectAll")
 										: t("backups.selectAll")}
@@ -648,7 +644,6 @@ export const Backups = ({ onBack }: BackupsProps) => {
 									<Button
 										size="small"
 										onClick={() => setRestoreSourcePath(null)}
-										sx={{ textTransform: "none" }}
 									>
 										{t("backups.chooseAnother")}
 									</Button>

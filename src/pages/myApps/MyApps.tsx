@@ -821,21 +821,18 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 											<Box sx={{ display: "flex", gap: 2, mt: 2 }}>
 												<Button
 													variant="outlined"
+													color="neutral"
 													onClick={handleShowVerificationDetails}
-													sx={{
-														px: 3,
-														borderColor: lines.strong,
-														color: neutral[800],
-														"&:hover": {
-															borderColor: "rgba(255, 255, 255, 0.5)",
-															bgcolor: lines.subtle,
-														},
-													}}
 												>
 													{t("myApps.verificationMoreDetails")}
 												</Button>
 												<Button
 													variant="contained"
+													color={
+														verificationResult?.isHashMismatch
+															? "error"
+															: "secondary"
+													}
 													onClick={() => {
 														verificationForceContinue();
 														if (updateDialogAppId) {
@@ -846,23 +843,6 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 														verificationResult?.isHashMismatch &&
 														verificationState === "failed"
 													}
-													sx={{
-														px: 3,
-														bgcolor: verificationResult?.isHashMismatch
-															? brand.danger
-															: brand.secondary,
-														color: neutral[50],
-														fontWeight: 600,
-														"&:hover": {
-															bgcolor: verificationResult?.isHashMismatch
-																? brand.dangerLight
-																: brand.secondaryLight,
-														},
-														"&.Mui-disabled": {
-															bgcolor: "rgba(255, 107, 107, 0.5)",
-															color: neutral[50],
-														},
-													}}
 												>
 													{verificationResult?.isHashMismatch
 														? t("appDetails.securityContinueAnywayRisk")
@@ -870,15 +850,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												</Button>
 											</Box>
 
-											<Button
-												onClick={handleCloseUpdateDialog}
-												sx={{
-													color: neutral[600],
-													"&:hover": {
-														color: neutral[800],
-													},
-												}}
-											>
+											<Button color="neutral" onClick={handleCloseUpdateDialog}>
 												{t("appDetails.securityCancelInstallation")}
 											</Button>
 										</Box>
@@ -1041,18 +1013,10 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 
 											<Box sx={{ display: "flex", gap: 2 }}>
 												<Button
-													variant="contained"
+													variant="soft"
+													color="neutral"
 													onClick={() => {
 														setShowVerificationDetails(false);
-													}}
-													sx={{
-														px: 3,
-														bgcolor: lines.default,
-														color: neutral[800],
-														border: `1px solid ${lines.strong}`,
-														"&:hover": {
-															bgcolor: lines.strong,
-														},
 													}}
 												>
 													{t("myApps.hideDetails")}

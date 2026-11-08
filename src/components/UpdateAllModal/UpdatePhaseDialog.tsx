@@ -120,8 +120,8 @@ export const UpdatePhaseDialog = memo(
 								<Button
 									variant="outlined"
 									size="small"
+									color="neutral"
 									onClick={onToggleTerminal}
-									sx={{ borderColor: "divider", color: "text.secondary" }}
 								>
 									{showTerminal
 										? t("myApps.hideDetails")

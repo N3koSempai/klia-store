@@ -87,28 +87,16 @@ export const CountdownPhaseDialog = memo(
 						<Button
 							size="small"
 							variant="outlined"
+							color="neutral"
 							onClick={onReviewDetails}
-							sx={{
-								borderColor: lines.strong,
-								color: neutral[600],
-								fontSize: "0.75rem",
-								py: 0.5,
-								textTransform: "none",
-							}}
 						>
 							{t("myApps.verificationReviewDetails")}
 						</Button>
 						<Button
 							size="small"
 							variant="outlined"
+							color="neutral"
 							onClick={onCancelAll}
-							sx={{
-								borderColor: lines.strong,
-								color: neutral[600],
-								fontSize: "0.75rem",
-								py: 0.5,
-								textTransform: "none",
-							}}
 						>
 							{t("myApps.verificationCancelAll")}
 						</Button>

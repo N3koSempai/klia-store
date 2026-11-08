@@ -756,13 +756,9 @@ export const DonationModal = ({
 							<Box sx={{ mt: 1 }}>
 								<Button
 									size="small"
+									color="neutral"
 									onClick={() => setView("input")}
 									disabled={view === "verifying"}
-									sx={{
-										color: neutral[500],
-										textTransform: "none",
-										fontSize: "0.78rem",
-									}}
 								>
 									← {t("donation.back")}
 								</Button>
@@ -823,20 +819,7 @@ export const DonationModal = ({
 								TX: {verifyTxId}
 							</Typography>
 						)}
-						<Button
-							variant="contained"
-							onClick={handleClose}
-							sx={{
-								px: 4,
-								py: 1,
-								fontWeight: 600,
-								fontFamily: "Inter, sans-serif",
-								textTransform: "none",
-								bgcolor: hues.greenDark,
-								"&:hover": { bgcolor: hues.greenDeep },
-								boxShadow: "none",
-							}}
-						>
+						<Button variant="contained" color="success" onClick={handleClose}>
 							{t("donation.close")}
 						</Button>
 					</DialogContent>

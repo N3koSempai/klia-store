@@ -262,19 +262,9 @@ export const VerifyingReviewPhaseDialog = memo(
 						<Button
 							size="small"
 							variant="outlined"
+							color="neutral"
 							onClick={onCancelAll}
 							disabled={isVerifyingPhase}
-							sx={{
-								borderColor: lines.strong,
-								color: neutral[600],
-								fontSize: "0.75rem",
-								py: 0.5,
-								textTransform: "none",
-								"&.Mui-disabled": {
-									borderColor: lines.default,
-									color: lines.strong,
-								},
-							}}
 						>
 							{t("myApps.verificationCancelAll")}
 						</Button>
@@ -283,16 +273,8 @@ export const VerifyingReviewPhaseDialog = memo(
 							<Button
 								size="small"
 								variant="contained"
+								color="success"
 								onClick={onProceedFromReview}
-								sx={{
-									bgcolor: hues.green,
-									color: neutral[50],
-									fontWeight: 600,
-									fontSize: "0.75rem",
-									py: 0.5,
-									textTransform: "none",
-									"&:hover": { bgcolor: hues.greenLime },
-								}}
 							>
 								{stats.included === 1
 									? t("myApps.updateAllCount", { count: stats.included })

@@ -305,48 +305,18 @@ export const InstallProgressPanel = memo(
 					<Box sx={{ display: "flex", gap: 2, mt: 2 }}>
 						<Button
 							variant="outlined"
+							color="neutral"
 							onClick={onShowVerificationDetails}
-							sx={{
-								px: 3,
-								borderColor: lines.strong,
-								color: neutral[800],
-								"&:hover": {
-									borderColor: "rgba(255, 255, 255, 0.5)",
-									bgcolor: lines.subtle,
-								},
-							}}
 						>
 							{t("appDetails.securityMoreDetails")}
 						</Button>
 						<Button
 							variant="contained"
+							color={verificationResult?.isHashMismatch ? "error" : "secondary"}
 							onClick={onForceContinue}
 							disabled={
 								verificationResult?.isHashMismatch && riskCountdown !== null
 							}
-							sx={{
-								px: 3,
-								bgcolor: verificationResult?.isUnsupportedPlatform
-									? brand.secondary
-									: verificationResult?.isHashMismatch
-										? brand.danger
-										: brand.secondary,
-								color: neutral[50],
-								fontWeight: 600,
-								"&:hover": {
-									bgcolor: verificationResult?.isUnsupportedPlatform
-										? brand.secondaryLight
-										: verificationResult?.isHashMismatch
-											? brand.dangerLight
-											: brand.secondaryLight,
-								},
-								"&.Mui-disabled": {
-									bgcolor: verificationResult?.isHashMismatch
-										? "rgba(255, 107, 107, 0.5)"
-										: "rgba(246, 211, 45, 0.5)",
-									color: neutral[50],
-								},
-							}}
 						>
 							{verificationResult?.isHashMismatch
 								? riskCountdown !== null
@@ -356,15 +326,7 @@ export const InstallProgressPanel = memo(
 						</Button>
 					</Box>
 
-					<Button
-						onClick={onCancelVerification}
-						sx={{
-							color: neutral[600],
-							"&:hover": {
-								color: neutral[800],
-							},
-						}}
-					>
+					<Button color="neutral" onClick={onCancelVerification}>
 						{t("appDetails.securityCancelInstallation")}
 					</Button>
 				</Box>
@@ -430,35 +392,10 @@ export const InstallProgressPanel = memo(
 					</Box>
 
 					<Box sx={{ display: "flex", gap: 2 }}>
-						<Button
-							variant="outlined"
-							onClick={onDownloadLog}
-							sx={{
-								px: 3,
-								borderColor: lines.strong,
-								color: neutral[800],
-								"&:hover": {
-									borderColor: "rgba(255, 255, 255, 0.5)",
-									bgcolor: lines.subtle,
-								},
-							}}
-						>
+						<Button variant="outlined" color="neutral" onClick={onDownloadLog}>
 							{t("appDetails.saveLog") || "Save Log"}
 						</Button>
-						<Button
-							variant="contained"
-							onClick={onBackFromDetails}
-							sx={{
-								px: 3,
-								bgcolor: lines.default,
-								color: neutral[800],
-								borderColor: lines.strong,
-								border: "1px solid",
-								"&:hover": {
-									bgcolor: lines.strong,
-								},
-							}}
-						>
+						<Button variant="soft" color="neutral" onClick={onBackFromDetails}>
 							{t("appDetails.back") || "Back"}
 						</Button>
 					</Box>
@@ -508,10 +445,10 @@ export const InstallProgressPanel = memo(
 
 					{/* Botones */}
 					<Box sx={{ display: "flex", gap: 2 }}>
-						<Button variant="outlined" onClick={onDownloadLog} sx={{ px: 3 }}>
+						<Button variant="outlined" color="neutral" onClick={onDownloadLog}>
 							{t("appDetails.getLog")}
 						</Button>
-						<Button variant="contained" onClick={onAccept} sx={{ px: 3 }}>
+						<Button variant="contained" onClick={onAccept}>
 							{t("appDetails.accept")}
 						</Button>
 					</Box>

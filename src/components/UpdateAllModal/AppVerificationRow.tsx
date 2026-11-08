@@ -10,6 +10,15 @@ import { memo } from "react";
 import { brand, hues, lines, neutral, status } from "../../theme/tokens";
 import type { AppToVerify } from "../UpdateAllModal";
 
+// Controles densos dentro de una fila: más bajos que el tamaño pequeño estándar
+// (excepción deliberada al mínimo de 36px; la fila ya es el objetivo de clic).
+const compactButtonSx = {
+	minHeight: 28,
+	minWidth: 56,
+	px: 1.25,
+	fontSize: "0.75rem",
+} as const;
+
 export interface AppVerificationState {
 	phase: "pending" | "verifying" | "verified" | "warning" | "hashMismatch";
 	decision: "include" | "exclude";
@@ -173,30 +182,10 @@ export const AppVerificationRow = memo(
 								{/* Skip button */}
 								<Button
 									size="small"
-									variant={
-										state.decision === "exclude" ? "contained" : "outlined"
-									}
+									color="neutral"
+									variant={state.decision === "exclude" ? "soft" : "outlined"}
 									onClick={() => onSetDecision(app.appId, "exclude")}
-									sx={{
-										minWidth: 50,
-										fontSize: "0.65rem",
-										py: 0.25,
-										px: 0.75,
-										textTransform: "none",
-										...(state.decision === "exclude"
-											? {
-													bgcolor: lines.default,
-													color: neutral[600],
-													border: `1px solid ${lines.strong}`,
-													"&:hover": {
-														bgcolor: "rgba(255,255,255,0.14)",
-													},
-												}
-											: {
-													borderColor: "rgba(255, 255, 255, 0.15)",
-													color: neutral[500],
-												}),
-									}}
+									sx={compactButtonSx}
 								>
 									{t("myApps.verificationSkipApp")}
 								</Button>
@@ -204,49 +193,10 @@ export const AppVerificationRow = memo(
 								{/* Include / Force button */}
 								<Button
 									size="small"
-									variant={
-										state.decision === "include" ? "contained" : "outlined"
-									}
+									color={state.phase === "hashMismatch" ? "error" : "secondary"}
+									variant={state.decision === "include" ? "soft" : "outlined"}
 									onClick={() => onSetDecision(app.appId, "include")}
-									sx={{
-										minWidth: 50,
-										fontSize: "0.65rem",
-										py: 0.25,
-										px: 0.75,
-										textTransform: "none",
-										...(state.decision === "include"
-											? {
-													bgcolor:
-														state.phase === "hashMismatch"
-															? "rgba(255,107,107,0.22)"
-															: "rgba(246,211,45,0.18)",
-													color:
-														state.phase === "hashMismatch"
-															? brand.danger
-															: brand.secondary,
-													border: `1px solid ${
-														state.phase === "hashMismatch"
-															? "rgba(255,107,107,0.45)"
-															: "rgba(246,211,45,0.45)"
-													}`,
-													"&:hover": {
-														bgcolor:
-															state.phase === "hashMismatch"
-																? "rgba(255,107,107,0.3)"
-																: "rgba(246,211,45,0.28)",
-													},
-												}
-											: {
-													borderColor:
-														state.phase === "hashMismatch"
-															? "rgba(255,107,107,0.3)"
-															: "rgba(246,211,45,0.3)",
-													color:
-														state.phase === "hashMismatch"
-															? "#FF6B6B80"
-															: "#F6D32D80",
-												}),
-									}}
+									sx={compactButtonSx}
 								>
 									{state.phase === "hashMismatch"
 										? t("myApps.verificationForceApp")
@@ -258,16 +208,9 @@ export const AppVerificationRow = memo(
 							<Button
 								size="small"
 								variant="text"
+								color="neutral"
 								onClick={() => onToggleDetails(app.appId)}
-								sx={{
-									fontSize: "0.6rem",
-									py: 0,
-									px: 0.5,
-									textTransform: "none",
-									color: neutral[500],
-									justifyContent: "flex-end",
-									"&:hover": { color: neutral[600] },
-								}}
+								sx={{ ...compactButtonSx, justifyContent: "flex-end" }}
 							>
 								{state.showDetails ? "▲ " : "▼ "}
 								{t("myApps.verificationMoreDetails")}

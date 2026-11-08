@@ -369,10 +369,7 @@ export function LocalFlatpakInstallModal({
 						>
 							{loadError}
 						</Typography>
-						<Button
-							onClick={onClose}
-							sx={{ mt: 3, color: "rgba(255,255,255,0.6)" }}
-						>
+						<Button onClick={onClose} color="neutral" sx={{ mt: 3 }}>
 							Close
 						</Button>
 					</Box>
@@ -588,17 +585,8 @@ export function LocalFlatpakInstallModal({
 								<Box sx={{ px: 3, py: 1.5 }}>
 									<Button
 										onClick={() => setShowDeps((v) => !v)}
-										sx={{
-											textTransform: "none",
-											color: "rgba(255,255,255,0.5)",
-											fontSize: "0.8rem",
-											fontFamily: "IBM Plex Sans, sans-serif",
-											p: 0,
-											"&:hover": {
-												color: "rgba(255,255,255,0.8)",
-												background: "none",
-											},
-										}}
+										size="small"
+										color="neutral"
 									>
 										<NetworkCheckIcon sx={{ fontSize: "0.9rem", mr: 0.75 }} />
 										{info.dependencies.length} runtime
@@ -698,33 +686,13 @@ export function LocalFlatpakInstallModal({
 							spacing={1.5}
 							sx={{ px: 3, py: 2, justifyContent: "flex-end" }}
 						>
-							<Button
-								onClick={onClose}
-								sx={{
-									textTransform: "none",
-									color: "rgba(255,255,255,0.5)",
-									fontFamily: "IBM Plex Sans, sans-serif",
-									"&:hover": { color: "rgba(255,255,255,0.8)" },
-								}}
-							>
+							<Button onClick={onClose} color="neutral">
 								Cancel
 							</Button>
 							<Button
 								onClick={handleInstall}
 								variant="contained"
-								sx={{
-									textTransform: "none",
-									fontFamily: "IBM Plex Sans, sans-serif",
-									fontWeight: 600,
-									backgroundColor:
-										risk?.score === "critical" ? hues.red : brand.primary,
-									"&:hover": {
-										backgroundColor:
-											risk?.score === "critical"
-												? hues.redMaterial
-												: brand.primaryDark,
-									},
-								}}
+								color={risk?.score === "critical" ? "error" : "primary"}
 							>
 								{info.already_installed ? "Reinstall" : "Install"}
 							</Button>
@@ -780,17 +748,8 @@ export function LocalFlatpakInstallModal({
 							<Button
 								onClick={() => setShowTerminal((v) => !v)}
 								size="small"
-								sx={{
-									textTransform: "none",
-									color: "rgba(255,255,255,0.4)",
-									fontSize: "0.75rem",
-									fontFamily: "JetBrains Mono, monospace",
-									p: 0,
-									"&:hover": {
-										color: "rgba(255,255,255,0.7)",
-										background: "none",
-									},
-								}}
+								color="neutral"
+								sx={{ fontFamily: "JetBrains Mono, monospace" }}
 							>
 								{showTerminal ? "Hide output ▲" : "Show output ▼"}
 							</Button>
@@ -823,17 +782,7 @@ export function LocalFlatpakInstallModal({
 										justifyContent: "flex-end",
 									}}
 								>
-									<Button
-										onClick={onClose}
-										variant="contained"
-										sx={{
-											textTransform: "none",
-											fontFamily: "IBM Plex Sans, sans-serif",
-											fontWeight: 600,
-											backgroundColor: hues.greenMaterial,
-											"&:hover": { backgroundColor: hues.greenMaterialDark },
-										}}
-									>
+									<Button onClick={onClose} variant="contained" color="success">
 										Done
 									</Button>
 								</Box>
