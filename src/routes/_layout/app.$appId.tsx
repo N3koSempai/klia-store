@@ -4,8 +4,12 @@ import { lazy, Suspense } from "react";
 import kliaAnimation from "../../assets/animations/klia.svg";
 import { OFF_FLATHUB_APPS } from "../../data/offFlathubApps";
 import { apiService } from "../../services/api";
-import { reportNetworkFailure, reportNetworkSuccess } from "../../store/connectivityStore";
+import {
+	reportNetworkFailure,
+	reportNetworkSuccess,
+} from "../../store/connectivityStore";
 import type { CategoryApp } from "../../types";
+import { dbCacheManager } from "../../utils/dbCache";
 import { isNetworkError } from "../../utils/networkError";
 
 const AppDetails = lazy(() =>
@@ -20,6 +24,10 @@ interface AppSearch {
 	// App tal como la tenía la tarjeta desde la que se navegó (Home, búsqueda,
 	// categoría...). Sirve de fallback local-first si el fetch de red falla.
 	selectedApp?: CategoryApp;
+	// true si la tarjeta de origen se acaba de pedir a la red (búsqueda,
+	// categoría, desarrollador). Las destacadas salen de caché y pueden tener
+	// hasta un día, así que no cuentan como frescas.
+	cardFresh?: boolean;
 }
 
 function LoadingFallback() {
@@ -42,12 +50,28 @@ export const Route = createFileRoute("/_layout/app/$appId")({
 		searchQuery: search.searchQuery as string | undefined,
 		searchResults: search.searchResults as CategoryApp[] | undefined,
 		selectedApp: search.selectedApp as CategoryApp | undefined,
+		cardFresh: search.cardFresh === true ? true : undefined,
 	}),
-	loaderDeps: ({ search }) => ({ selectedApp: search.selectedApp }),
+	loaderDeps: ({ search }) => ({
+		selectedApp: search.selectedApp,
+		cardFresh: search.cardFresh,
+	}),
 	loader: async ({ params, deps }) => {
 		const offFlathub = OFF_FLATHUB_APPS[params.appId];
 		if (offFlathub) {
 			return { app: offFlathub };
+		}
+
+		// Tarjeta fresca cuyo updated_at coincide con el que tenemos guardado:
+		// los datos de la app no han cambiado, así que no hace falta ir a la red.
+		const card = deps.selectedApp;
+		if (deps.cardFresh && card && card.updated_at > 0) {
+			const hit = await dbCacheManager.hasAppData(
+				params.appId,
+				"card",
+				String(card.updated_at),
+			);
+			if (hit) return { app: card };
 		}
 
 		// La red tiene prioridad (trae datos frescos). Si falla, caemos en

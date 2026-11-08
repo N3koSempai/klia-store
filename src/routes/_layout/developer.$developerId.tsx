@@ -57,7 +57,7 @@ function DeveloperRoute() {
 		navigate({
 			to: "/app/$appId",
 			params: { appId: app.app_id },
-			search: { searchQuery, searchResults },
+			search: { searchQuery, searchResults, selectedApp: app, cardFresh: true },
 		});
 	};
 

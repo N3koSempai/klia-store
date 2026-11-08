@@ -17,14 +17,23 @@ export interface DependenciesCheckResult {
  * Custom hook to check what dependencies will be installed for an app
  * Uses get_install_dependencies command (no PTY process)
  * @param appId - The Flatpak application ID (e.g., "org.gnome.Builder")
+ * @param enabled - When false the check is skipped (e.g. the app is already installed)
  * @returns DependenciesCheckResult with list of dependencies, loading state, and error
  */
-export function useRuntimeCheck(appId: string): DependenciesCheckResult {
+export function useRuntimeCheck(
+	appId: string,
+	enabled = true,
+): DependenciesCheckResult {
 	const [dependencies, setDependencies] = useState<Dependency[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(enabled);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
+		if (!enabled) {
+			setLoading(false);
+			return;
+		}
+
 		const fetchDependencies = async () => {
 			try {
 				setLoading(true);
@@ -45,7 +54,7 @@ export function useRuntimeCheck(appId: string): DependenciesCheckResult {
 		};
 
 		fetchDependencies();
-	}, [appId]);
+	}, [appId, enabled]);
 
 	return {
 		dependencies,

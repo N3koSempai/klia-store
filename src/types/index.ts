@@ -14,6 +14,22 @@ export interface AppsOfTheWeekResponse {
 	apps: AppOfTheWeek[];
 }
 
+export interface AppPermissions {
+	shared?: string[] | null;
+	devices?: string[] | null;
+	sockets?: string[] | null;
+	filesystems?: string[] | null;
+	features?: string[] | null;
+	"session-bus"?: {
+		talk?: string[] | null;
+		own?: string[] | null;
+	} | null;
+	"system-bus"?: {
+		talk?: string[] | null;
+		own?: string[] | null;
+	} | null;
+}
+
 export interface AppSummary {
 	arches: string[];
 	branch: string;
@@ -23,14 +39,7 @@ export interface AppSummary {
 		name: string;
 		command?: string;
 		runtime?: string;
-		permissions?: {
-			shared?: string[];
-			devices?: string[];
-			sockets?: string[];
-			"session-bus"?: {
-				talk?: string[];
-			};
-		};
+		permissions?: AppPermissions;
 		"built-extensions"?: string[];
 		runtimeIsEol?: boolean;
 	};
@@ -47,8 +56,14 @@ export interface AppOfTheWeekWithDetails extends AppOfTheWeek {
 	categoryApp?: CategoryApp;
 }
 
+export interface ContentRating {
+	minimumAge?: number;
+	categories?: Array<{ id: string; level: string }>;
+}
+
 export interface AppStream {
 	id: string;
+	content_rating_details?: Record<string, ContentRating> | null;
 	name: string;
 	summary: string;
 	description?: string;

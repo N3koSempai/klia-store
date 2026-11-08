@@ -2,6 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import Database from "@tauri-apps/plugin-sql";
 import type { AppOfTheDayWithDetails, AppOfTheWeekWithDetails } from "../types";
 
+/**
+ * Tipos de dato de una app que se guardan en `app_data`. Cada fila lleva su
+ * propia versión de origen, así que se pueden tener unos y no otros.
+ */
+export type AppDataKind = "card" | "appstream" | "summary";
+
+// Filas de app_data sin tocar desde hace más de esto se borran al arrancar.
+const APP_DATA_MAX_AGE_DAYS = 90;
+
 export class DBCacheManager {
 	private static instance: DBCacheManager;
 	private db: Database | null = null;
@@ -120,6 +129,24 @@ export class DBCacheManager {
 				)
 			`);
 
+			// Datos de Flathub por app y tipo (card, appstream, summary). La versión
+			// de origen (updated_at de Flathub) va en cada fila: si no coincide con
+			// la de la app que se va a mostrar, el dato se considera caducado.
+			await this.db.execute(`
+				CREATE TABLE IF NOT EXISTS app_data (
+					app_id TEXT NOT NULL,
+					kind TEXT NOT NULL,
+					source_version TEXT NOT NULL,
+					data TEXT NOT NULL,
+					cached_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+					PRIMARY KEY (app_id, kind)
+				)
+			`);
+
+			await this.db.execute(
+				`DELETE FROM app_data WHERE cached_at < datetime('now', '-${APP_DATA_MAX_AGE_DAYS} days')`,
+			);
+
 			console.log("All cache tables verified/created");
 		} catch (error) {
 			console.error("Error ensuring tables exist:", error);
@@ -150,6 +177,70 @@ export class DBCacheManager {
 				params.txId ?? null,
 			],
 		);
+	}
+
+	// App data (card / appstream / summary de Flathub)
+	/** Devuelve el dato solo si se guardó para exactamente esa versión. */
+	async getAppData<T>(
+		appId: string,
+		kind: AppDataKind,
+		version: string,
+	): Promise<T | null> {
+		try {
+			await this.initialize();
+			if (!this.db) return null;
+
+			const rows = await this.db.select<Array<{ data: string }>>(
+				"SELECT data FROM app_data WHERE app_id = $1 AND kind = $2 AND source_version = $3",
+				[appId, kind, version],
+			);
+			if (rows.length === 0) return null;
+			return JSON.parse(rows[0].data) as T;
+		} catch (error) {
+			console.error("Error reading app data cache:", error);
+			return null;
+		}
+	}
+
+	/** Comprueba si hay un dato guardado para esa versión, sin leer su contenido. */
+	async hasAppData(
+		appId: string,
+		kind: AppDataKind,
+		version: string,
+	): Promise<boolean> {
+		try {
+			await this.initialize();
+			if (!this.db) return false;
+
+			const rows = await this.db.select<Array<{ app_id: string }>>(
+				"SELECT app_id FROM app_data WHERE app_id = $1 AND kind = $2 AND source_version = $3",
+				[appId, kind, version],
+			);
+			return rows.length > 0;
+		} catch (error) {
+			console.error("Error checking app data cache:", error);
+			return false;
+		}
+	}
+
+	async setAppData(
+		appId: string,
+		kind: AppDataKind,
+		version: string,
+		data: unknown,
+	): Promise<void> {
+		try {
+			await this.initialize();
+			if (!this.db) return;
+
+			await this.db.execute(
+				`INSERT OR REPLACE INTO app_data (app_id, kind, source_version, data, cached_at)
+				 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`,
+				[appId, kind, version, JSON.stringify(data)],
+			);
+		} catch (error) {
+			console.error("Error writing app data cache:", error);
+		}
 	}
 
 	private getCurrentDate(): string {

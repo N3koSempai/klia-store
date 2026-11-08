@@ -465,5 +465,88 @@
     "cancel": "Cancelar",
     "confirm": "Desinstalar",
     "confirmDelete": "Desinstalar y borrar datos"
+  },
+  "privacy": {
+    "title": "Privacidad y permisos",
+    "badgeLabel": "Resumen de privacidad. Clic para ver detalles",
+    "intro": "A qué puede acceder esta app en tu sistema, según los permisos de su sandbox de Flatpak y su clasificación de contenido.",
+    "disclaimer": "Los permisos los aplica el sandbox de Flatpak. La clasificación de contenido la declara el desarrollador de la app y no está verificada.",
+    "technical": "Permisos técnicos",
+    "noFindings": "Nada especial que reportar.",
+    "close": "Cerrar",
+    "levels": {
+      "safe": "Bajo",
+      "caution": "Atención",
+      "high": "Alto",
+      "unknown": "Sin datos"
+    },
+    "foci": {
+      "storage": "Almacenamiento",
+      "system": "Sistema",
+      "social": "Social y edad",
+      "money": "Dinero"
+    },
+    "summary": {
+      "storage": {
+        "safe": "No puede explorar tus archivos",
+        "caution": "Puede acceder a carpetas concretas",
+        "high": "Puede acceder a toda tu carpeta personal o a archivos del sistema"
+      },
+      "system": {
+        "safe": "Solo gráficos, sonido y red básica",
+        "caution": "Puede acceder a dispositivos o servicios sensibles",
+        "high": "Puede actuar fuera del sandbox o en tu nombre"
+      },
+      "social": {
+        "safe": "Sin interacción con otros usuarios",
+        "caution": "Interacción con otros o público adulto",
+        "high": "Interacción abierta con desconocidos o contenido solo para adultos"
+      },
+      "money": {
+        "safe": "Sin posibilidad de gastar dinero",
+        "caution": "Puede permitirte gastar dinero",
+        "high": "Te permite gastar dinero real"
+      },
+      "unknown": "Sin datos disponibles"
+    },
+    "rating": {
+      "none": "ninguno",
+      "mild": "leve",
+      "moderate": "moderado",
+      "intense": "intenso",
+      "unknown": "desconocido"
+    },
+    "findings": {
+      "storageHome": "Acceso total a tu carpeta personal",
+      "storageHost": "Acceso total a todos tus archivos, incluidos los del sistema",
+      "storageHostOs": "Puede leer los archivos del sistema operativo anfitrión",
+      "storageUserFolders": "Acceso a estas carpetas: {{folders}}",
+      "storageRemovable": "Acceso a unidades externas y medios",
+      "storageOtherPaths": "Acceso a {{count}} ruta(s) más de tu sistema",
+      "storageAppDirs": "Puede escribir en carpetas compartidas de configuración o datos",
+      "systemSessionBus": "Acceso sin restricciones al bus de mensajes de tu escritorio (puede saltarse el sandbox)",
+      "systemSystemBus": "Acceso directo al bus de mensajes del sistema",
+      "systemFlatpakEscape": "Puede ejecutar comandos fuera del sandbox",
+      "systemSshAgent": "Puede usar tus claves SSH para autenticarse",
+      "systemGpgAgent": "Puede usar tus claves GPG para firmar y descifrar",
+      "systemSecrets": "Puede solicitar contraseñas de tu llavero o cartera",
+      "systemDevicesAll": "Acceso a todos los dispositivos (cámaras, USB y más)",
+      "systemDevicesSome": "Acceso a dispositivos: {{devices}}",
+      "systemFeatures": "Capacidades especiales: {{features}}",
+      "systemSmartcard": "Acceso a lectores de tarjetas inteligentes",
+      "systemSystemBusNames": "Se comunica con servicios del sistema",
+      "systemNetwork": "Acceso a la red",
+      "systemAudio": "Reproduce y graba audio (incluido el micrófono)",
+      "systemX11": "Usa la pantalla X11 heredada, que está menos aislada",
+      "systemPrinting": "Puede imprimir",
+      "socialInteraction": "Interacción con otros usuarios: {{level}}",
+      "socialAge": "Recomendada para mayores de {{age}} años",
+      "content_violence": "Violencia: {{level}}",
+      "content_drugs": "Drogas y alcohol: {{level}}",
+      "content_sex": "Contenido sexual: {{level}}",
+      "content_language": "Lenguaje: {{level}}",
+      "moneyPurchases": "Compras o gastos dentro de la app: {{level}}",
+      "moneyDonations": "Acepta donaciones voluntarias"
+    }
   }
 }

@@ -465,5 +465,88 @@
     "cancel": "Cancel",
     "confirm": "Uninstall",
     "confirmDelete": "Uninstall and delete data"
+  },
+  "privacy": {
+    "title": "Privacy & permissions",
+    "badgeLabel": "Privacy summary. Click for details",
+    "intro": "What this app can access on your system, based on its Flatpak sandbox permissions and its content rating.",
+    "disclaimer": "Permissions are enforced by the Flatpak sandbox. The content rating is declared by the app's developer and is not verified.",
+    "technical": "Technical permissions",
+    "noFindings": "Nothing special to report.",
+    "close": "Close",
+    "levels": {
+      "safe": "Low",
+      "caution": "Caution",
+      "high": "High",
+      "unknown": "No data"
+    },
+    "foci": {
+      "storage": "Storage",
+      "system": "System",
+      "social": "Social & age",
+      "money": "Money"
+    },
+    "summary": {
+      "storage": {
+        "safe": "Cannot browse your files",
+        "caution": "Can access specific folders",
+        "high": "Can access your whole home or system files"
+      },
+      "system": {
+        "safe": "Only graphics, sound and network basics",
+        "caution": "Can reach devices or sensitive services",
+        "high": "Can act outside the sandbox or on your behalf"
+      },
+      "social": {
+        "safe": "No interaction with other users",
+        "caution": "Interaction with others or a mature audience",
+        "high": "Open interaction with strangers or adults-only content"
+      },
+      "money": {
+        "safe": "No ability to spend money",
+        "caution": "May let you spend money",
+        "high": "Lets you spend real money"
+      },
+      "unknown": "No data available"
+    },
+    "rating": {
+      "none": "none",
+      "mild": "mild",
+      "moderate": "moderate",
+      "intense": "intense",
+      "unknown": "unknown"
+    },
+    "findings": {
+      "storageHome": "Full access to your home folder",
+      "storageHost": "Full access to all your files, including system files",
+      "storageHostOs": "Can read the host operating system files",
+      "storageUserFolders": "Access to these folders: {{folders}}",
+      "storageRemovable": "Access to external drives and media",
+      "storageOtherPaths": "Access to {{count}} other path(s) on your system",
+      "storageAppDirs": "Can write to shared configuration or data folders",
+      "systemSessionBus": "Unrestricted access to your desktop's message bus (can bypass the sandbox)",
+      "systemSystemBus": "Direct access to the system message bus",
+      "systemFlatpakEscape": "Can run commands outside the sandbox",
+      "systemSshAgent": "Can use your SSH keys to authenticate",
+      "systemGpgAgent": "Can use your GPG keys to sign and decrypt",
+      "systemSecrets": "Can request passwords from your keyring or wallet",
+      "systemDevicesAll": "Access to all devices (cameras, USB and more)",
+      "systemDevicesSome": "Access to devices: {{devices}}",
+      "systemFeatures": "Special capabilities: {{features}}",
+      "systemSmartcard": "Access to smart card readers",
+      "systemSystemBusNames": "Talks to system services",
+      "systemNetwork": "Network access",
+      "systemAudio": "Plays and records audio (including the microphone)",
+      "systemX11": "Uses the legacy X11 display, which is less isolated",
+      "systemPrinting": "Can print",
+      "socialInteraction": "Interaction with other users: {{level}}",
+      "socialAge": "Recommended for ages {{age}}+",
+      "content_violence": "Violence: {{level}}",
+      "content_drugs": "Drugs and alcohol: {{level}}",
+      "content_sex": "Sexual content: {{level}}",
+      "content_language": "Language: {{level}}",
+      "moneyPurchases": "In-app purchases or spending: {{level}}",
+      "moneyDonations": "Accepts voluntary donations"
+    }
   }
 }

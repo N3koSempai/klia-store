@@ -25,6 +25,9 @@ import { DependencyInfoPopover } from "../../components/DependencyInfoPopover";
 import { DonationModal } from "../../components/DonationModal";
 import { UninstallDialog } from "../../components/UninstallDialog";
 import { GitHubStarBadge } from "../../components/GitHubStarBadge";
+import { PrivacyBadge } from "../../components/PrivacyBadge";
+import { PrivacyDialog } from "../../components/PrivacyDialog";
+import { useAppPrivacy } from "../../hooks/useAppPrivacy";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
 import { useRepoStats } from "../../hooks/useRepoStats";
 import { useRuntimeCheck } from "../../hooks/useRuntimeCheck";
@@ -83,13 +86,16 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 		screenshots,
 		urls,
 		isLoading: isLoadingScreenshots,
-	} = useAppScreenshots(appStream);
+	} = useAppScreenshots(appStream, app.updated_at);
 	const isAppInstalled = useInstalledAppsStore((state) => state.isAppInstalled);
 	const setInstalledApp = useInstalledAppsStore(
 		(state) => state.setInstalledApp,
 	);
 	const { stars, repoUrl } = useRepoStats(app.app_id, urls);
-	const { dependencies, loading: loadingDeps } = useRuntimeCheck(app.app_id);
+	const { dependencies, loading: loadingDeps } = useRuntimeCheck(
+		app.app_id,
+		!isAppInstalled(app.app_id),
+	);
 
 	// Generate stable UUIDs for screenshots
 	const screenshotIds = useMemo(
@@ -103,6 +109,12 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const [showUninstallDialog, setShowUninstallDialog] = useState(false);
 	const [showOfflineToast, setShowOfflineToast] = useState(false);
 	const [showDonationModal, setShowDonationModal] = useState(false);
+	const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
+	const privacy = useAppPrivacy(
+		app.app_id,
+		!!urls?.donation,
+		app.updated_at,
+	);
 	const hasCryptoDonation = !!(
 		urls?.donation && /bitcoin|ethereum/i.test(urls.donation)
 	);
@@ -726,6 +738,12 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 								license={app.project_license}
 								downloads={app.installs_last_month}
 							/>
+							{privacy && (
+								<PrivacyBadge
+									assessment={privacy}
+									onOpen={() => setShowPrivacyDialog(true)}
+								/>
+							)}
 						</Box>
 					</Box>
 				</Box>
@@ -884,6 +902,14 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 				</Box>
 			)}
 
+			{privacy && (
+				<PrivacyDialog
+					open={showPrivacyDialog}
+					onClose={() => setShowPrivacyDialog(false)}
+					appName={app.name}
+					assessment={privacy}
+				/>
+			)}
 			<DonationModal
 				open={showDonationModal}
 				onClose={() => setShowDonationModal(false)}
