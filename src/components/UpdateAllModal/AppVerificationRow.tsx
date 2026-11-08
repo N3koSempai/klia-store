@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import type { TFunction } from "i18next";
 import { memo } from "react";
+import { brand, hues, lines, neutral, status } from "../../theme/tokens";
 import type { AppToVerify } from "../UpdateAllModal";
 
 export interface AppVerificationState {
@@ -52,12 +53,12 @@ export const AppVerificationRow = memo(
 
 		const statusColor =
 			state.phase === "verified"
-				? "#27c93f"
+				? hues.green
 				: state.phase === "warning"
-					? "#F6D32D"
+					? brand.secondary
 					: state.phase === "hashMismatch"
-						? "#FF6B6B"
-						: "#58A6FF";
+						? brand.danger
+						: status.info;
 
 		return (
 			<Box>
@@ -67,9 +68,7 @@ export const AppVerificationRow = memo(
 						alignItems: "flex-start",
 						gap: 1.5,
 						p: 1.5,
-						borderBottom: isLast
-							? "none"
-							: "1px solid rgba(255, 255, 255, 0.05)",
+						borderBottom: isLast ? "none" : `1px solid ${lines.subtle}`,
 						opacity: state.decision === "exclude" ? 0.45 : 1,
 						transition: "opacity 0.2s ease",
 					}}
@@ -90,10 +89,14 @@ export const AppVerificationRow = memo(
 						}}
 					>
 						{state.phase === "verifying" ? (
-							<CircularProgress size={13} sx={{ color: "#58A6FF" }} />
+							<CircularProgress size={13} sx={{ color: status.info }} />
 						) : state.phase === "pending" ? (
 							<Typography
-								sx={{ color: "#6E7681", fontSize: "0.6rem", letterSpacing: 1 }}
+								sx={{
+									color: neutral[500],
+									fontSize: "0.6rem",
+									letterSpacing: 1,
+								}}
 							>
 								···
 							</Typography>
@@ -113,7 +116,7 @@ export const AppVerificationRow = memo(
 						<Typography
 							variant="caption"
 							sx={{
-								color: "#C9D1D9",
+								color: neutral[800],
 								fontWeight: 500,
 								display: "block",
 								overflow: "hidden",
@@ -126,7 +129,7 @@ export const AppVerificationRow = memo(
 						<Typography
 							variant="caption"
 							sx={{
-								color: "#6E7681",
+								color: neutral[500],
 								fontFamily: "monospace",
 								fontSize: "0.65rem",
 								display: "block",
@@ -182,16 +185,16 @@ export const AppVerificationRow = memo(
 										textTransform: "none",
 										...(state.decision === "exclude"
 											? {
-													bgcolor: "rgba(255, 255, 255, 0.1)",
-													color: "#8B949E",
-													border: "1px solid rgba(255,255,255,0.2)",
+													bgcolor: lines.default,
+													color: neutral[600],
+													border: `1px solid ${lines.strong}`,
 													"&:hover": {
 														bgcolor: "rgba(255,255,255,0.14)",
 													},
 												}
 											: {
 													borderColor: "rgba(255, 255, 255, 0.15)",
-													color: "#6E7681",
+													color: neutral[500],
 												}),
 									}}
 								>
@@ -219,8 +222,8 @@ export const AppVerificationRow = memo(
 															: "rgba(246,211,45,0.18)",
 													color:
 														state.phase === "hashMismatch"
-															? "#FF6B6B"
-															: "#F6D32D",
+															? brand.danger
+															: brand.secondary,
 													border: `1px solid ${
 														state.phase === "hashMismatch"
 															? "rgba(255,107,107,0.45)"
@@ -261,9 +264,9 @@ export const AppVerificationRow = memo(
 									py: 0,
 									px: 0.5,
 									textTransform: "none",
-									color: "#6E7681",
+									color: neutral[500],
 									justifyContent: "flex-end",
-									"&:hover": { color: "#8B949E" },
+									"&:hover": { color: neutral[600] },
 								}}
 							>
 								{state.showDetails ? "▲ " : "▼ "}
@@ -277,7 +280,7 @@ export const AppVerificationRow = memo(
 						<Typography
 							variant="caption"
 							sx={{
-								color: "#27c93f",
+								color: hues.green,
 								fontSize: "0.7rem",
 								flexShrink: 0,
 								alignSelf: "center",
@@ -301,7 +304,7 @@ export const AppVerificationRow = memo(
 								border: `1px solid ${statusColor}28`,
 								fontFamily: "'JetBrains Mono', monospace",
 								fontSize: "0.7rem",
-								color: "#8B949E",
+								color: neutral[600],
 								whiteSpace: "pre-wrap",
 								wordBreak: "break-word",
 								maxHeight: 160,
@@ -323,14 +326,14 @@ export const AppVerificationRow = memo(
 										>
 											[{s.verified ? "✓" : "✗"}] {s.url}
 											<br />
-											<span style={{ color: "#6E7681" }}>
+											<span style={{ color: neutral[500] }}>
 												{t("appDetails.securityVerificationCommitInManifest")}:{" "}
 												{s.commit || "N/A"}
 											</span>
 											{s.remote_commit && (
 												<>
 													<br />
-													<span style={{ color: "#6E7681" }}>
+													<span style={{ color: neutral[500] }}>
 														{t("appDetails.securityVerificationRemoteCommit")}:{" "}
 														{s.remote_commit}
 													</span>
@@ -339,7 +342,7 @@ export const AppVerificationRow = memo(
 											{s.error && (
 												<>
 													<br />
-													<span style={{ color: "#FF6B6B" }}>
+													<span style={{ color: brand.danger }}>
 														{t("appDetails.securityVerificationError")}:{" "}
 														{s.error}
 													</span>
@@ -348,7 +351,7 @@ export const AppVerificationRow = memo(
 										</div>
 									))}
 									{state.fullResult.error && (
-										<div style={{ marginTop: 6, color: "#FF6B6B" }}>
+										<div style={{ marginTop: 6, color: brand.danger }}>
 											{t("appDetails.securityVerificationError")}:{" "}
 											{state.fullResult.error}
 										</div>

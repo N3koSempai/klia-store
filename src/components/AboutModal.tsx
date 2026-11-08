@@ -18,6 +18,7 @@ import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import packageJson from "../../package.json";
 import { CONTRIBUTORS } from "../data/contributors";
+import { neutral } from "../theme/tokens";
 
 interface AboutModalProps {
 	open: boolean;
@@ -44,7 +45,13 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 	};
 
 	return (
-		<Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth disableScrollLock>
+		<Dialog
+			open={open}
+			onClose={onClose}
+			maxWidth="sm"
+			fullWidth
+			disableScrollLock
+		>
 			<IconButton
 				aria-label={t("common.close")}
 				onClick={onClose}
@@ -255,7 +262,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 								px: 1.5,
 								borderRadius: 2,
 								backgroundColor: "rgba(0, 0, 0, 0.15)",
-								border: "1px solid #21262d",
+								border: `1px solid ${neutral[200]}`,
 							}}
 						>
 							<Box
@@ -271,12 +278,12 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 										backgroundColor: "transparent",
 									},
 									"&::-webkit-scrollbar-thumb": {
-										backgroundColor: "#30363d",
+										backgroundColor: neutral[300],
 										borderRadius: 3,
 									},
 									// separador de filas; la última no lo lleva
 									"& > :nth-child(n+3):nth-last-child(n+3)": {
-										borderBottom: "1px solid #21262d",
+										borderBottom: `1px solid ${neutral[200]}`,
 									},
 								}}
 							>
@@ -286,7 +293,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 									sx={{
 										pr: 2,
 										pb: 0.5,
-										borderBottom: "1px solid #21262d",
+										borderBottom: `1px solid ${neutral[200]}`,
 										fontSize: "0.625rem",
 										textTransform: "uppercase",
 										letterSpacing: 0.5,
@@ -300,7 +307,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
 									sx={{
 										pl: 2,
 										pb: 0.5,
-										borderBottom: "1px solid #21262d",
+										borderBottom: `1px solid ${neutral[200]}`,
 										fontSize: "0.625rem",
 										textTransform: "uppercase",
 										letterSpacing: 0.5,

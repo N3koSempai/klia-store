@@ -5,7 +5,7 @@ import PaymentsRounded from "@mui/icons-material/PaymentsRounded";
 import PeopleAltRounded from "@mui/icons-material/PeopleAltRounded";
 import { Box, ButtonBase, Tooltip } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { neutral, status } from "../theme/tokens";
+import { lines, neutral, status } from "../theme/tokens";
 import type {
 	AppPrivacyAssessment,
 	PrivacyFocusId,
@@ -54,8 +54,8 @@ export const PrivacyBadge = ({ assessment, onOpen }: PrivacyBadgeProps) => {
 			sx={{
 				display: "inline-flex",
 				alignItems: "stretch",
-				bgcolor: "rgba(255, 255, 255, 0.05)",
-				border: "1px solid rgba(255, 255, 255, 0.1)",
+				bgcolor: lines.subtle,
+				border: `1px solid ${lines.default}`,
 				borderRadius: "6px",
 				overflow: "hidden",
 				transition: "border-color 0.2s",
@@ -80,8 +80,7 @@ export const PrivacyBadge = ({ assessment, onOpen }: PrivacyBadgeProps) => {
 								alignItems: "center",
 								px: 1.25,
 								py: 0.5,
-								borderLeft:
-									index === 0 ? "none" : "1px solid rgba(255, 255, 255, 0.1)",
+								borderLeft: index === 0 ? "none" : `1px solid ${lines.default}`,
 								transition: "background-color 0.2s",
 								...cellStyle(focus.level),
 							}}

@@ -14,6 +14,7 @@ import {
 	useAccessibilityStore,
 } from "../../store/accessibilityStore";
 import "./Welcome.css";
+import { lines } from "../../theme/tokens";
 
 interface WelcomeProps {
 	onComplete: () => void;
@@ -24,8 +25,14 @@ export function Welcome({ onComplete }: WelcomeProps) {
 	const [currentSlide, setCurrentSlide] = useState(0);
 	const [isCompleting, setIsCompleting] = useState(false);
 
-	const { colorBlindMode, reducedMotion, highContrast, setColorBlindMode, setReducedMotion, setHighContrast } =
-		useAccessibilityStore();
+	const {
+		colorBlindMode,
+		reducedMotion,
+		highContrast,
+		setColorBlindMode,
+		setReducedMotion,
+		setHighContrast,
+	} = useAccessibilityStore();
 
 	const slides = [
 		{
@@ -149,8 +156,12 @@ export function Welcome({ onComplete }: WelcomeProps) {
 								}
 								label={
 									<span>
-										<span className="a11y-toggle-label">{t("welcome.accessibility.reducedMotion")}</span>
-										<span className="a11y-toggle-desc">{t("welcome.accessibility.reducedMotionDesc")}</span>
+										<span className="a11y-toggle-label">
+											{t("welcome.accessibility.reducedMotion")}
+										</span>
+										<span className="a11y-toggle-desc">
+											{t("welcome.accessibility.reducedMotionDesc")}
+										</span>
 									</span>
 								}
 							/>
@@ -165,33 +176,55 @@ export function Welcome({ onComplete }: WelcomeProps) {
 								}
 								label={
 									<span>
-										<span className="a11y-toggle-label">{t("welcome.accessibility.highContrast")}</span>
-										<span className="a11y-toggle-desc">{t("welcome.accessibility.highContrastDesc")}</span>
+										<span className="a11y-toggle-label">
+											{t("welcome.accessibility.highContrast")}
+										</span>
+										<span className="a11y-toggle-desc">
+											{t("welcome.accessibility.highContrastDesc")}
+										</span>
 									</span>
 								}
 							/>
 
 							<div className="a11y-select-row">
 								<span>
-									<span className="a11y-toggle-label">{t("welcome.accessibility.colorBlind")}</span>
-									<span className="a11y-toggle-desc">{t("welcome.accessibility.colorBlindDesc")}</span>
+									<span className="a11y-toggle-label">
+										{t("welcome.accessibility.colorBlind")}
+									</span>
+									<span className="a11y-toggle-desc">
+										{t("welcome.accessibility.colorBlindDesc")}
+									</span>
 								</span>
 								<FormControl size="small" sx={{ minWidth: 200 }}>
 									<Select
 										value={colorBlindMode}
-										onChange={(e) => setColorBlindMode(e.target.value as ColorBlindMode)}
-										inputProps={{ "aria-label": t("welcome.accessibility.colorBlind") }}
+										onChange={(e) =>
+											setColorBlindMode(e.target.value as ColorBlindMode)
+										}
+										inputProps={{
+											"aria-label": t("welcome.accessibility.colorBlind"),
+										}}
 										sx={{
 											color: "white",
-											backgroundColor: "rgba(255,255,255,0.1)",
-											"& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.3)" },
+											backgroundColor: lines.default,
+											"& .MuiOutlinedInput-notchedOutline": {
+												borderColor: lines.strong,
+											},
 											"& .MuiSvgIcon-root": { color: "white" },
 										}}
 									>
-										<MenuItem value="none">{t("welcome.accessibility.colorBlindNone")}</MenuItem>
-										<MenuItem value="deuteranopia">{t("welcome.accessibility.colorBlindDeuteranopia")}</MenuItem>
-										<MenuItem value="protanopia">{t("welcome.accessibility.colorBlindProtanopia")}</MenuItem>
-										<MenuItem value="tritanopia">{t("welcome.accessibility.colorBlindTritanopia")}</MenuItem>
+										<MenuItem value="none">
+											{t("welcome.accessibility.colorBlindNone")}
+										</MenuItem>
+										<MenuItem value="deuteranopia">
+											{t("welcome.accessibility.colorBlindDeuteranopia")}
+										</MenuItem>
+										<MenuItem value="protanopia">
+											{t("welcome.accessibility.colorBlindProtanopia")}
+										</MenuItem>
+										<MenuItem value="tritanopia">
+											{t("welcome.accessibility.colorBlindTritanopia")}
+										</MenuItem>
 									</Select>
 								</FormControl>
 							</div>

@@ -21,6 +21,7 @@ import { CachedImage } from "../../../components/CachedImage";
 import { ExtensionsPopover } from "../../../components/ExtensionsPopover";
 import { OFF_FLATHUB_APPS } from "../../../data/offFlathubApps";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
+import { hues, lines, neutral } from "../../../theme/tokens";
 import { DebAppIcon } from "./DebAppIcon";
 
 interface InstalledAppCardProps {
@@ -78,7 +79,7 @@ const InstalledAppCardComponent = ({
 				borderRadius: 4,
 				backgroundColor: "background.paper",
 				border: "1px solid",
-				borderColor: "rgba(255, 255, 255, 0.1)",
+				borderColor: lines.default,
 				transition: "all 0.3s ease-in-out",
 				willChange: "transform, box-shadow, border-color",
 				"&:hover": {
@@ -103,11 +104,11 @@ const InstalledAppCardComponent = ({
 							size="small"
 							sx={{
 								color: "text.secondary",
-								border: "1px solid rgba(255,255,255,0.1)",
+								border: `1px solid ${lines.default}`,
 								"&:hover": {
-									color: "#FFD700",
+									color: hues.gold,
 									backgroundColor: "rgba(255, 215, 0, 0.1)",
-									borderColor: "#FFD700",
+									borderColor: hues.gold,
 								},
 							}}
 						>
@@ -124,7 +125,7 @@ const InstalledAppCardComponent = ({
 							size="small"
 							sx={{
 								color: "text.secondary",
-								border: "1px solid rgba(255,255,255,0.1)",
+								border: `1px solid ${lines.default}`,
 								"&:hover": {
 									color: "info.main",
 									backgroundColor: "rgba(88, 166, 255, 0.1)",
@@ -309,7 +310,7 @@ const InstalledAppCardComponent = ({
 						width: "100%",
 						mt: "auto",
 						pt: 1,
-						borderTop: "1px solid rgba(255,255,255,0.05)",
+						borderTop: `1px solid ${lines.subtle}`,
 						display: "flex",
 						flexDirection: "column",
 						gap: 1,
@@ -326,7 +327,7 @@ const InstalledAppCardComponent = ({
 							fullWidth
 							sx={{
 								backgroundColor: "primary.main",
-								color: "#fff",
+								color: neutral[1000],
 								fontWeight: 600,
 								textTransform: "none",
 								borderRadius: 2,

@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { neutral, radius } from "../theme/tokens";
+import { lines, neutral, radius } from "../theme/tokens";
 import type {
 	AppPrivacyAssessment,
 	FindingLevel,
@@ -103,7 +103,7 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 						p: 0,
 						pt: 1.5,
 						listStyle: "none",
-						borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+						borderTop: `1px solid ${lines.subtle}`,
 						"& > li:first-of-type": { mt: 1.25 },
 					}}
 				>
@@ -158,7 +158,7 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 								p: 1,
 								borderRadius: 1,
 								bgcolor: "rgba(0, 0, 0, 0.25)",
-								border: "1px solid rgba(255, 255, 255, 0.05)",
+								border: `1px solid ${lines.subtle}`,
 								fontFamily: "JetBrains Mono, monospace",
 								fontSize: "0.75rem",
 								color: "text.secondary",

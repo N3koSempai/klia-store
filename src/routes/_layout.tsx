@@ -9,6 +9,7 @@ import { useAppInitialization } from "../hooks/useAppInitialization";
 import { useGitHubUpdates } from "../hooks/useGitHubUpdates";
 import { useInstalledApps } from "../hooks/useInstalledApps";
 import { Welcome } from "../pages/welcome/Welcome";
+import { lines } from "../theme/tokens";
 
 export const Route = createFileRoute("/_layout")({
 	component: LayoutComponent,
@@ -60,7 +61,7 @@ function LayoutComponent() {
 						display: "flex",
 						justifyContent: "center",
 						alignItems: "center",
-						border: "1px solid rgba(255,255,255,0.05)",
+						border: `1px solid ${lines.subtle}`,
 						borderTop: "none",
 					}}
 				>
@@ -83,7 +84,7 @@ function LayoutComponent() {
 						justifyContent: "center",
 						alignItems: "center",
 						flexDirection: "column",
-						border: "1px solid rgba(255,255,255,0.05)",
+						border: `1px solid ${lines.subtle}`,
 						borderTop: "none",
 					}}
 				>
@@ -104,7 +105,7 @@ function LayoutComponent() {
 						marginTop: "40px",
 						height: "calc(100vh - 40px)",
 						overflow: "auto",
-						border: "1px solid rgba(255,255,255,0.05)",
+						border: `1px solid ${lines.subtle}`,
 						borderTop: "none",
 					}}
 				>
@@ -129,7 +130,7 @@ function LayoutComponent() {
 					marginTop: "40px",
 					height: "calc(100vh - 40px)",
 					overflow: "auto",
-					border: "1px solid rgba(255,255,255,0.05)",
+					border: `1px solid ${lines.subtle}`,
 					borderTop: "none",
 				}}
 			>

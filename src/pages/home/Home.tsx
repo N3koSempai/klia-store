@@ -26,6 +26,7 @@ import { NotificationMenu } from "../../components/NotificationMenu";
 import { SettingsModal } from "../../components/SettingsModal";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useUpdateBadgeCount } from "../../hooks/useUpdateBadgeCount";
+import { lines } from "../../theme/tokens";
 import type { CategoryApp } from "../../types";
 import { AppsOfTheDaySection } from "./components/AppsOfTheDaySection";
 import { CategoriesSection } from "./components/CategoriesSection";
@@ -67,7 +68,9 @@ export const Home = ({
 	const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
 	// Un único modal activo: evita que Ajustes y Acerca de puedan estar montados a la vez
 	// (dos MuiDialog con dos backdrops superpuestos = parpadeo de brillo al cerrar/cambiar).
-	const [activeModal, setActiveModal] = useState<"settings" | "about" | null>(null);
+	const [activeModal, setActiveModal] = useState<"settings" | "about" | null>(
+		null,
+	);
 
 	const {
 		notifications,
@@ -114,7 +117,7 @@ export const Home = ({
 							px: 3,
 							height: 48,
 							bgcolor: "background.paper",
-							border: "1px solid rgba(255,255,255,0.1)",
+							border: `1px solid ${lines.default}`,
 							borderRadius: 2,
 							color: "primary.main",
 							fontWeight: 600,
@@ -272,7 +275,7 @@ export const Home = ({
 												sx={{
 													bgcolor: "background.paper",
 													borderRadius: "12px",
-													border: "1px solid rgba(255, 255, 255, 0.1)",
+													border: `1px solid ${lines.default}`,
 													height: "100%",
 													display: "flex",
 													flexDirection: "column",
@@ -295,30 +298,30 @@ export const Home = ({
 														sx={{
 															borderRadius: 2,
 															flexShrink: 0,
-															bgcolor: "rgba(255,255,255,0.1)",
+															bgcolor: lines.default,
 														}}
 													/>
 													<Box sx={{ flexGrow: 1, minWidth: 0 }}>
 														<Skeleton
 															variant="text"
-															sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }}
+															sx={{ mb: 0.5, bgcolor: lines.default }}
 														/>
 														<Skeleton
 															variant="text"
 															width="50%"
-															sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+															sx={{ bgcolor: lines.default }}
 														/>
 													</Box>
 												</Box>
 												<CardContent sx={{ flexGrow: 1, pt: 1 }}>
 													<Skeleton
 														variant="text"
-														sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+														sx={{ bgcolor: lines.default }}
 													/>
 													<Skeleton
 														variant="text"
 														width="90%"
-														sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+														sx={{ bgcolor: lines.default }}
 													/>
 												</CardContent>
 											</Card>
@@ -330,7 +333,7 @@ export const Home = ({
 												sx={{
 													bgcolor: "background.paper",
 													borderRadius: "12px",
-													border: "1px solid rgba(255, 255, 255, 0.1)",
+													border: `1px solid ${lines.default}`,
 													height: "100%",
 													display: "flex",
 													flexDirection: "column",

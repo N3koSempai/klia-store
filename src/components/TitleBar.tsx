@@ -4,11 +4,19 @@ import CropSquare from "@mui/icons-material/CropSquare";
 import FilterNone from "@mui/icons-material/FilterNone";
 import Remove from "@mui/icons-material/Remove";
 import WifiOffRounded from "@mui/icons-material/WifiOffRounded";
-import { Box, IconButton, Stack, Tooltip, Typography, useTheme } from "@mui/material";
+import {
+	Box,
+	IconButton,
+	Stack,
+	Tooltip,
+	Typography,
+	useTheme,
+} from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConnectivityStore } from "../store/connectivityStore";
+import { brand, hues, lines, neutral } from "../theme/tokens";
 
 const TitleBar = () => {
 	const theme = useTheme();
@@ -44,7 +52,7 @@ const TitleBar = () => {
 				height: "40px",
 				width: "100%",
 				backgroundColor: "background.default",
-				borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+				borderBottom: `1px solid ${lines.subtle}`,
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
@@ -105,10 +113,10 @@ const TitleBar = () => {
 								height: 28,
 								mr: 1.5,
 								borderRadius: "50%",
-								bgcolor: "#f6d32d",
+								bgcolor: brand.secondary,
 							}}
 						>
-							<WifiOffRounded sx={{ fontSize: 16, color: "#1a1a1a" }} />
+							<WifiOffRounded sx={{ fontSize: 16, color: hues.grayDarkest }} />
 						</Box>
 					</Tooltip>
 				)}
@@ -173,8 +181,8 @@ const WindowButton = ({
 			color: "text.secondary",
 			transition: "all 0.2s",
 			"&:hover": {
-				backgroundColor: isClose ? "#e81123" : "rgba(255, 255, 255, 0.05)",
-				color: isClose ? "#fff" : "text.primary",
+				backgroundColor: isClose ? hues.redWindows : lines.subtle,
+				color: isClose ? neutral[1000] : "text.primary",
 			},
 		}}
 	>

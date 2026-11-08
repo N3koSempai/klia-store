@@ -17,6 +17,7 @@ import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as THREE from "three";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
+import { brand, hues, neutral, status } from "../../../theme/tokens";
 
 // Geometría compartida por todos los AppBlock: misma forma siempre (0.85, 0.85, 0.85),
 // se reutiliza en vez de instanciar un BoxGeometry nuevo por bloque en cada render.
@@ -61,18 +62,18 @@ const AppBlock = ({
 	// Generate color based on app name hash
 	const getAppColor = (appName: string) => {
 		const colors = [
-			"#58a6ff",
-			"#f85149",
-			"#3fb950",
-			"#d2a8ff",
-			"#ffa657",
-			"#79c0ff",
-			"#ff7b72",
-			"#56d364",
-			"#bc8cff",
-			"#ffa198",
-			"#7ee787",
-			"#a5d6ff",
+			status.info,
+			status.danger,
+			status.success,
+			hues.purple,
+			hues.orange,
+			hues.blueLight,
+			hues.redSyntax,
+			hues.greenSoft,
+			hues.purpleSoft,
+			brand.dangerSoft,
+			hues.greenBright,
+			hues.bluePale,
 		];
 		let hash = 0;
 		for (let i = 0; i < appName.length; i++) {
@@ -86,12 +87,12 @@ const AppBlock = ({
 		if (permissionFilter === "storage") {
 			// Color según tamaño: rojo (>1GB), amarillo (200MB-1GB), verde (<200MB)
 			const size = app.installedSize || 0;
-			if (size > 1_000_000_000) return "#f85149"; // Rojo para apps > 1GB
-			if (size > 200_000_000) return "#ffa657"; // Amarillo para apps 200MB-1GB
-			return "#3fb950"; // Verde para apps < 200MB
+			if (size > 1_000_000_000) return status.danger; // Rojo para apps > 1GB
+			if (size > 200_000_000) return hues.orange; // Amarillo para apps 200MB-1GB
+			return status.success; // Verde para apps < 200MB
 		} else if (permissionFilter) {
 			// Amarillo/dorado para apps con permiso, azul celeste para apps sin permiso
-			return hasPermission ? "#ffd700" : "#87ceeb";
+			return hasPermission ? hues.gold : hues.skyBlue;
 		}
 		return getAppColor(app.name);
 	};
@@ -193,7 +194,7 @@ const AppBlock = ({
 			<lineSegments>
 				<edgesGeometry args={[sharedEdgesGeometry]} />
 				<lineBasicMaterial
-					color={hovered || isSelected ? "#ffffff" : color}
+					color={hovered || isSelected ? neutral[1000] : color}
 					transparent
 					opacity={0.6}
 				/>
@@ -366,10 +367,18 @@ const CubeScene = ({
 	return (
 		<>
 			<ambientLight intensity={0.4} />
-			<pointLight position={[10, 10, 10]} intensity={1.2} color="#58a6ff" />
-			<pointLight position={[-10, -10, -10]} intensity={0.8} color="#f85149" />
-			<pointLight position={[0, 15, 0]} intensity={0.9} color="#ffffff" />
-			<pointLight position={[0, -10, 10]} intensity={0.6} color="#3fb950" />
+			<pointLight position={[10, 10, 10]} intensity={1.2} color={status.info} />
+			<pointLight
+				position={[-10, -10, -10]}
+				intensity={0.8}
+				color={status.danger}
+			/>
+			<pointLight position={[0, 15, 0]} intensity={0.9} color={neutral[1000]} />
+			<pointLight
+				position={[0, -10, 10]}
+				intensity={0.6}
+				color={status.success}
+			/>
 
 			{/* Render app blocks */}
 			{sortedApps.map((app, sortedIndex) => (
@@ -391,7 +400,7 @@ const CubeScene = ({
 				<lineSegments>
 					<edgesGeometry args={[outerWireframeGeometry]} />
 					<lineBasicMaterial
-						color="#30363d"
+						color={neutral[300]}
 						transparent
 						opacity={0.5}
 						linewidth={2}
@@ -448,15 +457,15 @@ export const DataCube = ({
 					gap: 2,
 				}}
 			>
-				<CircularProgress sx={{ color: "#58a6ff" }} />
+				<CircularProgress sx={{ color: status.info }} />
 				<Box sx={{ textAlign: "center" }}>
-					<Typography sx={{ color: "#8b949e", fontFamily: "monospace" }}>
+					<Typography sx={{ color: neutral[600], fontFamily: "monospace" }}>
 						{loading ? t("analytics.loading") : t("analytics.noApps")}
 					</Typography>
 					{loading && (
 						<Typography
 							sx={{
-								color: "#6e7681",
+								color: neutral[500],
 								fontFamily: "monospace",
 								fontSize: "0.75rem",
 								mt: 0.5,
@@ -546,14 +555,14 @@ export const DataCube = ({
 							disabled={permissionFilter !== null}
 							sx={{
 								bgcolor: "rgba(22, 27, 34, 0.95)",
-								border: "1px solid #30363d",
-								color: permissionFilter ? "#8b949e" : "#58a6ff",
+								border: `1px solid ${neutral[300]}`,
+								color: permissionFilter ? neutral[600] : status.info,
 								backdropFilter: "blur(10px)",
 								"&:hover": {
 									bgcolor: permissionFilter
 										? "rgba(22, 27, 34, 0.95)"
 										: "rgba(88, 166, 255, 0.1)",
-									borderColor: permissionFilter ? "#30363d" : "#58a6ff",
+									borderColor: permissionFilter ? neutral[300] : status.info,
 								},
 								cursor: permissionFilter ? "not-allowed" : "pointer",
 							}}
@@ -570,7 +579,7 @@ export const DataCube = ({
 						flexDirection: "column",
 						gap: 1,
 						bgcolor: "rgba(22, 27, 34, 0.95)",
-						border: "1px solid #30363d",
+						border: `1px solid ${neutral[300]}`,
 						borderRadius: 1,
 						p: 1.5,
 						backdropFilter: "blur(10px)",
@@ -579,7 +588,7 @@ export const DataCube = ({
 					<Typography
 						variant="caption"
 						sx={{
-							color: "#8b949e",
+							color: neutral[600],
 							fontFamily: "monospace",
 							textTransform: "uppercase",
 							fontSize: "0.65rem",
@@ -602,8 +611,9 @@ export const DataCube = ({
 								permissionFilter === "storage"
 									? "rgba(88, 166, 255, 0.2)"
 									: "transparent",
-							border: `1px solid ${permissionFilter === "storage" ? "#58a6ff" : "#30363d"}`,
-							color: permissionFilter === "storage" ? "#58a6ff" : "#8b949e",
+							border: `1px solid ${permissionFilter === "storage" ? "${status.info}" : "${neutral[300]}"}`,
+							color:
+								permissionFilter === "storage" ? status.info : neutral[600],
 							fontFamily: "monospace",
 							fontSize: "0.7rem",
 							height: "28px",
@@ -611,11 +621,12 @@ export const DataCube = ({
 							transition: "all 0.2s",
 							"&:hover": {
 								bgcolor: "rgba(88, 166, 255, 0.1)",
-								borderColor: "#58a6ff",
-								color: "#58a6ff",
+								borderColor: status.info,
+								color: status.info,
 							},
 							"& .MuiChip-icon": {
-								color: permissionFilter === "storage" ? "#58a6ff" : "#8b949e",
+								color:
+									permissionFilter === "storage" ? status.info : neutral[600],
 								fontSize: "1rem",
 							},
 						}}
@@ -633,8 +644,8 @@ export const DataCube = ({
 								permissionFilter === "camera"
 									? "rgba(88, 166, 255, 0.2)"
 									: "transparent",
-							border: `1px solid ${permissionFilter === "camera" ? "#58a6ff" : "#30363d"}`,
-							color: permissionFilter === "camera" ? "#58a6ff" : "#8b949e",
+							border: `1px solid ${permissionFilter === "camera" ? "${status.info}" : "${neutral[300]}"}`,
+							color: permissionFilter === "camera" ? status.info : neutral[600],
 							fontFamily: "monospace",
 							fontSize: "0.7rem",
 							height: "28px",
@@ -642,11 +653,12 @@ export const DataCube = ({
 							transition: "all 0.2s",
 							"&:hover": {
 								bgcolor: "rgba(88, 166, 255, 0.1)",
-								borderColor: "#58a6ff",
-								color: "#58a6ff",
+								borderColor: status.info,
+								color: status.info,
 							},
 							"& .MuiChip-icon": {
-								color: permissionFilter === "camera" ? "#58a6ff" : "#8b949e",
+								color:
+									permissionFilter === "camera" ? status.info : neutral[600],
 								fontSize: "1rem",
 							},
 						}}
@@ -664,8 +676,8 @@ export const DataCube = ({
 								permissionFilter === "files"
 									? "rgba(88, 166, 255, 0.2)"
 									: "transparent",
-							border: `1px solid ${permissionFilter === "files" ? "#58a6ff" : "#30363d"}`,
-							color: permissionFilter === "files" ? "#58a6ff" : "#8b949e",
+							border: `1px solid ${permissionFilter === "files" ? "${status.info}" : "${neutral[300]}"}`,
+							color: permissionFilter === "files" ? status.info : neutral[600],
 							fontFamily: "monospace",
 							fontSize: "0.7rem",
 							height: "28px",
@@ -673,11 +685,12 @@ export const DataCube = ({
 							transition: "all 0.2s",
 							"&:hover": {
 								bgcolor: "rgba(88, 166, 255, 0.1)",
-								borderColor: "#58a6ff",
-								color: "#58a6ff",
+								borderColor: status.info,
+								color: status.info,
 							},
 							"& .MuiChip-icon": {
-								color: permissionFilter === "files" ? "#58a6ff" : "#8b949e",
+								color:
+									permissionFilter === "files" ? status.info : neutral[600],
 								fontSize: "1rem",
 							},
 						}}
@@ -692,7 +705,7 @@ export const DataCube = ({
 					bottom: 16,
 					left: 16,
 					bgcolor: "rgba(22, 27, 34, 0.95)",
-					border: "1px solid #30363d",
+					border: `1px solid ${neutral[300]}`,
 					p: 2,
 					borderRadius: 1,
 					backdropFilter: "blur(10px)",
@@ -701,7 +714,7 @@ export const DataCube = ({
 				<Typography
 					variant="caption"
 					sx={{
-						color: "#8b949e",
+						color: neutral[600],
 						fontFamily: "monospace",
 						textTransform: "uppercase",
 						display: "block",
@@ -714,7 +727,7 @@ export const DataCube = ({
 				<Typography
 					variant="body2"
 					sx={{
-						color: "#c9d1d9",
+						color: neutral[800],
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 					}}
@@ -726,7 +739,9 @@ export const DataCube = ({
 					<br />• {t("analytics.cubeSize")}: {cubeSize}×{cubeSize}×{cubeSize}
 					<br />
 					<br />
-					<span style={{ color: "#8b949e" }}>{t("analytics.controls")}:</span>
+					<span style={{ color: neutral[600] }}>
+						{t("analytics.controls")}:
+					</span>
 					<br />• {t("analytics.clickToSelect")}
 					<br />• {t("analytics.dragToRotate")}
 					<br />• {t("analytics.scrollToZoom")}

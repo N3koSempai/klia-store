@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { hues, lines } from "../theme/tokens";
 
 interface TerminalProps {
 	output: string[];
@@ -37,16 +38,16 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 				width: "100%",
 				maxWidth: 900,
 				margin: "0 auto",
-				bgcolor: "#1e1e1e",
+				bgcolor: hues.grayDarker,
 				borderRadius: 2,
 				overflow: "hidden",
-				border: "1px solid rgba(255, 255, 255, 0.1)",
+				border: `1px solid ${lines.default}`,
 			}}
 		>
 			{/* Header de la terminal */}
 			<Box
 				sx={{
-					bgcolor: "#323232",
+					bgcolor: hues.grayDark,
 					px: 2,
 					py: 1,
 					display: "flex",
@@ -59,7 +60,7 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 						width: 12,
 						height: 12,
 						borderRadius: "50%",
-						bgcolor: "#ff5f56",
+						bgcolor: hues.macRed,
 					}}
 				/>
 				<Box
@@ -67,7 +68,7 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 						width: 12,
 						height: 12,
 						borderRadius: "50%",
-						bgcolor: "#ffbd2e",
+						bgcolor: hues.macYellow,
 					}}
 				/>
 				<Box
@@ -75,7 +76,7 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 						width: 12,
 						height: 12,
 						borderRadius: "50%",
-						bgcolor: "#27c93f",
+						bgcolor: hues.green,
 					}}
 				/>
 				<Typography
@@ -116,7 +117,7 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 					overflowY: "auto",
 					fontFamily: "'Fira Code', 'Courier New', monospace",
 					fontSize: "0.9rem",
-					color: "#d4d4d4",
+					color: hues.grayLight,
 					whiteSpace: "pre-wrap",
 					wordBreak: "break-word",
 					"&::-webkit-scrollbar": {
@@ -126,10 +127,10 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 						bgcolor: "transparent",
 					},
 					"&::-webkit-scrollbar-thumb": {
-						bgcolor: "rgba(255, 255, 255, 0.2)",
+						bgcolor: lines.strong,
 						borderRadius: "4px",
 						"&:hover": {
-							bgcolor: "rgba(255, 255, 255, 0.3)",
+							bgcolor: lines.strong,
 						},
 					},
 				}}
@@ -158,7 +159,7 @@ export const Terminal = ({ output, isRunning }: TerminalProps) => {
 							display: "inline-block",
 							width: 8,
 							height: 16,
-							bgcolor: "#d4d4d4",
+							bgcolor: hues.grayLight,
 							animation: "blink 1s step-end infinite",
 							ml: 0.5,
 							"@keyframes blink": {

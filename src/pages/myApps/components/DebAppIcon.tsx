@@ -1,6 +1,7 @@
 import { Box, Skeleton, Typography } from "@mui/material";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { memo, useEffect, useState } from "react";
+import { lines } from "../../../theme/tokens";
 
 // In-memory caches so a card scrolling out and back never re-invokes the
 // backend. Keyed by package name (one icon per package).
@@ -109,7 +110,7 @@ const DebAppIconComponent = ({ appId, iconPath, name }: DebAppIconProps) => {
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				bgcolor: "rgba(255, 255, 255, 0.06)",
+				bgcolor: lines.subtle,
 				border: "1px solid rgba(255, 255, 255, 0.12)",
 				color: "text.secondary",
 			}}

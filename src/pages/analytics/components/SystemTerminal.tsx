@@ -2,6 +2,7 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
+import { hues, neutral, status } from "../../../theme/tokens";
 
 interface SystemTerminalProps {
 	selectedApp: InstalledAppInfo | null;
@@ -34,10 +35,10 @@ export const SystemTerminal = ({
 		if (loading) {
 			return (
 				<Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 2 }}>
-					<CircularProgress size={16} sx={{ color: "#58a6ff" }} />
+					<CircularProgress size={16} sx={{ color: status.info }} />
 					<Typography
 						sx={{
-							color: "#8b949e",
+							color: neutral[600],
 							fontFamily: "monospace",
 							fontSize: "0.875rem",
 						}}
@@ -74,11 +75,11 @@ export const SystemTerminal = ({
 
 			// Función para obtener el color según el tamaño (solo para storage)
 			const getSizeColor = (size: number | undefined): string => {
-				if (permissionFilter !== "storage") return "#ffd700";
+				if (permissionFilter !== "storage") return hues.gold;
 				const bytes = size || 0;
-				if (bytes > 1_000_000_000) return "#f85149"; // Rojo para > 1GB
-				if (bytes > 200_000_000) return "#ffa657"; // Amarillo para 200MB-1GB
-				return "#3fb950"; // Verde para < 200MB
+				if (bytes > 1_000_000_000) return status.danger; // Rojo para > 1GB
+				if (bytes > 200_000_000) return hues.orange; // Amarillo para 200MB-1GB
+				return status.success; // Verde para < 200MB
 			};
 
 			// Función para formatear tamaño en bytes a string legible
@@ -95,7 +96,7 @@ export const SystemTerminal = ({
 				<Box sx={{ p: 2 }}>
 					<Typography
 						sx={{
-							color: "#58a6ff",
+							color: status.info,
 							fontFamily: "monospace",
 							fontSize: "0.875rem",
 							fontWeight: 700,
@@ -112,7 +113,7 @@ export const SystemTerminal = ({
 
 					<Typography
 						sx={{
-							color: "#ffa657",
+							color: hues.orange,
 							fontFamily: "monospace",
 							fontSize: "0.75rem",
 							fontWeight: 700,
@@ -126,7 +127,7 @@ export const SystemTerminal = ({
 
 					<Typography
 						sx={{
-							color: "#8b949e",
+							color: neutral[600],
 							fontFamily: "monospace",
 							fontSize: "0.75rem",
 							mb: 2,
@@ -141,7 +142,7 @@ export const SystemTerminal = ({
 					{appsToDisplay.length === 0 ? (
 						<Typography
 							sx={{
-								color: "#8b949e",
+								color: neutral[600],
 								fontFamily: "monospace",
 								fontSize: "0.75rem",
 								fontStyle: "italic",
@@ -158,7 +159,7 @@ export const SystemTerminal = ({
 										key={app.instanceId}
 										onClick={() => onAppSelect(app)}
 										sx={{
-											color: "#c9d1d9",
+											color: neutral[800],
 											fontFamily: "monospace",
 											fontSize: "0.75rem",
 											lineHeight: 1.8,
@@ -184,7 +185,7 @@ export const SystemTerminal = ({
 											<span style={{ color: sizeColor }}>
 												{(index + 1).toString().padStart(2, "0")}.
 											</span>{" "}
-											<span style={{ color: "#56d364" }}>{app.name}</span>
+											<span style={{ color: hues.greenSoft }}>{app.name}</span>
 											{permissionFilter === "storage" && (
 												<>
 													<br />
@@ -200,7 +201,9 @@ export const SystemTerminal = ({
 												</>
 											)}
 											<br />
-											<span style={{ color: "#8b949e", paddingLeft: "24px" }}>
+											<span
+												style={{ color: neutral[600], paddingLeft: "24px" }}
+											>
 												{app.appId}
 											</span>
 										</Typography>
@@ -212,12 +215,12 @@ export const SystemTerminal = ({
 
 					<Typography
 						sx={{
-							color: "#8b949e",
+							color: neutral[600],
 							fontFamily: "monospace",
 							fontSize: "0.75rem",
 							mt: 3,
 							pt: 2,
-							borderTop: "1px solid #30363d",
+							borderTop: `1px solid ${neutral[300]}`,
 						}}
 					>
 						{t("analytics.terminal.clickForDetails")}
@@ -225,7 +228,7 @@ export const SystemTerminal = ({
 						{t("analytics.terminal.clickToClear")}
 						<br />
 						<br />
-						<span style={{ color: "#58a6ff" }}>▊</span>
+						<span style={{ color: status.info }}>▊</span>
 					</Typography>
 				</Box>
 			);
@@ -236,7 +239,7 @@ export const SystemTerminal = ({
 				<Box sx={{ p: 2 }}>
 					<Typography
 						sx={{
-							color: "#8b949e",
+							color: neutral[600],
 							fontFamily: "monospace",
 							fontSize: "0.875rem",
 						}}
@@ -253,7 +256,7 @@ export const SystemTerminal = ({
 						{t("analytics.terminal.awaitingSelection")}
 						<br />
 						<br />
-						<span style={{ color: "#58a6ff" }}>▊</span>
+						<span style={{ color: status.info }}>▊</span>
 					</Typography>
 				</Box>
 			);
@@ -283,7 +286,7 @@ export const SystemTerminal = ({
 			<Box sx={{ p: 2 }}>
 				<Typography
 					sx={{
-						color: "#58a6ff",
+						color: status.info,
 						fontFamily: "monospace",
 						fontSize: "0.875rem",
 						fontWeight: 700,
@@ -299,7 +302,7 @@ export const SystemTerminal = ({
 				{/* App Name */}
 				<Typography
 					sx={{
-						color: "#56d364",
+						color: hues.greenSoft,
 						fontFamily: "monospace",
 						fontSize: "0.875rem",
 						fontWeight: 700,
@@ -312,14 +315,14 @@ export const SystemTerminal = ({
 				{/* App ID */}
 				<Typography
 					sx={{
-						color: "#c9d1d9",
+						color: neutral[800],
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						lineHeight: 1.8,
 						mb: 2,
 					}}
 				>
-					<span style={{ color: "#8b949e" }}>
+					<span style={{ color: neutral[600] }}>
 						{t("analytics.terminal.id")}:
 					</span>{" "}
 					{selectedApp.appId}
@@ -328,7 +331,7 @@ export const SystemTerminal = ({
 				{/* Metadata Section */}
 				<Typography
 					sx={{
-						color: "#ffa657",
+						color: hues.orange,
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						fontWeight: 700,
@@ -340,7 +343,7 @@ export const SystemTerminal = ({
 
 				<Typography
 					sx={{
-						color: "#c9d1d9",
+						color: neutral[800],
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						lineHeight: 1.8,
@@ -365,7 +368,7 @@ export const SystemTerminal = ({
 					<>
 						<Typography
 							sx={{
-								color: "#ffa657",
+								color: hues.orange,
 								fontFamily: "monospace",
 								fontSize: "0.75rem",
 								fontWeight: 700,
@@ -376,7 +379,7 @@ export const SystemTerminal = ({
 						</Typography>
 						<Typography
 							sx={{
-								color: "#c9d1d9",
+								color: neutral[800],
 								fontFamily: "monospace",
 								fontSize: "0.75rem",
 								lineHeight: 1.8,
@@ -391,7 +394,7 @@ export const SystemTerminal = ({
 				{/* Package Information */}
 				<Typography
 					sx={{
-						color: "#ffa657",
+						color: hues.orange,
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						fontWeight: 700,
@@ -403,7 +406,7 @@ export const SystemTerminal = ({
 
 				<Typography
 					sx={{
-						color: "#c9d1d9",
+						color: neutral[800],
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						lineHeight: 1.8,
@@ -418,7 +421,7 @@ export const SystemTerminal = ({
 					{t("analytics.terminal.branch")}: {t("analytics.terminal.stable")}
 					<br />
 					{t("analytics.terminal.status")}:{" "}
-					<span style={{ color: "#56d364" }}>
+					<span style={{ color: hues.greenSoft }}>
 						{t("analytics.terminal.installed")}
 					</span>
 				</Typography>
@@ -426,7 +429,7 @@ export const SystemTerminal = ({
 				{/* System Integration */}
 				<Typography
 					sx={{
-						color: "#ffa657",
+						color: hues.orange,
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						fontWeight: 700,
@@ -438,7 +441,7 @@ export const SystemTerminal = ({
 
 				<Typography
 					sx={{
-						color: "#c9d1d9",
+						color: neutral[800],
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						lineHeight: 1.8,
@@ -460,7 +463,7 @@ export const SystemTerminal = ({
 				{/* Commands */}
 				<Typography
 					sx={{
-						color: "#ffa657",
+						color: hues.orange,
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						fontWeight: 700,
@@ -472,7 +475,7 @@ export const SystemTerminal = ({
 
 				<Typography
 					sx={{
-						color: "#79c0ff",
+						color: hues.blueLight,
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						lineHeight: 1.8,
@@ -488,12 +491,12 @@ export const SystemTerminal = ({
 				{/* Footer */}
 				<Typography
 					sx={{
-						color: "#8b949e",
+						color: neutral[600],
 						fontFamily: "monospace",
 						fontSize: "0.75rem",
 						mt: 3,
 						pt: 2,
-						borderTop: "1px solid #30363d",
+						borderTop: `1px solid ${neutral[300]}`,
 					}}
 				>
 					{t("analytics.terminal.timestamp")} {new Date().toISOString()}
@@ -503,7 +506,7 @@ export const SystemTerminal = ({
 					{t("analytics.terminal.source")}
 					<br />
 					<br />
-					<span style={{ color: "#58a6ff" }}>▊</span>
+					<span style={{ color: status.info }}>▊</span>
 				</Typography>
 			</Box>
 		);
@@ -515,15 +518,15 @@ export const SystemTerminal = ({
 				height: "100%",
 				display: "flex",
 				flexDirection: "column",
-				bgcolor: "#161b22",
+				bgcolor: neutral[100],
 			}}
 		>
 			{/* Terminal Header */}
 			<Box
 				sx={{
 					p: 1.5,
-					bgcolor: "#0d1117",
-					border: "1px solid #30363d",
+					bgcolor: neutral[50],
+					border: `1px solid ${neutral[300]}`,
 					borderLeft: "none",
 					display: "flex",
 					alignItems: "center",
@@ -535,7 +538,7 @@ export const SystemTerminal = ({
 						width: 10,
 						height: 10,
 						borderRadius: "50%",
-						bgcolor: "#f85149",
+						bgcolor: status.danger,
 					}}
 				/>
 				<Box
@@ -543,7 +546,7 @@ export const SystemTerminal = ({
 						width: 10,
 						height: 10,
 						borderRadius: "50%",
-						bgcolor: "#ffa657",
+						bgcolor: hues.orange,
 					}}
 				/>
 				<Box
@@ -551,14 +554,14 @@ export const SystemTerminal = ({
 						width: 10,
 						height: 10,
 						borderRadius: "50%",
-						bgcolor: "#3fb950",
+						bgcolor: status.success,
 					}}
 				/>
 				<Typography
 					variant="caption"
 					sx={{
 						ml: 2,
-						color: "#8b949e",
+						color: neutral[600],
 						fontFamily: "monospace",
 						textTransform: "uppercase",
 					}}
@@ -573,18 +576,18 @@ export const SystemTerminal = ({
 				sx={{
 					flex: 1,
 					overflow: "auto",
-					bgcolor: "#0d1117",
+					bgcolor: neutral[50],
 					"&::-webkit-scrollbar": {
 						width: "8px",
 					},
 					"&::-webkit-scrollbar-track": {
-						bgcolor: "#0d1117",
+						bgcolor: neutral[50],
 					},
 					"&::-webkit-scrollbar-thumb": {
-						bgcolor: "#30363d",
+						bgcolor: neutral[300],
 						borderRadius: "4px",
 						"&:hover": {
-							bgcolor: "#484f58",
+							bgcolor: neutral[400],
 						},
 					},
 				}}

@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { brand, hues, lines, neutral } from "../theme/tokens";
 
 interface Dependency {
 	id: string;
@@ -137,7 +138,7 @@ export function DependencyInfoPopover({
 
 	// Visual state based on dependencies
 	const borderColor = hasDependencies ? "warning.main" : "success.main";
-	const accentColor = hasDependencies ? "#F6D32D" : "#4CAF50";
+	const accentColor = hasDependencies ? brand.secondary : hues.greenMaterial;
 	const statusIcon = hasDependencies ? (
 		<WarningAmberIcon sx={{ fontSize: "1rem", color: accentColor }} />
 	) : (
@@ -223,8 +224,8 @@ export function DependencyInfoPopover({
 				slotProps={{
 					paper: {
 						sx: {
-							backgroundColor: "#161B22",
-							border: "1px solid rgba(255,255,255,0.1)",
+							backgroundColor: neutral[100],
+							border: `1px solid ${lines.default}`,
 							borderRadius: 2,
 							minWidth: 360,
 							maxWidth: 450,
@@ -241,7 +242,7 @@ export function DependencyInfoPopover({
 							fontFamily: "Inter, sans-serif",
 							fontSize: "1.125rem",
 							fontWeight: 700,
-							color: "#FFFFFF",
+							color: neutral[1000],
 							letterSpacing: -0.5,
 						}}
 					>
@@ -270,7 +271,7 @@ export function DependencyInfoPopover({
 									fontFamily: "JetBrains Mono, monospace",
 									fontSize: "2rem",
 									fontWeight: 700,
-									color: "#FFFFFF",
+									color: neutral[1000],
 									lineHeight: 1,
 								}}
 							>
@@ -369,7 +370,7 @@ export function DependencyInfoPopover({
 											py: 0.75,
 											borderBottom:
 												index < processedDeps.length - 1
-													? "1px solid rgba(255,255,255,0.05)"
+													? `1px solid ${lines.subtle}`
 													: "none",
 										}}
 									>

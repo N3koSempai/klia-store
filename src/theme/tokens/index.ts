@@ -96,3 +96,64 @@ export const createSemanticTokens = (opts: {
 		focusRing: opts.accent,
 	};
 };
+
+// ----------------------------------------------------------- Marca / extras
+
+// Colores de marca. Coinciden con `palette.*` del tema en modo normal; el tema
+// los sustituye en los modos de daltonismo (usar `theme.palette` cuando el
+// contexto lo permita y estos solo en lugares sin acceso al tema).
+export const brand = {
+	primary: "#4A86CF",
+	primaryDark: "#3D74B8",
+	secondary: "#F6D32D",
+	secondaryLight: "#F8DB4E",
+	secondaryPale: "#F8E45C",
+	danger: "#FF6B6B",
+	dangerLight: "#FF8585",
+	dangerSoft: "#FFA198",
+} as const;
+
+// Líneas y rellenos translúcidos estáticos (equivalen a `border.*` en modo
+// normal). Para estilos fuera del tema; dentro de `sx` preferir
+// `theme.tokens.border`.
+export const lines = {
+	subtle: "rgba(240, 246, 252, 0.08)",
+	default: "rgba(240, 246, 252, 0.14)",
+	strong: "rgba(240, 246, 252, 0.24)",
+} as const;
+
+// Paleta de terminal / sintaxis / visualización de datos (Analytics, Terminal,
+// gradientes decorativos). Independiente del tema de la app a propósito.
+export const hues = {
+	green: "#27C93F",
+	greenBright: "#7EE787",
+	greenSoft: "#56D364",
+	greenDeep: "#2EA043",
+	greenDark: "#238636",
+	greenLime: "#2ED547",
+	greenMaterial: "#4CAF50",
+	greenMaterialDark: "#43A047",
+	orange: "#FFA657",
+	orangeDeep: "#FF9800",
+	orangeRed: "#FF4500",
+	amber: "#FFB11B",
+	amberDeep: "#E3A918",
+	gold: "#FFD700",
+	macYellow: "#FFBD2E",
+	macRed: "#FF5F56",
+	red: "#FF5252",
+	redMaterial: "#E53935",
+	redTailwind: "#EF4444",
+	redWindows: "#E81123",
+	redSyntax: "#FF7B72",
+	skyBlue: "#87CEEB",
+	blueLight: "#79C0FF",
+	bluePale: "#A5D6FF",
+	purple: "#D2A8FF",
+	purpleSoft: "#BC8CFF",
+	brown: "#B98A5E",
+	grayLight: "#D4D4D4",
+	grayDark: "#323232",
+	grayDarker: "#1E1E1E",
+	grayDarkest: "#1A1A1A",
+} as const;

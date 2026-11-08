@@ -5,6 +5,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { InstalledAppInfo } from "../../store/installedAppsStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
+import { neutral, status } from "../../theme/tokens";
 import { dbCacheManager } from "../../utils/dbCache";
 import { SystemTerminal } from "./components/SystemTerminal";
 
@@ -168,8 +169,8 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 			sx={{
 				height: "100%",
 				width: "100%",
-				bgcolor: "#0d1117",
-				color: "#c9d1d9",
+				bgcolor: neutral[50],
+				color: neutral[800],
 				fontFamily: '"JetBrains Mono", "Fira Code", monospace',
 				overflow: "hidden",
 				display: "flex",
@@ -180,8 +181,8 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 			{/* Top Panel */}
 			<Paper
 				sx={{
-					bgcolor: "#161b22",
-					border: "1px solid #30363d",
+					bgcolor: neutral[100],
+					border: `1px solid ${neutral[300]}`,
 					borderRadius: 0,
 					p: 2,
 					display: "flex",
@@ -190,7 +191,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 				}}
 			>
 				<Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-					<IconButton onClick={onBack} sx={{ color: "#58a6ff" }}>
+					<IconButton onClick={onBack} sx={{ color: status.info }}>
 						<ArrowBackIcon />
 					</IconButton>
 					<Typography
@@ -198,7 +199,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 						sx={{
 							fontFamily: '"JetBrains Mono", monospace',
 							fontWeight: 700,
-							color: "#58a6ff",
+							color: status.info,
 						}}
 					>
 						{t("analytics.title")}
@@ -211,13 +212,13 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 							<Box>
 								<Typography
 									variant="caption"
-									sx={{ color: "#8b949e", textTransform: "uppercase" }}
+									sx={{ color: neutral[600], textTransform: "uppercase" }}
 								>
 									{t("analytics.totalApps")}
 								</Typography>
 								<Typography
 									variant="body2"
-									sx={{ fontFamily: "monospace", color: "#58a6ff" }}
+									sx={{ fontFamily: "monospace", color: status.info }}
 								>
 									{installedAppsInfo.length}
 								</Typography>
@@ -225,13 +226,13 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 							<Box>
 								<Typography
 									variant="caption"
-									sx={{ color: "#8b949e", textTransform: "uppercase" }}
+									sx={{ color: neutral[600], textTransform: "uppercase" }}
 								>
 									{t("analytics.hostname")}
 								</Typography>
 								<Typography
 									variant="body2"
-									sx={{ fontFamily: "monospace", color: "#58a6ff" }}
+									sx={{ fontFamily: "monospace", color: status.info }}
 								>
 									{analytics.system_info.hostname}
 								</Typography>
@@ -239,13 +240,13 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 							<Box>
 								<Typography
 									variant="caption"
-									sx={{ color: "#8b949e", textTransform: "uppercase" }}
+									sx={{ color: neutral[600], textTransform: "uppercase" }}
 								>
 									{t("analytics.kernel")}
 								</Typography>
 								<Typography
 									variant="body2"
-									sx={{ fontFamily: "monospace", color: "#58a6ff" }}
+									sx={{ fontFamily: "monospace", color: status.info }}
 								>
 									{analytics.system_info.kernel_version}
 								</Typography>
@@ -253,13 +254,13 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 							<Box>
 								<Typography
 									variant="caption"
-									sx={{ color: "#8b949e", textTransform: "uppercase" }}
+									sx={{ color: neutral[600], textTransform: "uppercase" }}
 								>
 									{t("analytics.diskUsage")}
 								</Typography>
 								<Typography
 									variant="body2"
-									sx={{ fontFamily: "monospace", color: "#58a6ff" }}
+									sx={{ fontFamily: "monospace", color: status.info }}
 								>
 									{analytics.disk_usage.usage_percent.toFixed(1)}%
 								</Typography>
@@ -274,7 +275,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 				sx={{
 					display: "flex",
 					flex: 1,
-					borderTop: "1px solid #30363d",
+					borderTop: `1px solid ${neutral[300]}`,
 					overflow: "hidden",
 				}}
 			>
@@ -282,8 +283,8 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 				<Box
 					sx={{
 						width: "70%",
-						borderRight: "1px solid #30363d",
-						bgcolor: "#0d1117",
+						borderRight: `1px solid ${neutral[300]}`,
+						bgcolor: neutral[50],
 						position: "relative",
 						overflow: "hidden",
 					}}
@@ -300,7 +301,7 @@ export const Analytics = ({ onBack }: AnalyticsProps) => {
 				</Box>
 
 				{/* Right Panel - Terminal (30%) */}
-				<Box sx={{ width: "30%", bgcolor: "#161b22", overflow: "hidden" }}>
+				<Box sx={{ width: "30%", bgcolor: neutral[100], overflow: "hidden" }}>
 					<SystemTerminal
 						selectedApp={selectedApp}
 						totalApps={installedAppsInfo.length}
