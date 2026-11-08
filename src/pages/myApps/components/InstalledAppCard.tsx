@@ -15,6 +15,7 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
@@ -149,13 +150,20 @@ const InstalledAppCardComponent = ({
 						disabled={isUninstalling}
 						size="small"
 						sx={{
-							color: "text.secondary",
+							// Acción destructiva: tinte rojo en reposo para advertir el riesgo.
+							color: "error.main",
+							backgroundColor: (theme) => alpha(theme.palette.error.main, 0.12),
+							border: (theme) =>
+								`1px solid ${alpha(theme.palette.error.main, 0.4)}`,
 							"&:hover": {
-								color: "error.main",
-								backgroundColor: "rgba(255, 107, 107, 0.1)",
+								backgroundColor: (theme) =>
+									alpha(theme.palette.error.main, 0.24),
+								borderColor: "error.main",
 							},
 							"&.Mui-disabled": {
 								color: "grey.500",
+								backgroundColor: "transparent",
+								borderColor: lines.default,
 							},
 						}}
 					>
