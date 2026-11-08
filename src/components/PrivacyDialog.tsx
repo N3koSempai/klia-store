@@ -1,5 +1,6 @@
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import {
+	alpha,
 	Box,
 	Button,
 	Collapse,
@@ -43,15 +44,28 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 	return (
 		<Box
 			sx={{
-				border: "1px solid rgba(255, 255, 255, 0.1)",
-				borderLeft: `3px solid ${color}`,
-				borderRadius: 2,
+				border: "1px solid rgba(255, 255, 255, 0.06)",
+				borderRadius: 3,
 				p: 2,
+				background: `linear-gradient(135deg, ${alpha(color, 0.1)} 0%, rgba(255, 255, 255, 0.02) 60%)`,
+				boxShadow: `inset 0 1px 0 rgba(255, 255, 255, 0.04)`,
 				opacity: focus.level === "unknown" ? 0.7 : 1,
 			}}
 		>
 			<Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-				<Box sx={{ color, display: "flex" }}>
+				<Box
+					sx={{
+						color,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						width: 40,
+						height: 40,
+						borderRadius: 2,
+						flexShrink: 0,
+						bgcolor: alpha(color, 0.16),
+					}}
+				>
 					<Icon />
 				</Box>
 				<Box sx={{ flex: 1, minWidth: 0 }}>
@@ -68,11 +82,12 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 					variant="caption"
 					sx={{
 						color,
-						border: `1px solid ${color}`,
+						bgcolor: alpha(color, 0.16),
 						borderRadius: "999px",
-						px: 1,
-						py: 0.25,
+						px: 1.25,
+						py: 0.35,
 						fontWeight: 700,
+						letterSpacing: 0.2,
 						whiteSpace: "nowrap",
 					}}
 				>
@@ -81,7 +96,18 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 			</Box>
 
 			{focus.level !== "unknown" && (
-				<Box component="ul" sx={{ m: 0, mt: 1.5, p: 0, listStyle: "none" }}>
+				<Box
+					component="ul"
+					sx={{
+						m: 0,
+						mt: 1.5,
+						p: 0,
+						pt: 1.5,
+						listStyle: "none",
+						borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+						"& > li:first-of-type": { mt: 1.25 },
+					}}
+				>
 					{focus.findings.length === 0 && (
 						<Typography variant="body2" color="text.secondary">
 							{t("privacy.noFindings")}
@@ -131,7 +157,8 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 								mt: 0.5,
 								p: 1,
 								borderRadius: 1,
-								bgcolor: "rgba(255, 255, 255, 0.04)",
+								bgcolor: "rgba(0, 0, 0, 0.25)",
+								border: "1px solid rgba(255, 255, 255, 0.05)",
 								fontFamily: "JetBrains Mono, monospace",
 								fontSize: "0.75rem",
 								color: "text.secondary",
