@@ -237,11 +237,7 @@ export const Backups = ({ onBack }: BackupsProps) => {
 			await reloadBackups(restoreSourcePath);
 		}
 		await refreshInstalledPackages();
-	}, [
-		clearRestoreBackup,
-		restoreSourcePath,
-		reloadBackups,
-	]);
+	}, [clearRestoreBackup, restoreSourcePath, reloadBackups]);
 
 	const handleRequestDelete = useCallback((archivePath: string) => {
 		setDeleteTarget(archivePath);
@@ -1011,7 +1007,9 @@ export const Backups = ({ onBack }: BackupsProps) => {
 						</Typography>
 					</DialogContent>
 					<DialogActions sx={{ px: 3, pb: 2 }}>
-						<Button onClick={handleCancelDelete}>{t("common.cancel")}</Button>
+						<Button variant="text" color="neutral" onClick={handleCancelDelete}>
+							{t("common.cancel")}
+						</Button>
 						<Button
 							variant="contained"
 							color="error"

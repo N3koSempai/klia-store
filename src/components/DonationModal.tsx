@@ -286,21 +286,7 @@ export const DonationModal = ({
 	};
 
 	return (
-		<Dialog
-			open={open}
-			onClose={handleClose}
-			maxWidth="xs"
-			fullWidth
-			PaperProps={{
-				sx: {
-					bgcolor: neutral[100],
-					backgroundImage: "none",
-					border: `1px solid ${neutral[300]}`,
-					borderRadius: "12px",
-					boxShadow: "0 16px 32px rgba(1,4,9,0.85)",
-				},
-			}}
-		>
+		<Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
 			{/* ─── INPUT VIEW ─────────────────────────────────────────────────── */}
 			{view === "input" && (
 				<>

@@ -1,17 +1,9 @@
-import CloseIcon from "@mui/icons-material/Close";
-import {
-	Box,
-	Dialog,
-	DialogContent,
-	DialogTitle,
-	IconButton,
-	Skeleton,
-	Typography,
-} from "@mui/material";
+import { Box, Skeleton, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiService } from "../services/api";
 import type { AppStream } from "../types";
+import { AppDialog } from "./ui/AppDialog";
 
 interface Release {
 	timestamp: string;
@@ -94,112 +86,100 @@ export const ReleaseNotesModal = ({
 	};
 
 	return (
-		<Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-			<DialogTitle>
-				<Box
-					sx={{
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-					}}
-				>
-					<Typography variant="h6" component="div">
-						{appName} - {t("releaseNotes.title")}
-					</Typography>
-					<IconButton onClick={onClose} size="small">
-						<CloseIcon />
-					</IconButton>
+		<AppDialog
+			open={open}
+			onClose={onClose}
+			maxWidth="md"
+			closeLabel={t("common.close")}
+			title={`${appName} - ${t("releaseNotes.title")}`}
+		>
+			{isLoading ? (
+				<Box>
+					<Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
+					<Skeleton variant="rectangular" height={100} sx={{ mb: 1 }} />
+					<Skeleton variant="rectangular" height={100} sx={{ mb: 1 }} />
+					<Skeleton variant="rectangular" height={100} />
 				</Box>
-			</DialogTitle>
-			<DialogContent>
-				{isLoading ? (
-					<Box>
-						<Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
-						<Skeleton variant="rectangular" height={100} sx={{ mb: 1 }} />
-						<Skeleton variant="rectangular" height={100} sx={{ mb: 1 }} />
-						<Skeleton variant="rectangular" height={100} />
-					</Box>
-				) : error ? (
-					<Box sx={{ textAlign: "center", py: 4 }}>
-						<Typography color="error">{error}</Typography>
-					</Box>
-				) : releases.length > 0 ? (
-					<Box>
-						<Box sx={{ mb: 3 }}>
-							<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-								{t("releaseNotes.currentVersion")}{" "}
-								<strong>v{currentVersion}</strong>
-							</Typography>
-							<Typography
-								variant="body2"
-								color="primary"
-								sx={{ fontWeight: "bold" }}
-							>
-								{t("releaseNotes.newVersionAvailable")}{" "}
-								<strong>v{newVersion}</strong>
-							</Typography>
-						</Box>
-
-						{releases.map((release) => (
-							<Box key={release.version} sx={{ mb: 3 }}>
-								<Typography variant="h6" sx={{ mb: 1 }}>
-									{t("releaseNotes.version", { version: release.version })}
-								</Typography>
-								{release.timestamp && (
-									<Typography
-										variant="caption"
-										color="text.secondary"
-										sx={{ mb: 2, display: "block" }}
-									>
-										{new Date(
-											Number.parseInt(release.timestamp, 10) * 1000,
-										).toLocaleDateString()}
-									</Typography>
-								)}
-								<Typography
-									variant="body2"
-									sx={{
-										whiteSpace: "pre-wrap",
-										"& ul": {
-											pl: 2,
-										},
-										"& li": {
-											mb: 0.5,
-										},
-									}}
-								>
-									{stripHtml(release.description)}
-								</Typography>
-								{release.url && (
-									<Box sx={{ mt: 2 }}>
-										<Typography
-											component="a"
-											href={release.url}
-											target="_blank"
-											rel="noopener noreferrer"
-											sx={{
-												color: "primary.main",
-												textDecoration: "none",
-												"&:hover": {
-													textDecoration: "underline",
-												},
-											}}
-										>
-											{t("releaseNotes.moreInfo")}
-										</Typography>
-									</Box>
-								)}
-							</Box>
-						))}
-					</Box>
-				) : (
-					<Box sx={{ textAlign: "center", py: 4 }}>
-						<Typography color="text.secondary">
-							{t("releaseNotes.noNotes")}
+			) : error ? (
+				<Box sx={{ textAlign: "center", py: 4 }}>
+					<Typography color="error">{error}</Typography>
+				</Box>
+			) : releases.length > 0 ? (
+				<Box>
+					<Box sx={{ mb: 3 }}>
+						<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+							{t("releaseNotes.currentVersion")}{" "}
+							<strong>v{currentVersion}</strong>
+						</Typography>
+						<Typography
+							variant="body2"
+							color="primary"
+							sx={{ fontWeight: "bold" }}
+						>
+							{t("releaseNotes.newVersionAvailable")}{" "}
+							<strong>v{newVersion}</strong>
 						</Typography>
 					</Box>
-				)}
-			</DialogContent>
-		</Dialog>
+
+					{releases.map((release) => (
+						<Box key={release.version} sx={{ mb: 3 }}>
+							<Typography variant="h6" sx={{ mb: 1 }}>
+								{t("releaseNotes.version", { version: release.version })}
+							</Typography>
+							{release.timestamp && (
+								<Typography
+									variant="caption"
+									color="text.secondary"
+									sx={{ mb: 2, display: "block" }}
+								>
+									{new Date(
+										Number.parseInt(release.timestamp, 10) * 1000,
+									).toLocaleDateString()}
+								</Typography>
+							)}
+							<Typography
+								variant="body2"
+								sx={{
+									whiteSpace: "pre-wrap",
+									"& ul": {
+										pl: 2,
+									},
+									"& li": {
+										mb: 0.5,
+									},
+								}}
+							>
+								{stripHtml(release.description)}
+							</Typography>
+							{release.url && (
+								<Box sx={{ mt: 2 }}>
+									<Typography
+										component="a"
+										href={release.url}
+										target="_blank"
+										rel="noopener noreferrer"
+										sx={{
+											color: "primary.main",
+											textDecoration: "none",
+											"&:hover": {
+												textDecoration: "underline",
+											},
+										}}
+									>
+										{t("releaseNotes.moreInfo")}
+									</Typography>
+								</Box>
+							)}
+						</Box>
+					))}
+				</Box>
+			) : (
+				<Box sx={{ textAlign: "center", py: 4 }}>
+					<Typography color="text.secondary">
+						{t("releaseNotes.noNotes")}
+					</Typography>
+				</Box>
+			)}
+		</AppDialog>
 	);
 };

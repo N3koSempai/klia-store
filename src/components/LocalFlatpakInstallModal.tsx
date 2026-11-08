@@ -302,16 +302,6 @@ export function LocalFlatpakInstallModal({
 			onClose={phase === "installing" ? undefined : onClose}
 			maxWidth="sm"
 			fullWidth
-			slotProps={{
-				paper: {
-					sx: {
-						backgroundColor: neutral[50],
-						border: "1px solid rgba(255,255,255,0.08)",
-						borderRadius: 3,
-						overflow: "hidden",
-					},
-				},
-			}}
 		>
 			<DialogContent sx={{ p: 0 }}>
 				{/* Header bar */}
