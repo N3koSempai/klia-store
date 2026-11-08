@@ -1,10 +1,14 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { apiService } from "../services/api";
-import { reportNetworkFailure, reportNetworkSuccess } from "../store/connectivityStore";
+import {
+	reportNetworkFailure,
+	reportNetworkSuccess,
+} from "../store/connectivityStore";
 import type { AppStream } from "../types";
 import { imageCacheManager } from "../utils/imageCache";
 import { isNetworkError } from "../utils/networkError";
 import { hasAnyValidRepoUrl } from "../utils/repoValidation";
+import { appStreamQueryOptions } from "./appStreamQuery";
 
 interface UseAppScreenshotsReturn {
 	screenshots: AppStream["screenshots"];
@@ -13,7 +17,11 @@ interface UseAppScreenshotsReturn {
 	error: Error | null;
 }
 
-export const useAppScreenshots = (app: AppStream): UseAppScreenshotsReturn => {
+export const useAppScreenshots = (
+	app: AppStream,
+	version?: number,
+): UseAppScreenshotsReturn => {
+	const queryClient = useQueryClient();
 	const [screenshots, setScreenshots] = useState<AppStream["screenshots"]>(
 		app.screenshots,
 	);
@@ -57,7 +65,9 @@ export const useAppScreenshots = (app: AppStream): UseAppScreenshotsReturn => {
 			// silencio a las screenshots que ya tengamos cacheadas en disco de
 			// una visita anterior, sin mostrar error al usuario.
 			try {
-				const appStreamData = await apiService.getAppStream(app.id);
+				const appStreamData = await queryClient.fetchQuery(
+					appStreamQueryOptions(app.id, version),
+				);
 				reportNetworkSuccess(startedAt);
 
 				if (isMounted) {
@@ -67,7 +77,10 @@ export const useAppScreenshots = (app: AppStream): UseAppScreenshotsReturn => {
 				}
 				return;
 			} catch (err) {
-				console.error("Error fetching screenshots, falling back to cache:", err);
+				console.error(
+					"Error fetching screenshots, falling back to cache:",
+					err,
+				);
 				if (isNetworkError(err)) {
 					reportNetworkFailure();
 				} else {
@@ -124,7 +137,7 @@ export const useAppScreenshots = (app: AppStream): UseAppScreenshotsReturn => {
 		return () => {
 			isMounted = false;
 		};
-	}, [app.id, app.screenshots, app.urls]);
+	}, [app.id, app.screenshots, app.urls, queryClient, version]);
 
 	return { screenshots, urls, isLoading, error };
 };

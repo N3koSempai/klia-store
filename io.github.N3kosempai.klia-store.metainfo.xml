@@ -47,6 +47,13 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.18.0" date="2026-11-08">
+      <description>
+        <p>Know what an app can do before you install it. A new privacy badge on every app page shows four traffic lights at a glance: file access, system access, age rating and in-app purchases. Click it for a clear, plain-language breakdown of every permission.</p>
+        <p>Faster app pages. Apps you have already visited open instantly from local storage, with their screenshots and details, and only reload when a new version is published. Opening an app that is already installed no longer runs the dependency check.</p>
+        <p>More reliable navigation: apps opened from categories and developer lists now show their page even when the connection drops.</p>
+      </description>
+    </release>
     <release version="2.17.0" date="2026-10-29">
       <description>
         <p>Uninstalling a Flatpak app now asks what to do with its data. A dialog appears from My Apps and from the app page: "Uninstall" keeps your settings, saves and files so you can pick up where you left off if you reinstall, and "Uninstall and delete data" removes them as well.</p>

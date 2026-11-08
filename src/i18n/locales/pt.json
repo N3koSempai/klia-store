@@ -462,5 +462,88 @@
     "cancel": "Cancelar",
     "confirm": "Desinstalar",
     "confirmDelete": "Desinstalar e apagar dados"
+  },
+  "privacy": {
+    "title": "Privacidade e permissões",
+    "badgeLabel": "Resumo de privacidade. Clique para ver detalhes",
+    "intro": "O que este app pode acessar no seu sistema, de acordo com as permissões do sandbox Flatpak e a classificação de conteúdo.",
+    "disclaimer": "As permissões são aplicadas pelo sandbox do Flatpak. A classificação de conteúdo é declarada pelo desenvolvedor do app e não é verificada.",
+    "technical": "Permissões técnicas",
+    "noFindings": "Nada de especial a relatar.",
+    "close": "Fechar",
+    "levels": {
+      "safe": "Baixo",
+      "caution": "Atenção",
+      "high": "Alto",
+      "unknown": "Sem dados"
+    },
+    "foci": {
+      "storage": "Armazenamento",
+      "system": "Sistema",
+      "social": "Social e idade",
+      "money": "Dinheiro"
+    },
+    "summary": {
+      "storage": {
+        "safe": "Não pode explorar seus arquivos",
+        "caution": "Pode acessar pastas específicas",
+        "high": "Pode acessar toda a sua pasta pessoal ou arquivos do sistema"
+      },
+      "system": {
+        "safe": "Apenas gráficos, som e rede básica",
+        "caution": "Pode acessar dispositivos ou serviços sensíveis",
+        "high": "Pode agir fora do sandbox ou em seu nome"
+      },
+      "social": {
+        "safe": "Sem interação com outros usuários",
+        "caution": "Interação com outros ou público adulto",
+        "high": "Interação aberta com desconhecidos ou conteúdo só para adultos"
+      },
+      "money": {
+        "safe": "Sem possibilidade de gastar dinheiro",
+        "caution": "Pode permitir gastar dinheiro",
+        "high": "Permite gastar dinheiro real"
+      },
+      "unknown": "Sem dados disponíveis"
+    },
+    "rating": {
+      "none": "nenhum",
+      "mild": "leve",
+      "moderate": "moderado",
+      "intense": "intenso",
+      "unknown": "desconhecido"
+    },
+    "findings": {
+      "storageHome": "Acesso total à sua pasta pessoal",
+      "storageHost": "Acesso total a todos os seus arquivos, incluindo os do sistema",
+      "storageHostOs": "Pode ler os arquivos do sistema operacional host",
+      "storageUserFolders": "Acesso a estas pastas: {{folders}}",
+      "storageRemovable": "Acesso a unidades externas e mídias",
+      "storageOtherPaths": "Acesso a mais {{count}} caminho(s) do seu sistema",
+      "storageAppDirs": "Pode escrever em pastas compartilhadas de configuração ou dados",
+      "systemSessionBus": "Acesso irrestrito ao barramento de mensagens da sua área de trabalho (pode contornar o sandbox)",
+      "systemSystemBus": "Acesso direto ao barramento de mensagens do sistema",
+      "systemFlatpakEscape": "Pode executar comandos fora do sandbox",
+      "systemSshAgent": "Pode usar suas chaves SSH para autenticar",
+      "systemGpgAgent": "Pode usar suas chaves GPG para assinar e descriptografar",
+      "systemSecrets": "Pode solicitar senhas do seu chaveiro ou carteira",
+      "systemDevicesAll": "Acesso a todos os dispositivos (câmeras, USB e mais)",
+      "systemDevicesSome": "Acesso a dispositivos: {{devices}}",
+      "systemFeatures": "Capacidades especiais: {{features}}",
+      "systemSmartcard": "Acesso a leitores de smart card",
+      "systemSystemBusNames": "Comunica-se com serviços do sistema",
+      "systemNetwork": "Acesso à rede",
+      "systemAudio": "Reproduz e grava áudio (incluindo o microfone)",
+      "systemX11": "Usa a tela X11 legada, que é menos isolada",
+      "systemPrinting": "Pode imprimir",
+      "socialInteraction": "Interação com outros usuários: {{level}}",
+      "socialAge": "Recomendado para maiores de {{age}} anos",
+      "content_violence": "Violência: {{level}}",
+      "content_drugs": "Drogas e álcool: {{level}}",
+      "content_sex": "Conteúdo sexual: {{level}}",
+      "content_language": "Linguagem: {{level}}",
+      "moneyPurchases": "Compras ou gastos no app: {{level}}",
+      "moneyDonations": "Aceita doações voluntárias"
+    }
   }
 }

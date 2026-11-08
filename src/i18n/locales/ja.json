@@ -416,5 +416,88 @@
     "cancel": "キャンセル",
     "confirm": "アンインストール",
     "confirmDelete": "アンインストールしてデータを削除"
+  },
+  "privacy": {
+    "title": "プライバシーと権限",
+    "badgeLabel": "プライバシーの概要。クリックで詳細を表示",
+    "intro": "Flatpak サンドボックスの権限とコンテンツ評価に基づき、このアプリがシステム上でアクセスできる内容を示します。",
+    "disclaimer": "権限は Flatpak サンドボックスによって強制されます。コンテンツ評価はアプリ開発者の自己申告であり、検証されていません。",
+    "technical": "技術的な権限",
+    "noFindings": "特記事項はありません。",
+    "close": "閉じる",
+    "levels": {
+      "safe": "低",
+      "caution": "注意",
+      "high": "高",
+      "unknown": "データなし"
+    },
+    "foci": {
+      "storage": "ストレージ",
+      "system": "システム",
+      "social": "ソーシャルと年齢",
+      "money": "お金"
+    },
+    "summary": {
+      "storage": {
+        "safe": "ファイルを閲覧できません",
+        "caution": "特定のフォルダにアクセスできます",
+        "high": "ホーム全体またはシステムファイルにアクセスできます"
+      },
+      "system": {
+        "safe": "グラフィックス、サウンド、基本的なネットワークのみ",
+        "caution": "デバイスや機密性の高いサービスにアクセスできます",
+        "high": "サンドボックスの外や、あなたに代わって動作できます"
+      },
+      "social": {
+        "safe": "他のユーザーとの交流なし",
+        "caution": "他者との交流または成人向けの対象",
+        "high": "見知らぬ人との自由な交流または成人向けコンテンツ"
+      },
+      "money": {
+        "safe": "お金を使う機能なし",
+        "caution": "お金を使える可能性があります",
+        "high": "実際のお金を使えます"
+      },
+      "unknown": "利用可能なデータがありません"
+    },
+    "rating": {
+      "none": "なし",
+      "mild": "軽度",
+      "moderate": "中程度",
+      "intense": "強い",
+      "unknown": "不明"
+    },
+    "findings": {
+      "storageHome": "ホームフォルダへのフルアクセス",
+      "storageHost": "システムファイルを含むすべてのファイルへのフルアクセス",
+      "storageHostOs": "ホスト OS のファイルを読み取れます",
+      "storageUserFolders": "次のフォルダにアクセス：{{folders}}",
+      "storageRemovable": "外部ドライブやメディアへのアクセス",
+      "storageOtherPaths": "システム上のほかの {{count}} 個のパスにアクセス",
+      "storageAppDirs": "共有の設定・データフォルダに書き込めます",
+      "systemSessionBus": "デスクトップのメッセージバスへの無制限アクセス（サンドボックスを回避できます）",
+      "systemSystemBus": "システムメッセージバスへの直接アクセス",
+      "systemFlatpakEscape": "サンドボックスの外でコマンドを実行できます",
+      "systemSshAgent": "SSH 鍵を認証に使用できます",
+      "systemGpgAgent": "GPG 鍵を署名と復号に使用できます",
+      "systemSecrets": "キーリングやウォレットのパスワードを要求できます",
+      "systemDevicesAll": "すべてのデバイス（カメラ、USB など）にアクセス",
+      "systemDevicesSome": "デバイスにアクセス：{{devices}}",
+      "systemFeatures": "特別な機能：{{features}}",
+      "systemSmartcard": "スマートカードリーダーにアクセス",
+      "systemSystemBusNames": "システムサービスと通信します",
+      "systemNetwork": "ネットワークにアクセス",
+      "systemAudio": "音声の再生と録音（マイクを含む）",
+      "systemX11": "分離性の低い従来の X11 表示を使用",
+      "systemPrinting": "印刷できます",
+      "socialInteraction": "他のユーザーとの交流：{{level}}",
+      "socialAge": "{{age}} 歳以上推奨",
+      "content_violence": "暴力：{{level}}",
+      "content_drugs": "薬物とアルコール：{{level}}",
+      "content_sex": "性的表現：{{level}}",
+      "content_language": "言葉づかい：{{level}}",
+      "moneyPurchases": "アプリ内課金・支出：{{level}}",
+      "moneyDonations": "任意の寄付を受け付けています"
+    }
   }
 }

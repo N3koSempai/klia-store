@@ -465,5 +465,88 @@
     "cancel": "取消",
     "confirm": "卸载",
     "confirmDelete": "卸载并删除数据"
+  },
+  "privacy": {
+    "title": "隐私与权限",
+    "badgeLabel": "隐私摘要。点击查看详情",
+    "intro": "根据 Flatpak 沙盒权限和内容分级，说明此应用可以访问您系统中的哪些内容。",
+    "disclaimer": "权限由 Flatpak 沙盒强制执行。内容分级由应用开发者自行声明，未经验证。",
+    "technical": "技术权限",
+    "noFindings": "没有需要特别说明的内容。",
+    "close": "关闭",
+    "levels": {
+      "safe": "低",
+      "caution": "注意",
+      "high": "高",
+      "unknown": "无数据"
+    },
+    "foci": {
+      "storage": "存储",
+      "system": "系统",
+      "social": "社交与年龄",
+      "money": "金钱"
+    },
+    "summary": {
+      "storage": {
+        "safe": "无法浏览您的文件",
+        "caution": "可访问特定文件夹",
+        "high": "可访问整个主目录或系统文件"
+      },
+      "system": {
+        "safe": "仅限图形、声音和基础网络",
+        "caution": "可访问设备或敏感服务",
+        "high": "可在沙盒之外或以您的名义行动"
+      },
+      "social": {
+        "safe": "不与其他用户互动",
+        "caution": "与他人互动或面向成熟受众",
+        "high": "与陌生人开放互动或仅限成人的内容"
+      },
+      "money": {
+        "safe": "无法花钱",
+        "caution": "可能允许您花钱",
+        "high": "允许您花费真实货币"
+      },
+      "unknown": "没有可用数据"
+    },
+    "rating": {
+      "none": "无",
+      "mild": "轻微",
+      "moderate": "中等",
+      "intense": "强烈",
+      "unknown": "未知"
+    },
+    "findings": {
+      "storageHome": "完全访问您的主目录",
+      "storageHost": "完全访问您的所有文件，包括系统文件",
+      "storageHostOs": "可读取宿主操作系统文件",
+      "storageUserFolders": "可访问这些文件夹：{{folders}}",
+      "storageRemovable": "可访问外部驱动器和媒体",
+      "storageOtherPaths": "可访问系统中另外 {{count}} 个路径",
+      "storageAppDirs": "可写入共享的配置或数据文件夹",
+      "systemSessionBus": "不受限制地访问桌面消息总线（可绕过沙盒）",
+      "systemSystemBus": "直接访问系统消息总线",
+      "systemFlatpakEscape": "可在沙盒之外运行命令",
+      "systemSshAgent": "可使用您的 SSH 密钥进行身份验证",
+      "systemGpgAgent": "可使用您的 GPG 密钥进行签名和解密",
+      "systemSecrets": "可向您的密钥环或钱包请求密码",
+      "systemDevicesAll": "可访问所有设备（摄像头、USB 等）",
+      "systemDevicesSome": "可访问设备：{{devices}}",
+      "systemFeatures": "特殊能力：{{features}}",
+      "systemSmartcard": "可访问智能卡读卡器",
+      "systemSystemBusNames": "与系统服务通信",
+      "systemNetwork": "可访问网络",
+      "systemAudio": "播放和录制音频（包括麦克风）",
+      "systemX11": "使用旧版 X11 显示，隔离性较差",
+      "systemPrinting": "可打印",
+      "socialInteraction": "与其他用户互动：{{level}}",
+      "socialAge": "建议 {{age}} 岁以上使用",
+      "content_violence": "暴力：{{level}}",
+      "content_drugs": "毒品和酒精：{{level}}",
+      "content_sex": "性内容：{{level}}",
+      "content_language": "语言：{{level}}",
+      "moneyPurchases": "应用内购买或消费：{{level}}",
+      "moneyDonations": "接受自愿捐赠"
+    }
   }
 }
