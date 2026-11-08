@@ -52,7 +52,9 @@ export function createAppTheme(prefs?: Partial<AccessibilityPrefs>) {
 			},
 			divider: tokens.border.subtle,
 		},
-		shape: { borderRadius: radius.md },
+		// Multiplicador de `sx.borderRadius` (4 → 16px). Los radios del diseño van en
+		// px explícitos desde `radius.*`; no subir este valor o todo `sx` se infla.
+		shape: { borderRadius: 4 },
 		// Base 8pt (cap. 1): theme.spacing(2) === 16px.
 		spacing: 8,
 		typography: {

@@ -90,14 +90,10 @@ const InstalledAppCardComponent = ({
 				},
 			}}
 		>
-			{/* --- ZONA SUPERIOR: ACCIONES SECUNDARIAS Y DESTRUCTIVAS --- */}
-			<Stack
-				direction="row"
-				spacing={1}
-				sx={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}
-			>
-				{/* Botón para ver extensiones */}
-				{mode === "flatpak" && (
+			{/* Esquina izquierda: extensiones (solo flatpak). Repartir los botones en
+			    ambas esquinas evita que choquen con el radio del card. */}
+			{mode === "flatpak" && (
+				<Box sx={{ position: "absolute", top: 12, left: 12, zIndex: 10 }}>
 					<Tooltip title={t("extensions.title")}>
 						<IconButton
 							onClick={handleExtensionsClick}
@@ -115,8 +111,15 @@ const InstalledAppCardComponent = ({
 							<Extension fontSize="small" />
 						</IconButton>
 					</Tooltip>
-				)}
+				</Box>
+			)}
 
+			{/* --- ESQUINA DERECHA: SECUNDARIAS Y DESTRUCTIVAS --- */}
+			<Stack
+				direction="row"
+				spacing={1}
+				sx={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}
+			>
 				{/* Botón para ver el Changelog/Release Notes */}
 				{hasUpdate && (
 					<Tooltip title={t("appDetails.releaseNotes")}>
