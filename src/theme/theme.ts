@@ -1,52 +1,14 @@
 import { alpha, createTheme } from "@mui/material/styles";
 import IBMPlexSansVariable from "../assets/fonts/IBMPlexSans-Variable.woff2";
-import type {
-	AccessibilityPrefs,
-	ColorBlindMode,
-} from "../store/accessibilityStore";
+import type { AccessibilityPrefs } from "../store/accessibilityStore";
 import {
+	colorBlindPalettes,
 	controlHeight,
 	createSemanticTokens,
 	neutral,
 	radius,
 	status,
 } from "./tokens";
-
-// Color palettes per color-blind mode
-// Each palette replaces primary/secondary/error with perceptually distinct hues
-const colorBlindPalettes: Record<
-	ColorBlindMode,
-	{ primary: string; secondary: string; error: string; info: string }
-> = {
-	none: {
-		primary: "#4A86CF",
-		secondary: "#F6D32D",
-		error: "#FF6B6B",
-		info: "#58A6FF",
-	},
-	// Deuteranopia (red-green, most common ~6% males): avoid red/green distinction
-	// Use blue + orange + magenta instead
-	deuteranopia: {
-		primary: "#4A86CF",
-		secondary: "#E07B39",
-		error: "#C44DC4",
-		info: "#58A6FF",
-	},
-	// Protanopia (red-blind): reds appear dark/absent — use blue + yellow + violet
-	protanopia: {
-		primary: "#4A86CF",
-		secondary: "#F0D43A",
-		error: "#8B6EF5",
-		info: "#58A6FF",
-	},
-	// Tritanopia (blue-yellow blind, rare): avoid blue/yellow — use teal + red + orange
-	tritanopia: {
-		primary: "#2BB5A0",
-		secondary: "#E07840",
-		error: "#E05C5C",
-		info: "#2BB5A0",
-	},
-};
 
 export function createAppTheme(prefs?: Partial<AccessibilityPrefs>) {
 	const mode = prefs?.colorBlindMode ?? "none";

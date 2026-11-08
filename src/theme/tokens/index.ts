@@ -6,6 +6,8 @@
 //   2. semánticos  → significado (surface, border, tone). Cambian con a11y.
 //   3. componente  → viven en `theme.ts` (overrides de MUI), no aquí.
 
+import type { ColorBlindMode } from "../../store/accessibilityStore";
+
 // ------------------------------------------------------------- Primitivos
 
 // Escala 8pt (cap. 1): todo múltiplo de 8; 4px solo para texto/baseline.
@@ -157,3 +159,41 @@ export const hues = {
 	grayDarker: "#1E1E1E",
 	grayDarkest: "#1A1A1A",
 } as const;
+
+// ------------------------------------------------------------ Accesibilidad
+
+// Color palettes per color-blind mode
+// Each palette replaces primary/secondary/error with perceptually distinct hues
+export const colorBlindPalettes: Record<
+	ColorBlindMode,
+	{ primary: string; secondary: string; error: string; info: string }
+> = {
+	none: {
+		primary: "#4A86CF",
+		secondary: "#F6D32D",
+		error: "#FF6B6B",
+		info: "#58A6FF",
+	},
+	// Deuteranopia (red-green, most common ~6% males): avoid red/green distinction
+	// Use blue + orange + magenta instead
+	deuteranopia: {
+		primary: "#4A86CF",
+		secondary: "#E07B39",
+		error: "#C44DC4",
+		info: "#58A6FF",
+	},
+	// Protanopia (red-blind): reds appear dark/absent — use blue + yellow + violet
+	protanopia: {
+		primary: "#4A86CF",
+		secondary: "#F0D43A",
+		error: "#8B6EF5",
+		info: "#58A6FF",
+	},
+	// Tritanopia (blue-yellow blind, rare): avoid blue/yellow — use teal + red + orange
+	tritanopia: {
+		primary: "#2BB5A0",
+		secondary: "#E07840",
+		error: "#E05C5C",
+		info: "#2BB5A0",
+	},
+};
