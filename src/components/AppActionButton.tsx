@@ -13,6 +13,9 @@ interface AppActionButtonProps {
 	fullWidth?: boolean;
 }
 
+// La apariencia (alto, radio, tipografía, estados) viene del tema; aquí solo
+// se elige el rol: éxito para lanzar, primario para instalar, soft mientras
+// hay trabajo en curso.
 export const AppActionButton = ({
 	status,
 	busyAction = "installing",
@@ -20,75 +23,46 @@ export const AppActionButton = ({
 	fullWidth = false,
 }: AppActionButtonProps) => {
 	const { t } = useTranslation();
-	// State: INSTALLED - Ready to Launch
+
 	if (status === "installed") {
 		return (
 			<Button
 				variant="contained"
+				color="success"
 				size="large"
 				onClick={onAction}
 				endIcon={<LaunchRounded />}
 				fullWidth={fullWidth}
-				sx={{
-					py: 1.5,
-					fontSize: "1rem",
-					fontWeight: 600,
-					fontFamily: "Inter, sans-serif",
-					bgcolor: "success.dark",
-					color: "white",
-					textTransform: "uppercase",
-					"&:hover": {
-						bgcolor: "success.main",
-					},
-				}}
 			>
 				{t("appDetails.launch")}
 			</Button>
 		);
 	}
 
-	// State: VERIFYING - Security Check
 	if (status === "verifying") {
 		return (
 			<Button
-				variant="outlined"
+				variant="soft"
+				color="primary"
 				size="large"
 				disabled
 				startIcon={<CircularProgress size={18} color="inherit" />}
 				fullWidth={fullWidth}
-				sx={{
-					py: 1.5,
-					fontSize: "1rem",
-					fontWeight: 600,
-					fontFamily: "Inter, sans-serif",
-					color: "primary.main",
-					borderColor: "primary.main",
-					textTransform: "capitalize",
-				}}
 			>
 				{t("appDetails.verifyingSecurity")}
 			</Button>
 		);
 	}
 
-	// State: BUSY - System Working
 	if (status === "busy") {
 		return (
 			<Button
-				variant="outlined"
+				variant="soft"
+				color="neutral"
 				size="large"
 				disabled
 				startIcon={<CircularProgress size={18} color="inherit" />}
 				fullWidth={fullWidth}
-				sx={{
-					py: 1.5,
-					fontSize: "1rem",
-					fontWeight: 600,
-					fontFamily: "Inter, sans-serif",
-					color: "text.secondary",
-					borderColor: "action.disabledBackground",
-					textTransform: "capitalize",
-				}}
 			>
 				{busyAction === "uninstalling"
 					? t("appDetails.uninstalling")
@@ -97,7 +71,6 @@ export const AppActionButton = ({
 		);
 	}
 
-	// State: NOT INSTALLED - Call to Action
 	return (
 		<Button
 			variant="contained"
@@ -105,18 +78,6 @@ export const AppActionButton = ({
 			onClick={onAction}
 			startIcon={<DownloadRounded />}
 			fullWidth={fullWidth}
-			sx={{
-				py: 1.5,
-				fontSize: "1rem",
-				fontWeight: 600,
-				fontFamily: "Inter, sans-serif",
-				bgcolor: "primary.main",
-				color: "white",
-				textTransform: "uppercase",
-				"&:hover": {
-					bgcolor: "primary.dark",
-				},
-			}}
 		>
 			{t("appDetails.install")}
 		</Button>

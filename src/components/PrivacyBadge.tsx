@@ -1,10 +1,11 @@
+import type { SvgIconComponent } from "@mui/icons-material";
 import FolderOpenRounded from "@mui/icons-material/FolderOpenRounded";
 import MemoryRounded from "@mui/icons-material/MemoryRounded";
 import PaymentsRounded from "@mui/icons-material/PaymentsRounded";
 import PeopleAltRounded from "@mui/icons-material/PeopleAltRounded";
 import { Box, ButtonBase, Tooltip } from "@mui/material";
-import type { SvgIconComponent } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import { neutral, status } from "../theme/tokens";
 import type {
 	AppPrivacyAssessment,
 	PrivacyFocusId,
@@ -19,10 +20,10 @@ export const PRIVACY_FOCUS_ICONS: Record<PrivacyFocusId, SvgIconComponent> = {
 };
 
 export const PRIVACY_LEVEL_COLORS: Record<PrivacyLevel, string> = {
-	safe: "#3fb950",
-	caution: "#d29922",
-	high: "#f85149",
-	unknown: "#6e7681",
+	safe: status.success,
+	caution: status.warning,
+	high: status.danger,
+	unknown: neutral[500],
 };
 
 // El color nunca es la única señal: el relleno y el borde crecen con el nivel
