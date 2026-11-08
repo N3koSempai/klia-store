@@ -3,7 +3,7 @@ import MemoryRounded from "@mui/icons-material/MemoryRounded";
 import PaymentsRounded from "@mui/icons-material/PaymentsRounded";
 import PeopleAltRounded from "@mui/icons-material/PeopleAltRounded";
 import { Box, ButtonBase, Tooltip } from "@mui/material";
-import type { ElementType } from "react";
+import type { SvgIconComponent } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type {
 	AppPrivacyAssessment,
@@ -11,7 +11,7 @@ import type {
 	PrivacyLevel,
 } from "../utils/appPrivacy";
 
-export const PRIVACY_FOCUS_ICONS: Record<PrivacyFocusId, ElementType> = {
+export const PRIVACY_FOCUS_ICONS: Record<PrivacyFocusId, SvgIconComponent> = {
 	storage: FolderOpenRounded,
 	system: MemoryRounded,
 	social: PeopleAltRounded,
