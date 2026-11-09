@@ -15,12 +15,14 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
 import { ExtensionsPopover } from "../../../components/ExtensionsPopover";
 import { OFF_FLATHUB_APPS } from "../../../data/offFlathubApps";
 import type { InstalledAppInfo } from "../../../store/installedAppsStore";
+import { hues, lines, neutral } from "../../../theme/tokens";
 import { DebAppIcon } from "./DebAppIcon";
 
 interface InstalledAppCardProps {
@@ -78,7 +80,7 @@ const InstalledAppCardComponent = ({
 				borderRadius: 4,
 				backgroundColor: "background.paper",
 				border: "1px solid",
-				borderColor: "rgba(255, 255, 255, 0.1)",
+				borderColor: lines.default,
 				transition: "all 0.3s ease-in-out",
 				willChange: "transform, box-shadow, border-color",
 				"&:hover": {
@@ -89,42 +91,16 @@ const InstalledAppCardComponent = ({
 				},
 			}}
 		>
-			{/* --- ZONA SUPERIOR: ACCIONES SECUNDARIAS Y DESTRUCTIVAS --- */}
-			<Stack
-				direction="row"
-				spacing={1}
-				sx={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}
-			>
-				{/* Botón para ver extensiones */}
-				{mode === "flatpak" && (
-					<Tooltip title={t("extensions.title")}>
-						<IconButton
-							onClick={handleExtensionsClick}
-							size="small"
-							sx={{
-								color: "text.secondary",
-								border: "1px solid rgba(255,255,255,0.1)",
-								"&:hover": {
-									color: "#FFD700",
-									backgroundColor: "rgba(255, 215, 0, 0.1)",
-									borderColor: "#FFD700",
-								},
-							}}
-						>
-							<Extension fontSize="small" />
-						</IconButton>
-					</Tooltip>
-				)}
-
-				{/* Botón para ver el Changelog/Release Notes */}
-				{hasUpdate && (
+			{/* Esquina izquierda: acción informativa (notas de versión). */}
+			{hasUpdate && (
+				<Box sx={{ position: "absolute", top: 12, left: 12, zIndex: 10 }}>
 					<Tooltip title={t("appDetails.releaseNotes")}>
 						<IconButton
 							onClick={onShowReleaseNotes}
 							size="small"
 							sx={{
 								color: "text.secondary",
-								border: "1px solid rgba(255,255,255,0.1)",
+								border: `1px solid ${lines.default}`,
 								"&:hover": {
 									color: "info.main",
 									backgroundColor: "rgba(88, 166, 255, 0.1)",
@@ -133,6 +109,36 @@ const InstalledAppCardComponent = ({
 							}}
 						>
 							<Description fontSize="small" />
+						</IconButton>
+					</Tooltip>
+				</Box>
+			)}
+
+			{/* Esquina derecha: acciones que modifican la app (extensiones y
+			    eliminar). Repartir los botones en ambas esquinas evita que choquen
+			    con el radio del card. */}
+			<Stack
+				direction="row"
+				spacing={1}
+				sx={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}
+			>
+				{/* Botón para instalar/desinstalar extensiones */}
+				{mode === "flatpak" && (
+					<Tooltip title={t("extensions.title")}>
+						<IconButton
+							onClick={handleExtensionsClick}
+							size="small"
+							sx={{
+								color: "text.secondary",
+								border: `1px solid ${lines.default}`,
+								"&:hover": {
+									color: hues.gold,
+									backgroundColor: "rgba(255, 215, 0, 0.1)",
+									borderColor: hues.gold,
+								},
+							}}
+						>
+							<Extension fontSize="small" />
 						</IconButton>
 					</Tooltip>
 				)}
@@ -144,13 +150,20 @@ const InstalledAppCardComponent = ({
 						disabled={isUninstalling}
 						size="small"
 						sx={{
-							color: "text.secondary",
+							// Acción destructiva: tinte rojo en reposo para advertir el riesgo.
+							color: "error.main",
+							backgroundColor: (theme) => alpha(theme.palette.error.main, 0.12),
+							border: (theme) =>
+								`1px solid ${alpha(theme.palette.error.main, 0.4)}`,
 							"&:hover": {
-								color: "error.main",
-								backgroundColor: "rgba(255, 107, 107, 0.1)",
+								backgroundColor: (theme) =>
+									alpha(theme.palette.error.main, 0.24),
+								borderColor: "error.main",
 							},
 							"&.Mui-disabled": {
 								color: "grey.500",
+								backgroundColor: "transparent",
+								borderColor: lines.default,
 							},
 						}}
 					>
@@ -309,7 +322,7 @@ const InstalledAppCardComponent = ({
 						width: "100%",
 						mt: "auto",
 						pt: 1,
-						borderTop: "1px solid rgba(255,255,255,0.05)",
+						borderTop: `1px solid ${lines.subtle}`,
 						display: "flex",
 						flexDirection: "column",
 						gap: 1,
@@ -326,7 +339,7 @@ const InstalledAppCardComponent = ({
 							fullWidth
 							sx={{
 								backgroundColor: "primary.main",
-								color: "#fff",
+								color: neutral[1000],
 								fontWeight: 600,
 								textTransform: "none",
 								borderRadius: 2,

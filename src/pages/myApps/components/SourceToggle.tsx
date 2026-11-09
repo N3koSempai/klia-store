@@ -1,4 +1,5 @@
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
+import { lines, neutral } from "../../../theme/tokens";
 
 export type AppSource = "flatpak" | "deb";
 
@@ -24,7 +25,7 @@ export const SourceToggle = ({ value, onChange }: SourceToggleProps) => (
 		aria-label="app source"
 		sx={{
 			mt: 1.5,
-			bgcolor: "rgba(255, 255, 255, 0.04)",
+			bgcolor: lines.subtle,
 			border: "1px solid rgba(255, 255, 255, 0.12)",
 			borderRadius: 2,
 			p: 0.5,
@@ -43,7 +44,7 @@ export const SourceToggle = ({ value, onChange }: SourceToggleProps) => (
 					borderRadius: 1.5,
 					"&.Mui-selected": {
 						bgcolor: "primary.main",
-						color: "#fff",
+						color: neutral[1000],
 						"&:hover": { bgcolor: "primary.main" },
 					},
 				}}

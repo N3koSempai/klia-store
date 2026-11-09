@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../components/CachedImage";
 import { useDeveloperApps } from "../../hooks/useDeveloperApps";
 import { apiService } from "../../services/api";
+import { lines, neutral } from "../../theme/tokens";
 import type { CategoryApp } from "../../types";
 
 interface DeveloperProfileProps {
@@ -98,15 +99,15 @@ export const DeveloperProfile = ({
 			sx={{
 				width: "100%",
 				minHeight: "100vh",
-				bgcolor: "#0D1117",
+				bgcolor: neutral[50],
 				fontFamily: '"Inter", sans-serif',
 			}}
 		>
 			{/* Hero Section - Developer Identity */}
 			<Box
 				sx={{
-					bgcolor: "#161B22",
-					borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+					bgcolor: neutral[100],
+					borderBottom: `1px solid ${lines.default}`,
 					p: 4,
 				}}
 			>
@@ -114,9 +115,9 @@ export const DeveloperProfile = ({
 				<IconButton
 					onClick={onBack}
 					sx={{
-						color: "#C9D1D9",
+						color: neutral[800],
 						mb: 3,
-						"&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+						"&:hover": { bgcolor: lines.default },
 					}}
 				>
 					<ArrowBack />
@@ -157,7 +158,7 @@ export const DeveloperProfile = ({
 							sx={{
 								fontFamily: '"IBM Plex Sans", sans-serif',
 								fontWeight: 700,
-								color: "#C9D1D9",
+								color: neutral[800],
 								mb: 1,
 							}}
 						>
@@ -196,7 +197,7 @@ export const DeveloperProfile = ({
 					sx={{
 						fontFamily: '"IBM Plex Sans", sans-serif',
 						fontWeight: 700,
-						color: "#C9D1D9",
+						color: neutral[800],
 						mb: 3,
 					}}
 				>
@@ -229,9 +230,9 @@ export const DeveloperProfile = ({
 								<Box key={`skeleton-${index}`}>
 									<Card
 										sx={{
-											bgcolor: "#161B22",
+											bgcolor: neutral[100],
 											borderRadius: "12px",
-											border: "1px solid rgba(255, 255, 255, 0.1)",
+											border: `1px solid ${lines.default}`,
 											height: "100%",
 											display: "flex",
 											flexDirection: "column",
@@ -254,30 +255,30 @@ export const DeveloperProfile = ({
 												sx={{
 													borderRadius: 2,
 													flexShrink: 0,
-													bgcolor: "rgba(255,255,255,0.1)",
+													bgcolor: lines.default,
 												}}
 											/>
 											<Box sx={{ flexGrow: 1, minWidth: 0 }}>
 												<Skeleton
 													variant="text"
-													sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }}
+													sx={{ mb: 0.5, bgcolor: lines.default }}
 												/>
 												<Skeleton
 													variant="text"
 													width="50%"
-													sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+													sx={{ bgcolor: lines.default }}
 												/>
 											</Box>
 										</Box>
 										<CardContent sx={{ flexGrow: 1, pt: 1 }}>
 											<Skeleton
 												variant="text"
-												sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+												sx={{ bgcolor: lines.default }}
 											/>
 											<Skeleton
 												variant="text"
 												width="90%"
-												sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+												sx={{ bgcolor: lines.default }}
 											/>
 										</CardContent>
 									</Card>
@@ -287,9 +288,9 @@ export const DeveloperProfile = ({
 								<Box key={app.app_id} sx={{ minWidth: 0 }}>
 									<Card
 										sx={{
-											bgcolor: "#161B22",
+											bgcolor: neutral[100],
 											borderRadius: "12px",
-											border: "1px solid rgba(255, 255, 255, 0.1)",
+											border: `1px solid ${lines.default}`,
 											height: "100%",
 											display: "flex",
 											flexDirection: "column",
@@ -355,7 +356,7 @@ export const DeveloperProfile = ({
 													) : (
 														<Typography
 															variant="caption"
-															sx={{ color: "#8B949E" }}
+															sx={{ color: neutral[600] }}
 														>
 															{t("home.noIcon")}
 														</Typography>
@@ -369,7 +370,7 @@ export const DeveloperProfile = ({
 														sx={{
 															fontFamily: '"IBM Plex Sans", sans-serif',
 															fontWeight: 600,
-															color: "#C9D1D9",
+															color: neutral[800],
 															mb: 0.5,
 														}}
 														noWrap
@@ -385,7 +386,7 @@ export const DeveloperProfile = ({
 													variant="body2"
 													sx={{
 														fontFamily: '"Inter", sans-serif',
-														color: "#8B949E",
+														color: neutral[600],
 														display: "-webkit-box",
 														WebkitLineClamp: 2,
 														WebkitBoxOrient: "vertical",
@@ -405,7 +406,7 @@ export const DeveloperProfile = ({
 				{/* No results message - only show after retry is complete */}
 				{!showLoading && hasRetried && data?.hits.length === 0 && (
 					<Box sx={{ textAlign: "center", py: 8 }}>
-						<Typography variant="h6" sx={{ color: "#8B949E" }}>
+						<Typography variant="h6" sx={{ color: neutral[600] }}>
 							{t("developerProfile.noApps")}
 						</Typography>
 					</Box>

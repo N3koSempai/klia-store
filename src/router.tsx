@@ -1,7 +1,10 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
-import { reportNetworkFailure, reportNetworkSuccess } from "./store/connectivityStore";
+import {
+	reportNetworkFailure,
+	reportNetworkSuccess,
+} from "./store/connectivityStore";
 import { isNetworkError } from "./utils/networkError";
 
 // Deriva el estado de conectividad global a partir de los resultados de las

@@ -6,6 +6,7 @@ import errorAnim from "../../../assets/animations/Error.lottie";
 import successAnim from "../../../assets/animations/success.lottie";
 import { LazyLottie } from "../../../components/LazyLottie";
 import { Terminal } from "../../../components/Terminal";
+import { brand, hues, lines, neutral } from "../../../theme/tokens";
 
 export type InstallStatus =
 	| "idle"
@@ -78,16 +79,16 @@ export const InstallProgressPanel = memo(
 						gap: 3,
 						p: 4,
 						minHeight: 500,
-						bgcolor: "#161B22",
+						bgcolor: neutral[100],
 						borderRadius: 2,
-						border: "1px solid rgba(255, 255, 255, 0.1)",
+						border: `1px solid ${lines.default}`,
 					}}
 				>
 					<Typography
 						variant="h5"
 						textAlign="center"
 						sx={{
-							color: "#C9D1D9",
+							color: neutral[800],
 							fontWeight: 500,
 						}}
 					>
@@ -100,7 +101,7 @@ export const InstallProgressPanel = memo(
 							width: 60,
 							height: 60,
 							border: "3px solid rgba(74, 134, 207, 0.3)",
-							borderTop: "3px solid #4A86CF",
+							borderTop: `3px solid ${brand.primary}`,
 							borderRadius: "50%",
 							animation: "spin 1s linear infinite",
 							"@keyframes spin": {
@@ -113,7 +114,7 @@ export const InstallProgressPanel = memo(
 					<Typography
 						variant="body2"
 						sx={{
-							color: "#8B949E",
+							color: neutral[600],
 							fontFamily: "'Fira Code', 'Courier New', monospace",
 						}}
 					>
@@ -134,7 +135,7 @@ export const InstallProgressPanel = memo(
 						gap: 3,
 						p: 4,
 						minHeight: 500,
-						bgcolor: "#161B22",
+						bgcolor: neutral[100],
 						borderRadius: 2,
 						border: "1px solid rgba(39, 201, 63, 0.3)",
 					}}
@@ -149,10 +150,10 @@ export const InstallProgressPanel = memo(
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
-							border: "2px solid #27c93f",
+							border: `2px solid ${hues.green}`,
 						}}
 					>
-						<Typography sx={{ color: "#27c93f", fontSize: "2rem" }}>
+						<Typography sx={{ color: hues.green, fontSize: "2rem" }}>
 							✓
 						</Typography>
 					</Box>
@@ -161,7 +162,7 @@ export const InstallProgressPanel = memo(
 						variant="h5"
 						textAlign="center"
 						sx={{
-							color: "#27c93f",
+							color: hues.green,
 							fontWeight: 500,
 						}}
 					>
@@ -172,7 +173,7 @@ export const InstallProgressPanel = memo(
 						variant="body2"
 						textAlign="center"
 						sx={{
-							color: "#8B949E",
+							color: neutral[600],
 							maxWidth: 500,
 							px: 2,
 						}}
@@ -184,7 +185,7 @@ export const InstallProgressPanel = memo(
 						variant="body1"
 						textAlign="center"
 						sx={{
-							color: "#C9D1D9",
+							color: neutral[800],
 						}}
 					>
 						{t("appDetails.securityStartingInSeconds", { countdown })}
@@ -207,7 +208,7 @@ export const InstallProgressPanel = memo(
 						gap: 3,
 						p: 4,
 						minHeight: 500,
-						bgcolor: "#161B22",
+						bgcolor: neutral[100],
 						borderRadius: 2,
 						border: `1px solid ${
 							verificationResult?.isUnsupportedPlatform
@@ -234,20 +235,20 @@ export const InstallProgressPanel = memo(
 							justifyContent: "center",
 							border: `2px solid ${
 								verificationResult?.isUnsupportedPlatform
-									? "#F6D32D"
+									? brand.secondary
 									: verificationResult?.isHashMismatch
-										? "#FF6B6B"
-										: "#F6D32D"
+										? brand.danger
+										: brand.secondary
 							}`,
 						}}
 					>
 						<Typography
 							sx={{
 								color: verificationResult?.isUnsupportedPlatform
-									? "#F6D32D"
+									? brand.secondary
 									: verificationResult?.isHashMismatch
-										? "#FF6B6B"
-										: "#F6D32D",
+										? brand.danger
+										: brand.secondary,
 								fontSize: "2rem",
 							}}
 						>
@@ -260,10 +261,10 @@ export const InstallProgressPanel = memo(
 						textAlign="center"
 						sx={{
 							color: verificationResult?.isUnsupportedPlatform
-								? "#F6D32D"
+								? brand.secondary
 								: verificationResult?.isHashMismatch
-									? "#FF6B6B"
-									: "#F6D32D",
+									? brand.danger
+									: brand.secondary,
 							fontWeight: 500,
 						}}
 					>
@@ -276,7 +277,7 @@ export const InstallProgressPanel = memo(
 						variant="body2"
 						textAlign="center"
 						sx={{
-							color: "#8B949E",
+							color: neutral[600],
 							maxWidth: 500,
 							px: 2,
 							mb: 2,
@@ -289,7 +290,7 @@ export const InstallProgressPanel = memo(
 						variant="body1"
 						textAlign="center"
 						sx={{
-							color: "#C9D1D9",
+							color: neutral[800],
 							maxWidth: 600,
 						}}
 					>
@@ -304,48 +305,18 @@ export const InstallProgressPanel = memo(
 					<Box sx={{ display: "flex", gap: 2, mt: 2 }}>
 						<Button
 							variant="outlined"
+							color="neutral"
 							onClick={onShowVerificationDetails}
-							sx={{
-								px: 3,
-								borderColor: "rgba(255, 255, 255, 0.3)",
-								color: "#C9D1D9",
-								"&:hover": {
-									borderColor: "rgba(255, 255, 255, 0.5)",
-									bgcolor: "rgba(255, 255, 255, 0.05)",
-								},
-							}}
 						>
 							{t("appDetails.securityMoreDetails")}
 						</Button>
 						<Button
 							variant="contained"
+							color={verificationResult?.isHashMismatch ? "error" : "secondary"}
 							onClick={onForceContinue}
 							disabled={
 								verificationResult?.isHashMismatch && riskCountdown !== null
 							}
-							sx={{
-								px: 3,
-								bgcolor: verificationResult?.isUnsupportedPlatform
-									? "#F6D32D"
-									: verificationResult?.isHashMismatch
-										? "#FF6B6B"
-										: "#F6D32D",
-								color: "#0D1117",
-								fontWeight: 600,
-								"&:hover": {
-									bgcolor: verificationResult?.isUnsupportedPlatform
-										? "#f8db4e"
-										: verificationResult?.isHashMismatch
-											? "#ff8585"
-											: "#f8db4e",
-								},
-								"&.Mui-disabled": {
-									bgcolor: verificationResult?.isHashMismatch
-										? "rgba(255, 107, 107, 0.5)"
-										: "rgba(246, 211, 45, 0.5)",
-									color: "#0D1117",
-								},
-							}}
 						>
 							{verificationResult?.isHashMismatch
 								? riskCountdown !== null
@@ -355,15 +326,7 @@ export const InstallProgressPanel = memo(
 						</Button>
 					</Box>
 
-					<Button
-						onClick={onCancelVerification}
-						sx={{
-							color: "#8B949E",
-							"&:hover": {
-								color: "#C9D1D9",
-							},
-						}}
-					>
+					<Button color="neutral" onClick={onCancelVerification}>
 						{t("appDetails.securityCancelInstallation")}
 					</Button>
 				</Box>
@@ -381,7 +344,7 @@ export const InstallProgressPanel = memo(
 						gap: 3,
 						p: 4,
 						minHeight: 500,
-						bgcolor: "#161B22",
+						bgcolor: neutral[100],
 						borderRadius: 2,
 						border: `1px solid ${
 							verificationResult?.isUnsupportedPlatform
@@ -396,7 +359,7 @@ export const InstallProgressPanel = memo(
 						variant="h5"
 						textAlign="center"
 						sx={{
-							color: "#C9D1D9",
+							color: neutral[800],
 							fontWeight: 500,
 						}}
 					>
@@ -415,7 +378,7 @@ export const InstallProgressPanel = memo(
 							p: 2,
 							fontFamily: "'Fira Code', 'Courier New', monospace",
 							fontSize: "0.85rem",
-							color: "#8B949E",
+							color: neutral[600],
 							whiteSpace: "pre-wrap",
 							wordBreak: "break-word",
 						}}
@@ -429,35 +392,10 @@ export const InstallProgressPanel = memo(
 					</Box>
 
 					<Box sx={{ display: "flex", gap: 2 }}>
-						<Button
-							variant="outlined"
-							onClick={onDownloadLog}
-							sx={{
-								px: 3,
-								borderColor: "rgba(255, 255, 255, 0.3)",
-								color: "#C9D1D9",
-								"&:hover": {
-									borderColor: "rgba(255, 255, 255, 0.5)",
-									bgcolor: "rgba(255, 255, 255, 0.05)",
-								},
-							}}
-						>
+						<Button variant="outlined" color="neutral" onClick={onDownloadLog}>
 							{t("appDetails.saveLog") || "Save Log"}
 						</Button>
-						<Button
-							variant="contained"
-							onClick={onBackFromDetails}
-							sx={{
-								px: 3,
-								bgcolor: "rgba(255, 255, 255, 0.1)",
-								color: "#C9D1D9",
-								borderColor: "rgba(255, 255, 255, 0.3)",
-								border: "1px solid",
-								"&:hover": {
-									bgcolor: "rgba(255, 255, 255, 0.2)",
-								},
-							}}
-						>
+						<Button variant="soft" color="neutral" onClick={onBackFromDetails}>
 							{t("appDetails.back") || "Back"}
 						</Button>
 					</Box>
@@ -507,10 +445,10 @@ export const InstallProgressPanel = memo(
 
 					{/* Botones */}
 					<Box sx={{ display: "flex", gap: 2 }}>
-						<Button variant="outlined" onClick={onDownloadLog} sx={{ px: 3 }}>
+						<Button variant="outlined" color="neutral" onClick={onDownloadLog}>
 							{t("appDetails.getLog")}
 						</Button>
-						<Button variant="contained" onClick={onAccept} sx={{ px: 3 }}>
+						<Button variant="contained" onClick={onAccept}>
 							{t("appDetails.accept")}
 						</Button>
 					</Box>

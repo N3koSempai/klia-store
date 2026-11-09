@@ -237,11 +237,7 @@ export const Backups = ({ onBack }: BackupsProps) => {
 			await reloadBackups(restoreSourcePath);
 		}
 		await refreshInstalledPackages();
-	}, [
-		clearRestoreBackup,
-		restoreSourcePath,
-		reloadBackups,
-	]);
+	}, [clearRestoreBackup, restoreSourcePath, reloadBackups]);
 
 	const handleRequestDelete = useCallback((archivePath: string) => {
 		setDeleteTarget(archivePath);
@@ -412,11 +408,7 @@ export const Backups = ({ onBack }: BackupsProps) => {
 								{t("backups.installedApps")}
 							</Typography>
 							{filteredApps.length > 0 && (
-								<Button
-									size="small"
-									onClick={toggleSelectAllFiltered}
-									sx={{ textTransform: "none", fontSize: "0.75rem" }}
-								>
+								<Button size="small" onClick={toggleSelectAllFiltered}>
 									{allFilteredSelected
 										? t("backups.deselectAll")
 										: t("backups.selectAll")}
@@ -652,7 +644,6 @@ export const Backups = ({ onBack }: BackupsProps) => {
 									<Button
 										size="small"
 										onClick={() => setRestoreSourcePath(null)}
-										sx={{ textTransform: "none" }}
 									>
 										{t("backups.chooseAnother")}
 									</Button>
@@ -1011,7 +1002,9 @@ export const Backups = ({ onBack }: BackupsProps) => {
 						</Typography>
 					</DialogContent>
 					<DialogActions sx={{ px: 3, pb: 2 }}>
-						<Button onClick={handleCancelDelete}>{t("common.cancel")}</Button>
+						<Button variant="text" color="neutral" onClick={handleCancelDelete}>
+							{t("common.cancel")}
+						</Button>
 						<Button
 							variant="contained"
 							color="error"

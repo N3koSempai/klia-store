@@ -1,14 +1,8 @@
 import FolderOpenOutlined from "@mui/icons-material/FolderOpenOutlined";
-import {
-	Box,
-	Button,
-	Dialog,
-	DialogActions,
-	DialogContent,
-	DialogTitle,
-	Typography,
-} from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { radius } from "../theme/tokens";
+import { AppDialog } from "./ui/AppDialog";
 
 interface UninstallDialogProps {
 	open: boolean;
@@ -31,63 +25,59 @@ export const UninstallDialog = ({
 	const { t } = useTranslation();
 
 	return (
-		<Dialog
+		<AppDialog
 			open={open}
 			onClose={onCancel}
-			maxWidth="sm"
-			fullWidth
-			PaperProps={{
-				sx: {
-					bgcolor: "background.paper",
-					backgroundImage: "none",
-					border: "1px solid rgba(255,255,255,0.1)",
-					borderRadius: 4,
-					boxShadow: "0 8px 24px -4px rgba(0,0,0,0.6)",
-				},
-			}}
+			title={t("uninstallDialog.title", { name: appName })}
+			actions={
+				<>
+					<Button
+						onClick={onCancel}
+						variant="text"
+						color="neutral"
+						sx={{ mr: "auto" }}
+					>
+						{t("uninstallDialog.cancel")}
+					</Button>
+					<Button variant="soft" color="error" onClick={() => onConfirm(true)}>
+						{t("uninstallDialog.confirmDelete")}
+					</Button>
+					<Button
+						variant="contained"
+						onClick={() => onConfirm(false)}
+						autoFocus
+					>
+						{t("uninstallDialog.confirm")}
+					</Button>
+				</>
+			}
 		>
-			<DialogTitle sx={{ fontFamily: "IBM Plex Sans", fontWeight: 700, pt: 3 }}>
-				{t("uninstallDialog.title", { name: appName })}
-			</DialogTitle>
-			<DialogContent>
-				<Typography color="text.secondary" sx={{ mb: 2 }}>
-					{t("uninstallDialog.description")}
-				</Typography>
-				<Box
+			<Typography color="text.secondary">
+				{t("uninstallDialog.description")}
+			</Typography>
+			<Box
+				sx={(theme) => ({
+					display: "flex",
+					alignItems: "center",
+					gap: 1.5,
+					p: 1.5,
+					borderRadius: `${radius.md}px`,
+					border: `1px solid ${theme.tokens.border.subtle}`,
+					bgcolor: theme.tokens.surface.sunken,
+					color: "text.secondary",
+				})}
+			>
+				<FolderOpenOutlined fontSize="small" />
+				<Typography
+					variant="caption"
 					sx={{
-						display: "flex",
-						alignItems: "center",
-						gap: 1.5,
-						p: 1.5,
-						borderRadius: 2,
-						border: "1px solid rgba(255,255,255,0.1)",
-						color: "text.secondary",
+						fontFamily: "JetBrains Mono, monospace",
+						wordBreak: "break-all",
 					}}
 				>
-					<FolderOpenOutlined fontSize="small" />
-					<Typography
-						variant="caption"
-						sx={{ fontFamily: "monospace", wordBreak: "break-all" }}
-					>
-						~/.var/app/{appId}
-					</Typography>
-				</Box>
-			</DialogContent>
-			<DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-				<Button onClick={onCancel} color="inherit" sx={{ mr: "auto" }}>
-					{t("uninstallDialog.cancel")}
-				</Button>
-				<Button
-					variant="outlined"
-					color="error"
-					onClick={() => onConfirm(true)}
-				>
-					{t("uninstallDialog.confirmDelete")}
-				</Button>
-				<Button variant="contained" onClick={() => onConfirm(false)} autoFocus>
-					{t("uninstallDialog.confirm")}
-				</Button>
-			</DialogActions>
-		</Dialog>
+					~/.var/app/{appId}
+				</Typography>
+			</Box>
+		</AppDialog>
 	);
 };

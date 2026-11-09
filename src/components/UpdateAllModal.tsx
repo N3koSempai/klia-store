@@ -65,7 +65,9 @@ export const UpdateAllModal = ({
 	const { t } = useTranslation();
 
 	const [modalPhase, setModalPhase] = useState<ModalPhase>("verifying");
-	const [appStates, setAppStates] = useState<Record<string, AppVerificationState>>({});
+	const [appStates, setAppStates] = useState<
+		Record<string, AppVerificationState>
+	>({});
 	const [countdown, setCountdown] = useState(3);
 
 	const cancelledRef = useRef(false);
@@ -173,7 +175,9 @@ export const UpdateAllModal = ({
 							? "hashMismatch"
 							: "warning";
 					// Hash mismatch defaults to excluded; warnings default to included
-					const decision: "include" | "exclude" = isHashMismatch ? "exclude" : "include";
+					const decision: "include" | "exclude" = isHashMismatch
+						? "exclude"
+						: "include";
 
 					setAppStates((prev) => ({
 						...prev,
@@ -317,9 +321,7 @@ export const UpdateAllModal = ({
 
 	const completedCount = appsToVerify.length - stats.pending;
 	const progressPercent =
-		appsToVerify.length > 0
-			? (completedCount / appsToVerify.length) * 100
-			: 0;
+		appsToVerify.length > 0 ? (completedCount / appsToVerify.length) * 100 : 0;
 	const isVerifyingPhase = modalPhase === "verifying";
 
 	if (!open) return null;

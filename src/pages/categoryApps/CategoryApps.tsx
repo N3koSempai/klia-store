@@ -7,6 +7,7 @@ import {
 	AppGridCardSkeleton,
 } from "../../components/AppGridCard";
 import { useCategoryApps } from "../../hooks/useCategoryApps";
+import { lines, neutral } from "../../theme/tokens";
 import type { CategoryApp } from "../../types";
 
 interface CategoryAppsProps {
@@ -32,7 +33,7 @@ export const CategoryApps = ({
 			sx={{
 				width: "100%",
 				minHeight: "100vh",
-				bgcolor: "#0D1117",
+				bgcolor: neutral[50],
 				p: 4,
 				fontFamily: '"Inter", sans-serif',
 			}}
@@ -44,7 +45,7 @@ export const CategoryApps = ({
 					sx={{
 						color: "text.primary",
 						mr: 2,
-						"&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+						"&:hover": { bgcolor: lines.default },
 					}}
 				>
 					<ArrowBack fontSize="large" />

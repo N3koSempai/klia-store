@@ -1,5 +1,8 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { reportNetworkFailure, reportNetworkSuccess } from "../store/connectivityStore";
+import {
+	reportNetworkFailure,
+	reportNetworkSuccess,
+} from "../store/connectivityStore";
 import { LruMap, LruSet } from "./lruCache";
 import { isNetworkError } from "./networkError";
 

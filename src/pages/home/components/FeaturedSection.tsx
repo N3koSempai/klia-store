@@ -1,11 +1,19 @@
-import { alpha, Box, ButtonBase, Card, Chip, Skeleton, Typography,
-	useTheme
+import {
+	alpha,
+	Box,
+	ButtonBase,
+	Card,
+	Chip,
+	Skeleton,
+	Typography,
+	useTheme,
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
 import { OFF_FLATHUB_APPS } from "../../../data/offFlathubApps";
 import { useAppOfTheDay } from "../../../hooks/useAppOfTheDay";
+import { hues, lines } from "../../../theme/tokens";
 import type { CategoryApp } from "../../../types";
 
 interface FeaturedSectionProps {
@@ -23,17 +31,17 @@ interface PromotedAppCardData {
 }
 
 // Marrón del badge "beta" que acompaña al chip de promocionado.
-const BETA_BROWN = "#B98A5E";
+const BETA_BROWN = hues.brown;
 
-const KLIA_SCALER_PLAYER_APP_ID = "io.github.N3kosempai.klia-scaler-player";
-const kliaScalerPlayerData = OFF_FLATHUB_APPS[KLIA_SCALER_PLAYER_APP_ID];
+const KLIA_IPCAM_APP_ID = "io.github.N3kosempai.klia-ipcam";
+const kliaIpcamData = OFF_FLATHUB_APPS[KLIA_IPCAM_APP_ID];
 
-const KLIA_SCALER_PLAYER_PROMO: PromotedAppCardData = {
-	appId: KLIA_SCALER_PLAYER_APP_ID,
-	name: kliaScalerPlayerData.name,
-	summary: kliaScalerPlayerData.summary,
-	icon: kliaScalerPlayerData.icon,
-	categoryApp: kliaScalerPlayerData,
+const KLIA_IPCAM_PROMO: PromotedAppCardData = {
+	appId: KLIA_IPCAM_APP_ID,
+	name: kliaIpcamData.name,
+	summary: kliaIpcamData.summary,
+	icon: kliaIpcamData.icon,
+	categoryApp: kliaIpcamData,
 };
 
 export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
@@ -41,7 +49,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const theme = useTheme();
 	const { data: appOfTheDay, isLoading, error } = useAppOfTheDay();
 
-	const promotedApp = KLIA_SCALER_PLAYER_PROMO;
+	const promotedApp = KLIA_IPCAM_PROMO;
 
 	// Carousel state - includes backend app and optional promoted app
 	const [activeSlide, setActiveSlide] = useState(0);
@@ -64,7 +72,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 					sx={{
 						borderRadius: 4,
 						overflow: "hidden",
-						border: "1px solid rgba(255,255,255,0.1)",
+						border: `1px solid ${lines.default}`,
 					}}
 				>
 					<Box sx={{ p: 5 }}>
@@ -111,7 +119,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 						height: 300,
 						bgcolor: "background.paper",
 						borderRadius: 4,
-						border: "1px solid rgba(255,255,255,0.1)",
+						border: `1px solid ${lines.default}`,
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "center",
@@ -136,7 +144,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 					tabIndex={0}
 					aria-label={
 						currentSlide.type === "backend"
-							? (currentSlide.data?.name || currentSlide.data?.app_id || "")
+							? currentSlide.data?.name || currentSlide.data?.app_id || ""
 							: currentSlide.data.name
 					}
 					onClick={() => {
@@ -155,9 +163,15 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 					onKeyDown={(e) => {
 						if (e.key === "Enter" || e.key === " ") {
 							e.preventDefault();
-							if (currentSlide.type === "backend" && currentSlide.data?.categoryApp)
+							if (
+								currentSlide.type === "backend" &&
+								currentSlide.data?.categoryApp
+							)
 								onAppSelect(currentSlide.data.categoryApp);
-							else if (currentSlide.type === "promoted" && currentSlide.data.categoryApp)
+							else if (
+								currentSlide.type === "promoted" &&
+								currentSlide.data.categoryApp
+							)
 								onAppSelect(currentSlide.data.categoryApp);
 						}
 					}}
@@ -165,7 +179,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 						position: "relative",
 						overflow: "hidden",
 						bgcolor: "background.paper",
-						border: "1px solid rgba(255,255,255,0.1)",
+						border: `1px solid ${lines.default}`,
 						borderRadius: 4,
 						transition: "all 0.3s ease-in-out",
 						cursor: "pointer",
@@ -256,20 +270,21 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 											borderRadius: 1,
 										}}
 									/>
-									{currentSlide.type === "promoted" && currentSlide.data.beta && (
-										<Chip
-											label={t("home.beta").toUpperCase()}
-											size="small"
-											sx={{
-												bgcolor: alpha(BETA_BROWN, 0.15),
-												color: BETA_BROWN,
-												fontWeight: 800,
-												fontSize: "0.65rem",
-												height: 20,
-												borderRadius: 1,
-											}}
-										/>
-									)}
+									{currentSlide.type === "promoted" &&
+										currentSlide.data.beta && (
+											<Chip
+												label={t("home.beta").toUpperCase()}
+												size="small"
+												sx={{
+													bgcolor: alpha(BETA_BROWN, 0.15),
+													color: BETA_BROWN,
+													fontWeight: 800,
+													fontSize: "0.65rem",
+													height: 20,
+													borderRadius: 1,
+												}}
+											/>
+										)}
 								</Box>
 								<Typography
 									variant="h3"

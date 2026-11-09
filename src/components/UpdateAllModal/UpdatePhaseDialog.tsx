@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import type { TFunction } from "i18next";
 import { memo } from "react";
+import { brand, hues } from "../../theme/tokens";
 import { Terminal } from "../Terminal";
 
 interface UpdatePhaseDialogProps {
@@ -119,8 +120,8 @@ export const UpdatePhaseDialog = memo(
 								<Button
 									variant="outlined"
 									size="small"
+									color="neutral"
 									onClick={onToggleTerminal}
-									sx={{ borderColor: "divider", color: "text.secondary" }}
 								>
 									{showTerminal
 										? t("myApps.hideDetails")
@@ -183,12 +184,13 @@ export const UpdatePhaseDialog = memo(
 										display: "flex",
 										alignItems: "center",
 										justifyContent: "center",
-										border: `2px solid ${updateErrorCount > 0 ? "#F6D32D" : "#27c93f"}`,
+										border: `2px solid ${updateErrorCount > 0 ? brand.secondary : hues.green}`,
 									}}
 								>
 									<Typography
 										sx={{
-											color: updateErrorCount > 0 ? "#F6D32D" : "#27c93f",
+											color:
+												updateErrorCount > 0 ? brand.secondary : hues.green,
 											fontSize: "1.6rem",
 										}}
 									>
@@ -198,7 +200,7 @@ export const UpdatePhaseDialog = memo(
 								<Typography
 									variant="body1"
 									sx={{
-										color: updateErrorCount > 0 ? "#F6D32D" : "#27c93f",
+										color: updateErrorCount > 0 ? brand.secondary : hues.green,
 										fontWeight: 600,
 										textAlign: "center",
 									}}

@@ -22,6 +22,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { hues, neutral, status } from "../theme/tokens";
 import { dbCacheManager } from "../utils/dbCache";
 
 type CryptoOption = "usdt" | "btc";
@@ -77,7 +78,7 @@ function DonationHeader({
 				px: 2.5,
 				pt: 2.5,
 				pb: 2,
-				borderBottom: "1px solid #21262d",
+				borderBottom: `1px solid ${neutral[200]}`,
 				display: "flex",
 				alignItems: "flex-start",
 				gap: 1.5,
@@ -96,13 +97,13 @@ function DonationHeader({
 					flexShrink: 0,
 				}}
 			>
-				<BoltRounded sx={{ color: "#d29922", fontSize: 20 }} />
+				<BoltRounded sx={{ color: status.warning, fontSize: 20 }} />
 			</Box>
 			<Box sx={{ flex: 1, minWidth: 0 }}>
 				<Typography
 					variant="subtitle1"
 					fontWeight={700}
-					color="#e6edf3"
+					color={neutral[900]}
 					fontFamily="Inter, sans-serif"
 					lineHeight={1.3}
 				>
@@ -110,7 +111,7 @@ function DonationHeader({
 				</Typography>
 				<Typography
 					variant="caption"
-					color="#6e7681"
+					color={neutral[500]}
 					fontFamily="Inter, sans-serif"
 				>
 					{subtitle}
@@ -120,10 +121,10 @@ function DonationHeader({
 				size="small"
 				onClick={onClose}
 				sx={{
-					color: "#6e7681",
+					color: neutral[500],
 					mt: -0.5,
 					mr: -0.5,
-					"&:hover": { color: "#e6edf3", bgcolor: "rgba(110,118,129,0.1)" },
+					"&:hover": { color: neutral[900], bgcolor: "rgba(110,118,129,0.1)" },
 				}}
 			>
 				<Typography fontSize="1.1rem" lineHeight={1}>
@@ -273,33 +274,19 @@ export const DonationModal = ({
 	};
 
 	const selectSx = {
-		bgcolor: "#0d1117",
-		color: "#e6edf3",
-		"& .MuiSelect-select": { color: "#e6edf3" },
-		"& .MuiOutlinedInput-notchedOutline": { borderColor: "#30363d" },
-		"&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#58a6ff" },
+		bgcolor: neutral[50],
+		color: neutral[900],
+		"& .MuiSelect-select": { color: neutral[900] },
+		"& .MuiOutlinedInput-notchedOutline": { borderColor: neutral[300] },
+		"&:hover .MuiOutlinedInput-notchedOutline": { borderColor: status.info },
 		"&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-			borderColor: "#58a6ff",
+			borderColor: status.info,
 		},
-		"& .MuiSvgIcon-root": { color: "#8b949e" },
+		"& .MuiSvgIcon-root": { color: neutral[600] },
 	};
 
 	return (
-		<Dialog
-			open={open}
-			onClose={handleClose}
-			maxWidth="xs"
-			fullWidth
-			PaperProps={{
-				sx: {
-					bgcolor: "#161b22",
-					backgroundImage: "none",
-					border: "1px solid #30363d",
-					borderRadius: "12px",
-					boxShadow: "0 16px 32px rgba(1,4,9,0.85)",
-				},
-			}}
-		>
+		<Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
 			{/* ─── INPUT VIEW ─────────────────────────────────────────────────── */}
 			{view === "input" && (
 				<>
@@ -313,9 +300,9 @@ export const DonationModal = ({
 						<FormControl fullWidth size="small" sx={{ mb: 2.5 }}>
 							<InputLabel
 								sx={{
-									color: "#8b949e",
+									color: neutral[600],
 									fontSize: "0.85rem",
-									"&.Mui-focused": { color: "#58a6ff" },
+									"&.Mui-focused": { color: status.info },
 								}}
 							>
 								{t("donation.selectCurrency")}
@@ -328,12 +315,12 @@ export const DonationModal = ({
 								MenuProps={{
 									PaperProps: {
 										sx: {
-											bgcolor: "#21262d",
-											border: "1px solid #30363d",
+											bgcolor: neutral[200],
+											border: `1px solid ${neutral[300]}`,
 											borderRadius: "8px",
 											boxShadow: "0 8px 24px rgba(1,4,9,0.8)",
 											"& .MuiMenuItem-root": {
-												color: "#e6edf3",
+												color: neutral[900],
 												"&:hover": { bgcolor: "rgba(88,166,255,0.08)" },
 												"&.Mui-selected": {
 													bgcolor: "rgba(88,166,255,0.1)",
@@ -364,14 +351,14 @@ export const DonationModal = ({
 										<Typography
 											variant="body2"
 											fontWeight={600}
-											color="#e6edf3"
+											color={neutral[900]}
 											fontSize="0.85rem"
 										>
 											USDT
 										</Typography>
 										<Typography
 											variant="caption"
-											color="#8b949e"
+											color={neutral[600]}
 											fontSize="0.72rem"
 										>
 											· {t("donation.ethNetwork")}
@@ -379,7 +366,7 @@ export const DonationModal = ({
 										{!wallets.usdt && (
 											<Typography
 												variant="caption"
-												color="#8b949e"
+												color={neutral[600]}
 												fontSize="0.7rem"
 												sx={{ ml: "auto" }}
 											>
@@ -408,14 +395,14 @@ export const DonationModal = ({
 										<Typography
 											variant="body2"
 											fontWeight={600}
-											color="#e6edf3"
+											color={neutral[900]}
 											fontSize="0.85rem"
 										>
 											Bitcoin
 										</Typography>
 										<Typography
 											variant="caption"
-											color="#8b949e"
+											color={neutral[600]}
 											fontSize="0.72rem"
 										>
 											· {t("donation.btcNetwork")}
@@ -423,7 +410,7 @@ export const DonationModal = ({
 										{!wallets.btc && (
 											<Typography
 												variant="caption"
-												color="#8b949e"
+												color={neutral[600]}
 												fontSize="0.7rem"
 												sx={{ ml: "auto" }}
 											>
@@ -438,7 +425,7 @@ export const DonationModal = ({
 						{/* Amount label */}
 						<Typography
 							variant="caption"
-							color="#8b949e"
+							color={neutral[600]}
 							fontFamily="Inter, sans-serif"
 							fontWeight={600}
 							sx={{
@@ -469,7 +456,7 @@ export const DonationModal = ({
 									startAdornment: (
 										<InputAdornment position="start">
 											<Typography
-												color="#8b949e"
+												color={neutral[600]}
 												fontWeight={700}
 												fontSize="0.95rem"
 											>
@@ -481,12 +468,12 @@ export const DonationModal = ({
 								sx={{
 									mb: 2,
 									"& .MuiOutlinedInput-root": {
-										bgcolor: "#0d1117",
+										bgcolor: neutral[50],
 										fontFamily: "monospace",
-										color: "#e6edf3",
-										"& fieldset": { borderColor: "#30363d" },
-										"&:hover fieldset": { borderColor: "#58a6ff" },
-										"&.Mui-focused fieldset": { borderColor: "#58a6ff" },
+										color: neutral[900],
+										"& fieldset": { borderColor: neutral[300] },
+										"&:hover fieldset": { borderColor: status.info },
+										"&.Mui-focused fieldset": { borderColor: status.info },
 										"&.Mui-disabled": { opacity: 0.5 },
 									},
 									"& input[type=number]": { MozAppearance: "textfield" },
@@ -513,7 +500,7 @@ export const DonationModal = ({
 									endAdornment: (
 										<InputAdornment position="end">
 											<Typography
-												color="#d29922"
+												color={status.warning}
 												fontWeight={700}
 												fontSize="0.75rem"
 												fontFamily="monospace"
@@ -526,12 +513,12 @@ export const DonationModal = ({
 								sx={{
 									mb: 2,
 									"& .MuiOutlinedInput-root": {
-										bgcolor: "#0d1117",
+										bgcolor: neutral[50],
 										fontFamily: "monospace",
-										color: "#e6edf3",
-										"& fieldset": { borderColor: "#30363d" },
-										"&:hover fieldset": { borderColor: "#d29922" },
-										"&.Mui-focused fieldset": { borderColor: "#d29922" },
+										color: neutral[900],
+										"& fieldset": { borderColor: neutral[300] },
+										"&:hover fieldset": { borderColor: status.warning },
+										"&.Mui-focused fieldset": { borderColor: status.warning },
 										"&.Mui-disabled": { opacity: 0.5 },
 									},
 								}}
@@ -552,8 +539,8 @@ export const DonationModal = ({
 									fontFamily: "Inter, sans-serif",
 									fontSize: "0.875rem",
 									textTransform: "none",
-									bgcolor: crypto === "btc" ? "#d29922" : "#238636",
-									color: crypto === "btc" ? "#0d1117" : "#ffffff",
+									bgcolor: crypto === "btc" ? status.warning : hues.greenDark,
+									color: crypto === "btc" ? neutral[50] : neutral[1000],
 									border: "1px solid",
 									borderColor:
 										crypto === "btc"
@@ -561,13 +548,13 @@ export const DonationModal = ({
 											: "rgba(63,185,80,0.5)",
 									boxShadow: "none",
 									"&:hover": {
-										bgcolor: crypto === "btc" ? "#e3a918" : "#2ea043",
+										bgcolor: crypto === "btc" ? hues.amberDeep : hues.greenDeep,
 										boxShadow: "none",
 									},
 									"&.Mui-disabled": {
-										bgcolor: "#21262d",
-										color: "#484f58",
-										borderColor: "#21262d",
+										bgcolor: neutral[200],
+										color: neutral[400],
+										borderColor: neutral[200],
 									},
 								}}
 							>
@@ -595,7 +582,7 @@ export const DonationModal = ({
 								sx={{
 									display: "inline-flex",
 									p: 1.5,
-									bgcolor: "#ffffff",
+									bgcolor: neutral[1000],
 									borderRadius: "10px",
 									mb: 2,
 								}}
@@ -607,8 +594,8 @@ export const DonationModal = ({
 											: activeWallet
 									}
 									size={160}
-									bgColor="#ffffff"
-									fgColor="#0d1117"
+									bgColor={neutral[1000]}
+									fgColor={neutral[50]}
 									level="M"
 								/>
 							</Box>
@@ -616,7 +603,7 @@ export const DonationModal = ({
 							{/* Exact amount */}
 							<Typography
 								variant="caption"
-								color="#8b949e"
+								color={neutral[600]}
 								fontWeight={600}
 								sx={{
 									display: "block",
@@ -632,12 +619,16 @@ export const DonationModal = ({
 								variant="h6"
 								fontWeight={700}
 								fontFamily="monospace"
-								color={crypto === "btc" ? "#d29922" : "#58a6ff"}
+								color={crypto === "btc" ? status.warning : status.info}
 								sx={{ mb: 0.5 }}
 							>
 								{activeAmount} {crypto === "btc" ? "BTC" : "USDT"}
 							</Typography>
-							<Typography variant="caption" color="#6e7681" fontSize="0.72rem">
+							<Typography
+								variant="caption"
+								color={neutral[500]}
+								fontSize="0.72rem"
+							>
 								{t("donation.sendExactNote")}
 							</Typography>
 
@@ -651,8 +642,8 @@ export const DonationModal = ({
 									py: 0.75,
 									mt: 1.5,
 									mb: 2,
-									bgcolor: "#0d1117",
-									border: "1px solid #21262d",
+									bgcolor: neutral[50],
+									border: `1px solid ${neutral[200]}`,
 									borderRadius: "6px",
 									textAlign: "left",
 								}}
@@ -660,7 +651,7 @@ export const DonationModal = ({
 								<Typography
 									variant="caption"
 									fontFamily="monospace"
-									color="#8b949e"
+									color={neutral[600]}
 									sx={{
 										flex: 1,
 										wordBreak: "break-all",
@@ -681,10 +672,10 @@ export const DonationModal = ({
 										size="small"
 										onClick={() => handleCopy(activeWallet)}
 										sx={{
-											color: copied ? "#3fb950" : "#6e7681",
+											color: copied ? status.success : neutral[500],
 											flexShrink: 0,
 											"&:hover": {
-												color: "#e6edf3",
+												color: neutral[900],
 												bgcolor: "rgba(110,118,129,0.1)",
 											},
 										}}
@@ -710,11 +701,15 @@ export const DonationModal = ({
 									}}
 								>
 									<ErrorOutlineRounded
-										sx={{ color: "#f85149", fontSize: "1rem", flexShrink: 0 }}
+										sx={{
+											color: status.danger,
+											fontSize: "1rem",
+											flexShrink: 0,
+										}}
 									/>
 									<Typography
 										variant="caption"
-										color="#f85149"
+										color={status.danger}
 										fontSize="0.78rem"
 										textAlign="left"
 									>
@@ -741,15 +736,15 @@ export const DonationModal = ({
 									fontFamily: "Inter, sans-serif",
 									fontSize: "0.875rem",
 									textTransform: "none",
-									color: "#58a6ff",
+									color: status.info,
 									borderColor: "rgba(88,166,255,0.4)",
 									"&:hover": {
-										borderColor: "#58a6ff",
+										borderColor: status.info,
 										bgcolor: "rgba(88,166,255,0.08)",
 									},
 									"&.Mui-disabled": {
-										color: "#484f58",
-										borderColor: "#21262d",
+										color: neutral[400],
+										borderColor: neutral[200],
 									},
 								}}
 							>
@@ -761,13 +756,9 @@ export const DonationModal = ({
 							<Box sx={{ mt: 1 }}>
 								<Button
 									size="small"
+									color="neutral"
 									onClick={() => setView("input")}
 									disabled={view === "verifying"}
-									sx={{
-										color: "#6e7681",
-										textTransform: "none",
-										fontSize: "0.78rem",
-									}}
 								>
 									← {t("donation.back")}
 								</Button>
@@ -786,24 +777,28 @@ export const DonationModal = ({
 					/>
 					<DialogContent sx={{ px: 2.5, pt: 3, pb: 3, textAlign: "center" }}>
 						<CheckCircleRounded
-							sx={{ fontSize: 56, color: "#3fb950", mb: 1.5 }}
+							sx={{ fontSize: 56, color: status.success, mb: 1.5 }}
 						/>
 						<Typography
 							variant="h6"
 							fontWeight={700}
-							color="#e6edf3"
+							color={neutral[900]}
 							fontFamily="Inter, sans-serif"
 							mb={0.5}
 						>
 							{t("donation.paymentConfirmed")}
 						</Typography>
-						<Typography variant="body2" color="#8b949e" mb={2}>
+						<Typography variant="body2" color={neutral[600]} mb={2}>
 							{t("donation.paymentConfirmedDesc", { name: displayName })}
 						</Typography>
 						{!isInstalled && (
-							<Typography variant="body2" color="#6e7681" mb={2}>
+							<Typography variant="body2" color={neutral[500]} mb={2}>
 								Installing in{" "}
-								<Typography component="span" fontWeight={700} color="#e6edf3">
+								<Typography
+									component="span"
+									fontWeight={700}
+									color={neutral[900]}
+								>
 									{countdown}s
 								</Typography>
 								…
@@ -813,7 +808,7 @@ export const DonationModal = ({
 							<Typography
 								variant="caption"
 								fontFamily="monospace"
-								color="#6e7681"
+								color={neutral[500]}
 								sx={{
 									display: "block",
 									wordBreak: "break-all",
@@ -824,20 +819,7 @@ export const DonationModal = ({
 								TX: {verifyTxId}
 							</Typography>
 						)}
-						<Button
-							variant="contained"
-							onClick={handleClose}
-							sx={{
-								px: 4,
-								py: 1,
-								fontWeight: 600,
-								fontFamily: "Inter, sans-serif",
-								textTransform: "none",
-								bgcolor: "#238636",
-								"&:hover": { bgcolor: "#2ea043" },
-								boxShadow: "none",
-							}}
-						>
+						<Button variant="contained" color="success" onClick={handleClose}>
 							{t("donation.close")}
 						</Button>
 					</DialogContent>

@@ -23,10 +23,10 @@ import { AppMetaCapsule } from "../../components/AppMetaCapsule";
 import { CachedImage } from "../../components/CachedImage";
 import { DependencyInfoPopover } from "../../components/DependencyInfoPopover";
 import { DonationModal } from "../../components/DonationModal";
-import { UninstallDialog } from "../../components/UninstallDialog";
 import { GitHubStarBadge } from "../../components/GitHubStarBadge";
 import { PrivacyBadge } from "../../components/PrivacyBadge";
 import { PrivacyDialog } from "../../components/PrivacyDialog";
+import { UninstallDialog } from "../../components/UninstallDialog";
 import { useAppPrivacy } from "../../hooks/useAppPrivacy";
 import { useAppScreenshots } from "../../hooks/useAppScreenshots";
 import { useRepoStats } from "../../hooks/useRepoStats";
@@ -37,6 +37,7 @@ import {
 	reportNetworkSuccess,
 } from "../../store/connectivityStore";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
+import { hues, lines, status } from "../../theme/tokens";
 import type { AppStream, CategoryApp } from "../../types";
 import { GITHUB_RELEASE_REPOS } from "../../utils/githubReleaseApps";
 import { isNetworkError } from "../../utils/networkError";
@@ -110,11 +111,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 	const [showOfflineToast, setShowOfflineToast] = useState(false);
 	const [showDonationModal, setShowDonationModal] = useState(false);
 	const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
-	const privacy = useAppPrivacy(
-		app.app_id,
-		!!urls?.donation,
-		app.updated_at,
-	);
+	const privacy = useAppPrivacy(app.app_id, !!urls?.donation, app.updated_at);
 	const hasCryptoDonation = !!(
 		urls?.donation && /bitcoin|ethereum/i.test(urls.donation)
 	);
@@ -775,13 +772,13 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 										fontWeight: 600,
 										fontFamily: "Inter, sans-serif",
 										textTransform: "uppercase",
-										color: "#d29922",
+										color: status.warning,
 										borderColor: "rgba(210, 153, 34, 0.45)",
 										bgcolor: "rgba(210, 153, 34, 0.05)",
 										whiteSpace: "nowrap",
 										flexShrink: 0,
 										"&:hover": {
-											borderColor: "#d29922",
+											borderColor: status.warning,
 											bgcolor: "rgba(210, 153, 34, 0.1)",
 										},
 									}}
@@ -801,8 +798,8 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 								<IconButton
 									onClick={() => setShowUninstallDialog(true)}
 									sx={{
-										bgcolor: "rgba(255, 255, 255, 0.05)",
-										border: "1px solid rgba(255, 255, 255, 0.1)",
+										bgcolor: lines.subtle,
+										border: `1px solid ${lines.default}`,
 										borderRadius: "6px",
 										width: 48,
 										height: 48,
@@ -810,7 +807,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 										"&:hover": {
 											bgcolor: "rgba(239, 68, 68, 0.1)",
 											borderColor: "rgba(239, 68, 68, 0.3)",
-											color: "#ef4444",
+											color: hues.redTailwind,
 										},
 									}}
 								>
@@ -829,7 +826,7 @@ export const AppDetails = ({ app, onBack }: AppDetailsProps) => {
 								width="100%"
 								height={72}
 								sx={{
-									bgcolor: "rgba(255, 255, 255, 0.05)",
+									bgcolor: lines.subtle,
 								}}
 							/>
 						) : dependencies.length > 0 ? (

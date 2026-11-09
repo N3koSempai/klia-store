@@ -1,10 +1,11 @@
+import type { SvgIconComponent } from "@mui/icons-material";
 import FolderOpenRounded from "@mui/icons-material/FolderOpenRounded";
 import MemoryRounded from "@mui/icons-material/MemoryRounded";
 import PaymentsRounded from "@mui/icons-material/PaymentsRounded";
 import PeopleAltRounded from "@mui/icons-material/PeopleAltRounded";
 import { Box, ButtonBase, Tooltip } from "@mui/material";
-import type { SvgIconComponent } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import { lines, neutral, status } from "../theme/tokens";
 import type {
 	AppPrivacyAssessment,
 	PrivacyFocusId,
@@ -19,10 +20,10 @@ export const PRIVACY_FOCUS_ICONS: Record<PrivacyFocusId, SvgIconComponent> = {
 };
 
 export const PRIVACY_LEVEL_COLORS: Record<PrivacyLevel, string> = {
-	safe: "#3fb950",
-	caution: "#d29922",
-	high: "#f85149",
-	unknown: "#6e7681",
+	safe: status.success,
+	caution: status.warning,
+	high: status.danger,
+	unknown: neutral[500],
 };
 
 // El color nunca es la única señal: el relleno y el borde crecen con el nivel
@@ -53,8 +54,8 @@ export const PrivacyBadge = ({ assessment, onOpen }: PrivacyBadgeProps) => {
 			sx={{
 				display: "inline-flex",
 				alignItems: "stretch",
-				bgcolor: "rgba(255, 255, 255, 0.05)",
-				border: "1px solid rgba(255, 255, 255, 0.1)",
+				bgcolor: lines.subtle,
+				border: `1px solid ${lines.default}`,
 				borderRadius: "6px",
 				overflow: "hidden",
 				transition: "border-color 0.2s",
@@ -79,8 +80,7 @@ export const PrivacyBadge = ({ assessment, onOpen }: PrivacyBadgeProps) => {
 								alignItems: "center",
 								px: 1.25,
 								py: 0.5,
-								borderLeft:
-									index === 0 ? "none" : "1px solid rgba(255, 255, 255, 0.1)",
+								borderLeft: index === 0 ? "none" : `1px solid ${lines.default}`,
 								transition: "background-color 0.2s",
 								...cellStyle(focus.level),
 							}}

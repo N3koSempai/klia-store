@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import type { TFunction } from "i18next";
 import { memo } from "react";
+import { brand, hues, lines, neutral, status } from "../../theme/tokens";
 import type { AppToVerify } from "../UpdateAllModal";
 import {
 	AppVerificationRow,
@@ -58,10 +59,10 @@ export const VerifyingReviewPhaseDialog = memo(
 	}: VerifyingReviewPhaseDialogProps) => {
 		const progressBarColor =
 			stats.hashMismatch > 0
-				? "#FF6B6B"
+				? brand.danger
 				: stats.warning > 0
-					? "#F6D32D"
-					: "#27c93f";
+					? brand.secondary
+					: hues.green;
 
 		return (
 			<Dialog
@@ -74,7 +75,7 @@ export const VerifyingReviewPhaseDialog = memo(
 					{/* Header */}
 					<Typography
 						variant="subtitle1"
-						sx={{ color: "#C9D1D9", fontWeight: 600, mb: 2 }}
+						sx={{ color: neutral[800], fontWeight: 600, mb: 2 }}
 					>
 						{isVerifyingPhase
 							? t("appDetails.verifyingSecurity")
@@ -86,12 +87,12 @@ export const VerifyingReviewPhaseDialog = memo(
 						<Box
 							sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}
 						>
-							<Typography variant="caption" sx={{ color: "#8B949E" }}>
+							<Typography variant="caption" sx={{ color: neutral[600] }}>
 								{t("appDetails.securityVerificationSourcesChecked")}
 							</Typography>
 							<Typography
 								variant="caption"
-								sx={{ color: "#8B949E", fontFamily: "monospace" }}
+								sx={{ color: neutral[600], fontFamily: "monospace" }}
 							>
 								{completedCount} / {appsToVerify.length}
 							</Typography>
@@ -102,9 +103,9 @@ export const VerifyingReviewPhaseDialog = memo(
 							sx={{
 								height: 4,
 								borderRadius: 1,
-								bgcolor: "rgba(255, 255, 255, 0.05)",
+								bgcolor: lines.subtle,
 								"& .MuiLinearProgress-bar": {
-									bgcolor: isVerifyingPhase ? "#58A6FF" : progressBarColor,
+									bgcolor: isVerifyingPhase ? status.info : progressBarColor,
 									transition: "background-color 0.4s ease",
 								},
 							}}
@@ -127,12 +128,12 @@ export const VerifyingReviewPhaseDialog = memo(
 										border: "1px solid rgba(39, 201, 63, 0.3)",
 									}}
 								>
-									<Typography sx={{ color: "#27c93f", fontSize: "0.85rem" }}>
+									<Typography sx={{ color: hues.green, fontSize: "0.85rem" }}>
 										✓
 									</Typography>
 									<Typography
 										variant="caption"
-										sx={{ color: "#27c93f", fontWeight: 600 }}
+										sx={{ color: hues.green, fontWeight: 600 }}
 									>
 										{stats.verified}
 									</Typography>
@@ -151,12 +152,14 @@ export const VerifyingReviewPhaseDialog = memo(
 										border: "1px solid rgba(246, 211, 45, 0.3)",
 									}}
 								>
-									<Typography sx={{ color: "#F6D32D", fontSize: "0.85rem" }}>
+									<Typography
+										sx={{ color: brand.secondary, fontSize: "0.85rem" }}
+									>
 										⚠
 									</Typography>
 									<Typography
 										variant="caption"
-										sx={{ color: "#F6D32D", fontWeight: 600 }}
+										sx={{ color: brand.secondary, fontWeight: 600 }}
 									>
 										{stats.warning}
 									</Typography>
@@ -175,12 +178,12 @@ export const VerifyingReviewPhaseDialog = memo(
 										border: "1px solid rgba(255, 107, 107, 0.3)",
 									}}
 								>
-									<Typography sx={{ color: "#FF6B6B", fontSize: "0.85rem" }}>
+									<Typography sx={{ color: brand.danger, fontSize: "0.85rem" }}>
 										✗
 									</Typography>
 									<Typography
 										variant="caption"
-										sx={{ color: "#FF6B6B", fontWeight: 600 }}
+										sx={{ color: brand.danger, fontWeight: 600 }}
 									>
 										{stats.hashMismatch}
 									</Typography>
@@ -195,13 +198,13 @@ export const VerifyingReviewPhaseDialog = memo(
 										px: 1.5,
 										py: 0.5,
 										borderRadius: 1,
-										bgcolor: "rgba(255, 255, 255, 0.05)",
-										border: "1px solid rgba(255, 255, 255, 0.1)",
+										bgcolor: lines.subtle,
+										border: `1px solid ${lines.default}`,
 									}}
 								>
 									<Typography
 										variant="caption"
-										sx={{ color: "#8B949E", fontWeight: 600 }}
+										sx={{ color: neutral[600], fontWeight: 600 }}
 									>
 										{stats.pending} {t("myApps.verificationPending")}
 									</Typography>
@@ -217,7 +220,7 @@ export const VerifyingReviewPhaseDialog = memo(
 							overflow: "auto",
 							bgcolor: "rgba(0, 0, 0, 0.2)",
 							borderRadius: 2,
-							border: "1px solid rgba(255, 255, 255, 0.06)",
+							border: `1px solid ${lines.subtle}`,
 							mb: 2,
 						}}
 					>
@@ -244,7 +247,7 @@ export const VerifyingReviewPhaseDialog = memo(
 					{systemUpdatesCount > 0 && !isVerifyingPhase && (
 						<Typography
 							variant="caption"
-							sx={{ color: "#6E7681", display: "block", mb: 2 }}
+							sx={{ color: neutral[500], display: "block", mb: 2 }}
 						>
 							{systemUpdatesCount === 1
 								? t("myApps.systemPackageNote", { count: systemUpdatesCount })
@@ -259,19 +262,9 @@ export const VerifyingReviewPhaseDialog = memo(
 						<Button
 							size="small"
 							variant="outlined"
+							color="neutral"
 							onClick={onCancelAll}
 							disabled={isVerifyingPhase}
-							sx={{
-								borderColor: "rgba(255, 255, 255, 0.2)",
-								color: "#8B949E",
-								fontSize: "0.75rem",
-								py: 0.5,
-								textTransform: "none",
-								"&.Mui-disabled": {
-									borderColor: "rgba(255, 255, 255, 0.1)",
-									color: "rgba(255, 255, 255, 0.3)",
-								},
-							}}
 						>
 							{t("myApps.verificationCancelAll")}
 						</Button>
@@ -280,16 +273,8 @@ export const VerifyingReviewPhaseDialog = memo(
 							<Button
 								size="small"
 								variant="contained"
+								color="success"
 								onClick={onProceedFromReview}
-								sx={{
-									bgcolor: "#27c93f",
-									color: "#0D1117",
-									fontWeight: 600,
-									fontSize: "0.75rem",
-									py: 0.5,
-									textTransform: "none",
-									"&:hover": { bgcolor: "#2ed547" },
-								}}
 							>
 								{stats.included === 1
 									? t("myApps.updateAllCount", { count: stats.included })

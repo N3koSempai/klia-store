@@ -12,6 +12,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Dependency } from "../hooks/useRuntimeCheck";
+import { brand, lines } from "../theme/tokens";
 
 interface DependencyStatusCardProps {
 	dependencies: Dependency[];
@@ -43,7 +44,7 @@ export const DependencyStatusCard = ({
 				width={180}
 				height={36}
 				sx={{
-					bgcolor: "rgba(255, 255, 255, 0.05)",
+					bgcolor: lines.subtle,
 					borderRadius: "18px",
 				}}
 			/>
@@ -110,7 +111,7 @@ export const DependencyStatusCard = ({
 					"& .MuiChip-deleteIcon": {
 						color: "secondary.main",
 						"&:hover": {
-							color: "#f8e45c",
+							color: brand.secondaryPale,
 						},
 					},
 				}}
@@ -132,7 +133,7 @@ export const DependencyStatusCard = ({
 					paper: {
 						sx: {
 							bgcolor: "background.paper",
-							border: "1px solid rgba(255, 255, 255, 0.1)",
+							border: `1px solid ${lines.default}`,
 							borderRadius: 2,
 							mt: 1,
 							minWidth: 400,
@@ -161,7 +162,7 @@ export const DependencyStatusCard = ({
 								sx={{
 									px: 0,
 									py: 1,
-									borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+									borderBottom: `1px solid ${lines.subtle}`,
 									display: "flex",
 									flexDirection: "column",
 									alignItems: "flex-start",

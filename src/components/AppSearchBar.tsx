@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebouncedCallback } from "use-debounce";
 import { apiService } from "../services/api";
+import { lines } from "../theme/tokens";
 import type { CategoryApp } from "../types";
 
 interface AppSearchBarProps {
@@ -88,7 +89,7 @@ export const AppSearchBar = ({
 					borderRadius: 3,
 					transition: "all 0.3s",
 					"& fieldset": {
-						borderColor: "rgba(255, 255, 255, 0.1)",
+						borderColor: lines.default,
 					},
 					"&:hover fieldset": {
 						borderColor: "primary.main",

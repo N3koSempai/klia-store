@@ -4,6 +4,7 @@ import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import { Box, type SxProps, type Theme } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type React from "react";
+import { brand, hues, lines, neutral } from "../theme/tokens";
 
 interface GitHubStarBadgeProps {
 	count: number;
@@ -37,13 +38,13 @@ const getTierStyle = (count: number): TierStyle => {
 				},
 			},
 			textSx: {
-				background: "linear-gradient(135deg, #FFD700 0%, #FF4500 100%)",
+				background: `linear-gradient(135deg, ${hues.gold} 0%, ${hues.orangeRed} 100%)`,
 				WebkitBackgroundClip: "text",
 				WebkitTextFillColor: "transparent",
 				backgroundClip: "text",
 			},
 			iconSx: {
-				background: "linear-gradient(135deg, #FFD700 0%, #FF4500 100%)",
+				background: `linear-gradient(135deg, ${hues.gold} 0%, ${hues.orangeRed} 100%)`,
 				WebkitBackgroundClip: "text",
 				WebkitTextFillColor: "transparent",
 				backgroundClip: "text",
@@ -56,15 +57,15 @@ const getTierStyle = (count: number): TierStyle => {
 		return {
 			icon: <StarRoundedIcon />,
 			containerSx: {
-				border: "1px solid #FFB11B",
+				border: `1px solid ${hues.amber}`,
 				bgcolor: "rgba(255, 177, 27, 0.15)",
 				boxShadow: "0 0 12px rgba(255, 177, 27, 0.4)",
 			},
 			textSx: {
-				color: "#FFB11B",
+				color: hues.amber,
 			},
 			iconSx: {
-				color: "#FFB11B",
+				color: hues.amber,
 			},
 		};
 	}
@@ -78,10 +79,10 @@ const getTierStyle = (count: number): TierStyle => {
 				bgcolor: "rgba(246, 211, 45, 0.1)",
 			},
 			textSx: {
-				color: "#E6EDF3",
+				color: neutral[900],
 			},
 			iconSx: {
-				color: "#F6D32D",
+				color: brand.secondary,
 			},
 		};
 	}
@@ -90,14 +91,14 @@ const getTierStyle = (count: number): TierStyle => {
 	return {
 		icon: <StarBorderRoundedIcon />,
 		containerSx: {
-			border: "1px solid rgba(255, 255, 255, 0.1)",
+			border: `1px solid ${lines.default}`,
 			bgcolor: "transparent",
 		},
 		textSx: {
-			color: "#8B949E",
+			color: neutral[600],
 		},
 		iconSx: {
-			color: "#8B949E",
+			color: neutral[600],
 		},
 	};
 };

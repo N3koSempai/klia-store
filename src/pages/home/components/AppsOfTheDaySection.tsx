@@ -1,10 +1,17 @@
-import { alpha, Box, Link, Paper, Skeleton, Typography,
-	useTheme
+import {
+	alpha,
+	Box,
+	Link,
+	Paper,
+	Skeleton,
+	Typography,
+	useTheme,
 } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { CachedImage } from "../../../components/CachedImage";
 import { useAppsOfTheWeek } from "../../../hooks/useAppsOfTheWeek";
+import { lines } from "../../../theme/tokens";
 import type { AppStream, CategoryApp } from "../../../types";
 
 // Helper to convert AppStream to CategoryApp with defaults
@@ -85,11 +92,11 @@ export const AppsOfTheDaySection = ({
 					"&::-webkit-scrollbar": { height: 6 },
 					"&::-webkit-scrollbar-track": { bgcolor: "transparent" },
 					"&::-webkit-scrollbar-thumb": {
-						bgcolor: "rgba(255,255,255,0.1)",
+						bgcolor: lines.default,
 						borderRadius: 3,
 					},
 					"&::-webkit-scrollbar-thumb:hover": {
-						bgcolor: "rgba(255,255,255,0.2)",
+						bgcolor: lines.strong,
 					},
 				}}
 			>
@@ -102,7 +109,7 @@ export const AppsOfTheDaySection = ({
 									minWidth: 200,
 									maxWidth: 200,
 									bgcolor: "background.paper",
-									border: "1px solid rgba(255,255,255,0.1)",
+									border: `1px solid ${lines.default}`,
 									borderRadius: 3,
 								}}
 							>
@@ -150,14 +157,15 @@ export const AppsOfTheDaySection = ({
 										if (e.key === "Enter" || e.key === " ") {
 											e.preventDefault();
 											if (app.categoryApp) onAppSelect(app.categoryApp);
-											else if (app.appStream) onAppSelect(appStreamToCategoryApp(app.appStream));
+											else if (app.appStream)
+												onAppSelect(appStreamToCategoryApp(app.appStream));
 										}
 									}}
 									sx={{
 										minWidth: 200,
 										maxWidth: 200,
 										bgcolor: "background.paper",
-										border: "1px solid rgba(255,255,255,0.1)",
+										border: `1px solid ${lines.default}`,
 										borderRadius: 3,
 										transition: "all 0.3s ease-in-out",
 										cursor: "pointer",

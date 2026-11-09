@@ -19,6 +19,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Notification } from "../hooks/useNotifications";
+import { lines } from "../theme/tokens";
 
 interface NotificationMenuProps {
 	notifications: Notification[];
@@ -113,9 +114,11 @@ export const NotificationMenu = ({
 		<>
 			<IconButton
 				onClick={handleClick}
-				aria-label={unreadCount > 0
-					? t("notifications.labelWithCount", { count: unreadCount })
-					: t("notifications.label")}
+				aria-label={
+					unreadCount > 0
+						? t("notifications.labelWithCount", { count: unreadCount })
+						: t("notifications.label")
+				}
 				aria-haspopup="true"
 				aria-expanded={open}
 				aria-controls={open ? "notifications-popover" : undefined}
@@ -154,7 +157,7 @@ export const NotificationMenu = ({
 							display: "flex",
 							justifyContent: "space-between",
 							alignItems: "center",
-							borderBottom: "1px solid rgba(255,255,255,0.1)",
+							borderBottom: `1px solid ${lines.default}`,
 						}}
 					>
 						<Typography variant="h6" fontWeight="bold">

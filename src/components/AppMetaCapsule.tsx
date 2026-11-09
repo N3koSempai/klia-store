@@ -3,6 +3,7 @@ import PublicIcon from "@mui/icons-material/Public";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import { Box, Tooltip } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { lines } from "../theme/tokens";
 
 interface AppMetaCapsuleProps {
 	isVerified: boolean;
@@ -67,8 +68,8 @@ export const AppMetaCapsule = ({
 			sx={{
 				display: "inline-flex",
 				alignItems: "center",
-				bgcolor: "rgba(255, 255, 255, 0.05)",
-				border: "1px solid rgba(255, 255, 255, 0.1)",
+				bgcolor: lines.subtle,
+				border: `1px solid ${lines.default}`,
 				borderRadius: "6px",
 				overflow: "hidden",
 			}}
@@ -102,7 +103,7 @@ export const AppMetaCapsule = ({
 				sx={{
 					width: "1px",
 					height: "24px",
-					bgcolor: "rgba(255, 255, 255, 0.1)",
+					bgcolor: lines.default,
 				}}
 			/>
 
@@ -138,7 +139,7 @@ export const AppMetaCapsule = ({
 				sx={{
 					width: "1px",
 					height: "24px",
-					bgcolor: "rgba(255, 255, 255, 0.1)",
+					bgcolor: lines.default,
 				}}
 			/>
 

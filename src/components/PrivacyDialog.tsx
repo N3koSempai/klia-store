@@ -1,16 +1,15 @@
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import {
+	alpha,
 	Box,
 	Button,
 	Collapse,
-	Dialog,
-	DialogActions,
-	DialogContent,
-	DialogTitle,
 	Typography,
+	useTheme,
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { lines, neutral, radius } from "../theme/tokens";
 import type {
 	AppPrivacyAssessment,
 	FindingLevel,
@@ -18,15 +17,17 @@ import type {
 	PrivacyFocus,
 } from "../utils/appPrivacy";
 import { PRIVACY_FOCUS_ICONS, PRIVACY_LEVEL_COLORS } from "./PrivacyBadge";
+import { AppDialog } from "./ui/AppDialog";
 
 const FINDING_COLORS: Record<FindingLevel, string> = {
-	info: "#6e7681",
+	info: neutral[500],
 	caution: PRIVACY_LEVEL_COLORS.caution,
 	high: PRIVACY_LEVEL_COLORS.high,
 };
 
 const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 	const { t } = useTranslation();
+	const theme = useTheme();
 	const [showTechnical, setShowTechnical] = useState(false);
 	const Icon = PRIVACY_FOCUS_ICONS[focus.id];
 	const color = PRIVACY_LEVEL_COLORS[focus.level];
@@ -43,15 +44,27 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 	return (
 		<Box
 			sx={{
-				border: "1px solid rgba(255, 255, 255, 0.1)",
-				borderLeft: `3px solid ${color}`,
-				borderRadius: 2,
+				border: `1px solid ${theme.tokens.border.subtle}`,
+				borderRadius: `${radius.lg}px`,
 				p: 2,
+				background: `linear-gradient(135deg, ${alpha(color, 0.1)} 0%, transparent 60%)`,
 				opacity: focus.level === "unknown" ? 0.7 : 1,
 			}}
 		>
 			<Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-				<Box sx={{ color, display: "flex" }}>
+				<Box
+					sx={{
+						color,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						width: 40,
+						height: 40,
+						borderRadius: 2,
+						flexShrink: 0,
+						bgcolor: alpha(color, 0.16),
+					}}
+				>
 					<Icon />
 				</Box>
 				<Box sx={{ flex: 1, minWidth: 0 }}>
@@ -68,11 +81,12 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 					variant="caption"
 					sx={{
 						color,
-						border: `1px solid ${color}`,
+						bgcolor: alpha(color, 0.16),
 						borderRadius: "999px",
-						px: 1,
-						py: 0.25,
+						px: 1.25,
+						py: 0.35,
 						fontWeight: 700,
+						letterSpacing: 0.2,
 						whiteSpace: "nowrap",
 					}}
 				>
@@ -81,7 +95,18 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 			</Box>
 
 			{focus.level !== "unknown" && (
-				<Box component="ul" sx={{ m: 0, mt: 1.5, p: 0, listStyle: "none" }}>
+				<Box
+					component="ul"
+					sx={{
+						m: 0,
+						mt: 1.5,
+						p: 0,
+						pt: 1.5,
+						listStyle: "none",
+						borderTop: `1px solid ${lines.subtle}`,
+						"& > li:first-of-type": { mt: 1.25 },
+					}}
+				>
 					{focus.findings.length === 0 && (
 						<Typography variant="body2" color="text.secondary">
 							{t("privacy.noFindings")}
@@ -121,7 +146,8 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 								}}
 							/>
 						}
-						sx={{ mt: 1, textTransform: "none", color: "text.secondary" }}
+						color="neutral"
+						sx={{ mt: 1, ml: -1 }}
 					>
 						{t("privacy.technical")}
 					</Button>
@@ -131,7 +157,8 @@ const FocusSection = ({ focus }: { focus: PrivacyFocus }) => {
 								mt: 0.5,
 								p: 1,
 								borderRadius: 1,
-								bgcolor: "rgba(255, 255, 255, 0.04)",
+								bgcolor: "rgba(0, 0, 0, 0.25)",
+								border: `1px solid ${lines.subtle}`,
 								fontFamily: "JetBrains Mono, monospace",
 								fontSize: "0.75rem",
 								color: "text.secondary",
@@ -165,33 +192,28 @@ export const PrivacyDialog = ({
 	const { t } = useTranslation();
 
 	return (
-		<Dialog
+		<AppDialog
 			open={open}
 			onClose={onClose}
-			fullWidth
-			maxWidth="sm"
 			scroll="paper"
+			dividers
+			title={t("privacy.title")}
+			subtitle={appName}
+			actions={
+				<Button variant="outlined" color="neutral" onClick={onClose}>
+					{t("privacy.close")}
+				</Button>
+			}
 		>
-			<DialogTitle sx={{ pb: 0.5 }}>
-				{t("privacy.title")}
-				<Typography variant="body2" color="text.secondary">
-					{appName}
-				</Typography>
-			</DialogTitle>
-			<DialogContent dividers sx={{ display: "grid", gap: 1.5 }}>
-				<Typography variant="body2" color="text.secondary">
-					{t("privacy.intro")}
-				</Typography>
-				{assessment.foci.map((focus) => (
-					<FocusSection key={focus.id} focus={focus} />
-				))}
-				<Typography variant="caption" color="text.secondary">
-					{t("privacy.disclaimer")}
-				</Typography>
-			</DialogContent>
-			<DialogActions>
-				<Button onClick={onClose}>{t("privacy.close")}</Button>
-			</DialogActions>
-		</Dialog>
+			<Typography variant="body2" color="text.secondary">
+				{t("privacy.intro")}
+			</Typography>
+			{assessment.foci.map((focus) => (
+				<FocusSection key={focus.id} focus={focus} />
+			))}
+			<Typography variant="caption" color="text.secondary">
+				{t("privacy.disclaimer")}
+			</Typography>
+		</AppDialog>
 	);
 };

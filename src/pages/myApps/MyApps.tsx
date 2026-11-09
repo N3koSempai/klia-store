@@ -18,8 +18,8 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReleaseNotesModal } from "../../components/ReleaseNotesModal";
-import { UninstallDialog } from "../../components/UninstallDialog";
 import { Terminal } from "../../components/Terminal";
+import { UninstallDialog } from "../../components/UninstallDialog";
 import { UpdateAllModal } from "../../components/UpdateAllModal";
 import { useAppVerification } from "../../hooks/useAppVerification";
 import { useUninstallApp } from "../../hooks/useUninstallApp";
@@ -27,6 +27,7 @@ import { useUpdateAll } from "../../hooks/useUpdateAll";
 import { useUpdateApp } from "../../hooks/useUpdateApp";
 import { refreshInstalledPackages } from "../../services/installedPackages";
 import { useInstalledAppsStore } from "../../store/installedAppsStore";
+import { brand, hues, lines, neutral, status } from "../../theme/tokens";
 import { resolveGithubRepoForUpdate } from "../../utils/githubReleaseApps";
 import { sortDebApps, sortInstalledApps } from "../../utils/installedApps";
 import { checkAvailableUpdates } from "../../utils/updateChecker";
@@ -641,23 +642,23 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 											gap: 3,
 											p: 4,
 											minHeight: 300,
-											bgcolor: "rgba(255, 255, 255, 0.02)",
+											bgcolor: lines.subtle,
 											borderRadius: 2,
 											border: "1px solid rgba(88, 166, 255, 0.3)",
 										}}
 									>
-										<CircularProgress size={48} sx={{ color: "#58A6FF" }} />
+										<CircularProgress size={48} sx={{ color: status.info }} />
 										<Typography
 											variant="h6"
 											textAlign="center"
-											sx={{ color: "#C9D1D9", fontWeight: 500 }}
+											sx={{ color: neutral[800], fontWeight: 500 }}
 										>
 											{t("appDetails.verifyingSecurity")}
 										</Typography>
 										<Typography
 											variant="body2"
 											textAlign="center"
-											sx={{ color: "#8B949E" }}
+											sx={{ color: neutral[600] }}
 										>
 											{t("appDetails.securityCheckingSignatures")}
 										</Typography>
@@ -675,7 +676,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 											gap: 3,
 											p: 4,
 											minHeight: 300,
-											bgcolor: "rgba(255, 255, 255, 0.02)",
+											bgcolor: lines.subtle,
 											borderRadius: 2,
 											border: "1px solid rgba(39, 201, 63, 0.3)",
 										}}
@@ -689,31 +690,31 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												display: "flex",
 												alignItems: "center",
 												justifyContent: "center",
-												border: "2px solid #27c93f",
+												border: `2px solid ${hues.green}`,
 											}}
 										>
-											<Typography sx={{ color: "#27c93f", fontSize: "2rem" }}>
+											<Typography sx={{ color: hues.green, fontSize: "2rem" }}>
 												✓
 											</Typography>
 										</Box>
 										<Typography
 											variant="h6"
 											textAlign="center"
-											sx={{ color: "#27c93f", fontWeight: 500 }}
+											sx={{ color: hues.green, fontWeight: 500 }}
 										>
 											{t("appDetails.securityVerificationSuccess")}
 										</Typography>
 										<Typography
 											variant="body2"
 											textAlign="center"
-											sx={{ color: "#8B949E", maxWidth: 500, px: 2 }}
+											sx={{ color: neutral[600], maxWidth: 500, px: 2 }}
 										>
 											{t("appDetails.securityHashVerifiedExplanation")}
 										</Typography>
 										<Typography
 											variant="body1"
 											textAlign="center"
-											sx={{ color: "#C9D1D9" }}
+											sx={{ color: neutral[800] }}
 										>
 											{t("myApps.updateStartingShortly")}
 										</Typography>
@@ -733,7 +734,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												gap: 3,
 												p: 4,
 												minHeight: 300,
-												bgcolor: "rgba(255, 255, 255, 0.02)",
+												bgcolor: lines.subtle,
 												borderRadius: 2,
 												border: `1px solid ${
 													verificationResult?.isHashMismatch
@@ -755,16 +756,16 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 													justifyContent: "center",
 													border: `2px solid ${
 														verificationResult?.isHashMismatch
-															? "#FF6B6B"
-															: "#F6D32D"
+															? brand.danger
+															: brand.secondary
 													}`,
 												}}
 											>
 												<Typography
 													sx={{
 														color: verificationResult?.isHashMismatch
-															? "#FF6B6B"
-															: "#F6D32D",
+															? brand.danger
+															: brand.secondary,
 														fontSize: "2rem",
 													}}
 												>
@@ -777,8 +778,8 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												textAlign="center"
 												sx={{
 													color: verificationResult?.isHashMismatch
-														? "#FF6B6B"
-														: "#F6D32D",
+														? brand.danger
+														: brand.secondary,
 													fontWeight: 500,
 												}}
 											>
@@ -793,7 +794,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												variant="body2"
 												textAlign="center"
 												sx={{
-													color: "#8B949E",
+													color: neutral[600],
 													maxWidth: 500,
 													px: 2,
 												}}
@@ -805,7 +806,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												variant="body1"
 												textAlign="center"
 												sx={{
-													color: "#C9D1D9",
+													color: neutral[800],
 													maxWidth: 600,
 												}}
 											>
@@ -820,21 +821,18 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 											<Box sx={{ display: "flex", gap: 2, mt: 2 }}>
 												<Button
 													variant="outlined"
+													color="neutral"
 													onClick={handleShowVerificationDetails}
-													sx={{
-														px: 3,
-														borderColor: "rgba(255, 255, 255, 0.3)",
-														color: "#C9D1D9",
-														"&:hover": {
-															borderColor: "rgba(255, 255, 255, 0.5)",
-															bgcolor: "rgba(255, 255, 255, 0.05)",
-														},
-													}}
 												>
 													{t("myApps.verificationMoreDetails")}
 												</Button>
 												<Button
 													variant="contained"
+													color={
+														verificationResult?.isHashMismatch
+															? "error"
+															: "secondary"
+													}
 													onClick={() => {
 														verificationForceContinue();
 														if (updateDialogAppId) {
@@ -845,23 +843,6 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 														verificationResult?.isHashMismatch &&
 														verificationState === "failed"
 													}
-													sx={{
-														px: 3,
-														bgcolor: verificationResult?.isHashMismatch
-															? "#FF6B6B"
-															: "#F6D32D",
-														color: "#0D1117",
-														fontWeight: 600,
-														"&:hover": {
-															bgcolor: verificationResult?.isHashMismatch
-																? "#ff8585"
-																: "#f8db4e",
-														},
-														"&.Mui-disabled": {
-															bgcolor: "rgba(255, 107, 107, 0.5)",
-															color: "#0D1117",
-														},
-													}}
 												>
 													{verificationResult?.isHashMismatch
 														? t("appDetails.securityContinueAnywayRisk")
@@ -869,15 +850,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 												</Button>
 											</Box>
 
-											<Button
-												onClick={handleCloseUpdateDialog}
-												sx={{
-													color: "#8B949E",
-													"&:hover": {
-														color: "#C9D1D9",
-													},
-												}}
-											>
+											<Button color="neutral" onClick={handleCloseUpdateDialog}>
 												{t("appDetails.securityCancelInstallation")}
 											</Button>
 										</Box>
@@ -908,7 +881,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 											<Typography
 												variant="h6"
 												textAlign="center"
-												sx={{ color: "#C9D1D9", fontWeight: 500 }}
+												sx={{ color: neutral[800], fontWeight: 500 }}
 											>
 												{t("appDetails.securityVerificationDetails")}
 											</Typography>
@@ -925,7 +898,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 													fontFamily:
 														"'Fira Code', 'JetBrains Mono', monospace",
 													fontSize: "0.85rem",
-													color: "#8B949E",
+													color: neutral[600],
 													whiteSpace: "pre-wrap",
 													wordBreak: "break-word",
 												}}
@@ -936,8 +909,8 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 															style={{
 																marginBottom: 8,
 																color: verificationResult.isHashMismatch
-																	? "#FF6B6B"
-																	: "#F6D32D",
+																	? brand.danger
+																	: brand.secondary,
 																fontWeight: 600,
 															}}
 														>
@@ -984,7 +957,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 																			: "⚠"}
 																	] {s.url}
 																	<br />
-																	<span style={{ color: "#6E7681" }}>
+																	<span style={{ color: neutral[500] }}>
 																		{t(
 																			"appDetails.securityVerificationCommitInManifest",
 																		)}
@@ -993,7 +966,7 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 																	{s.remote_commit && (
 																		<>
 																			<br />
-																			<span style={{ color: "#6E7681" }}>
+																			<span style={{ color: neutral[500] }}>
 																				{t(
 																					"appDetails.securityVerificationRemoteCommit",
 																				)}
@@ -1007,8 +980,8 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 																			<span
 																				style={{
 																					color: isHashMismatch
-																						? "#FF6B6B"
-																						: "#F6D32D",
+																						? brand.danger
+																						: brand.secondary,
 																				}}
 																			>
 																				{t(
@@ -1026,8 +999,8 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 																style={{
 																	marginTop: 8,
 																	color: verificationResult.isHashMismatch
-																		? "#FF6B6B"
-																		: "#F6D32D",
+																		? brand.danger
+																		: brand.secondary,
 																}}
 															>
 																{t("appDetails.securityVerificationError")}:{" "}
@@ -1040,18 +1013,10 @@ export const MyApps = ({ onBack, onDeveloperSelect }: MyAppsProps) => {
 
 											<Box sx={{ display: "flex", gap: 2 }}>
 												<Button
-													variant="contained"
+													variant="soft"
+													color="neutral"
 													onClick={() => {
 														setShowVerificationDetails(false);
-													}}
-													sx={{
-														px: 3,
-														bgcolor: "rgba(255, 255, 255, 0.1)",
-														color: "#C9D1D9",
-														border: "1px solid rgba(255, 255, 255, 0.3)",
-														"&:hover": {
-															bgcolor: "rgba(255, 255, 255, 0.2)",
-														},
 													}}
 												>
 													{t("myApps.hideDetails")}

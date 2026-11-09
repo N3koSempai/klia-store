@@ -1,14 +1,21 @@
 import { Box, Card, CardContent, Skeleton, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { lines } from "../theme/tokens";
 import type { CategoryApp } from "../types";
 import { CachedImage } from "./CachedImage";
 
 interface AppGridCardProps {
 	app: CategoryApp;
 	onClick: (app: CategoryApp) => void;
+	// Oculta el desarrollador donde ya es evidente (p. ej. la sección Klia).
+	showDeveloper?: boolean;
 }
 
-export const AppGridCard = ({ app, onClick }: AppGridCardProps) => {
+export const AppGridCard = ({
+	app,
+	onClick,
+	showDeveloper = true,
+}: AppGridCardProps) => {
 	const { t } = useTranslation();
 
 	return (
@@ -17,7 +24,7 @@ export const AppGridCard = ({ app, onClick }: AppGridCardProps) => {
 				sx={{
 					bgcolor: "background.paper",
 					borderRadius: "12px",
-					border: "1px solid rgba(255, 255, 255, 0.1)",
+					border: `1px solid ${lines.default}`,
 					height: "100%",
 					display: "flex",
 					flexDirection: "column",
@@ -115,16 +122,18 @@ export const AppGridCard = ({ app, onClick }: AppGridCardProps) => {
 							>
 								{app.name}
 							</Typography>
-							<Typography
-								variant="caption"
-								sx={{
-									fontFamily: '"Inter", sans-serif',
-									color: "text.secondary",
-								}}
-								noWrap
-							>
-								{app.developer_name}
-							</Typography>
+							{showDeveloper && (
+								<Typography
+									variant="caption"
+									sx={{
+										fontFamily: '"Inter", sans-serif',
+										color: "text.secondary",
+									}}
+									noWrap
+								>
+									{app.developer_name}
+								</Typography>
+							)}
 						</Box>
 					</Box>
 
@@ -157,7 +166,7 @@ export const AppGridCardSkeleton = () => (
 			sx={{
 				bgcolor: "background.paper",
 				borderRadius: "12px",
-				border: "1px solid rgba(255, 255, 255, 0.1)",
+				border: `1px solid ${lines.default}`,
 				height: "100%",
 				display: "flex",
 				flexDirection: "column",
@@ -181,29 +190,22 @@ export const AppGridCardSkeleton = () => (
 					sx={{
 						borderRadius: 2,
 						flexShrink: 0,
-						bgcolor: "rgba(255,255,255,0.1)",
+						bgcolor: lines.default,
 					}}
 				/>
 				<Box sx={{ flexGrow: 1, minWidth: 0 }}>
-					<Skeleton
-						variant="text"
-						sx={{ mb: 0.5, bgcolor: "rgba(255,255,255,0.1)" }}
-					/>
+					<Skeleton variant="text" sx={{ mb: 0.5, bgcolor: lines.default }} />
 					<Skeleton
 						variant="text"
 						width="50%"
-						sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
+						sx={{ bgcolor: lines.default }}
 					/>
 				</Box>
 			</Box>
 			{/* Skeleton for summary */}
 			<CardContent sx={{ flexGrow: 1, pt: 1 }}>
-				<Skeleton variant="text" sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
-				<Skeleton
-					variant="text"
-					width="90%"
-					sx={{ bgcolor: "rgba(255,255,255,0.1)" }}
-				/>
+				<Skeleton variant="text" sx={{ bgcolor: lines.default }} />
+				<Skeleton variant="text" width="90%" sx={{ bgcolor: lines.default }} />
 			</CardContent>
 		</Card>
 	</Box>

@@ -49,9 +49,10 @@
   <releases>
     <release version="2.18.0" date="2026-11-08">
       <description>
-        <p>Know what an app can do before you install it. A new privacy badge on every app page shows four traffic lights at a glance: file access, system access, age rating and in-app purchases. Click it for a clear, plain-language breakdown of every permission.</p>
-        <p>Faster app pages. Apps you have already visited open instantly from local storage, with their screenshots and details, and only reload when a new version is published. Opening an app that is already installed no longer runs the dependency check.</p>
-        <p>More reliable navigation: apps opened from categories and developer lists now show their page even when the connection drops.</p>
+        <p>A fresh new look. Klia Store has been redesigned from the ground up: cleaner cards, sharper buttons and dialogs, and a consistent style across every screen. Destructive actions now stand out in red, text and controls are easier to read, and it all works with the color-blind and high-contrast modes.</p>
+        <p>Know what an app can do before you install it. A new privacy badge on every app page shows four traffic lights at a glance: file access, system access, age rating and in-app purchases. Click it for a plain-language breakdown of every permission.</p>
+        <p>New in the Klia family: Klia IPCam. See all your ONVIF and RTSP cameras on a single screen with smooth GPU-accelerated video, PTZ controls and no cloud. Find it on the Home screen and in the Klia section.</p>
+        <p>Faster, more reliable app pages. Apps you have already visited open instantly, and apps opened from categories and developer lists load even when the connection drops.</p>
       </description>
     </release>
     <release version="2.17.0" date="2026-10-29">

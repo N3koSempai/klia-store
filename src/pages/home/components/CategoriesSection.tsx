@@ -1,8 +1,15 @@
-import { alpha, Box, Grid, Paper, Skeleton, Typography,
-	useTheme
+import {
+	alpha,
+	Box,
+	Grid,
+	Paper,
+	Skeleton,
+	Typography,
+	useTheme,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useCategories } from "../../../hooks/useCategories";
+import { lines } from "../../../theme/tokens";
 
 interface CategoriesSectionProps {
 	onCategorySelect: (categoryId: string) => void;
@@ -38,7 +45,7 @@ export const CategoriesSection = ({
 									sx={{
 										p: 2,
 										bgcolor: "background.paper",
-										border: "1px solid rgba(255, 255, 255, 0.1)",
+										border: `1px solid ${lines.default}`,
 										borderRadius: 2,
 									}}
 								>
@@ -62,7 +69,7 @@ export const CategoriesSection = ({
 									sx={{
 										p: 2,
 										bgcolor: "background.paper",
-										border: "1px solid rgba(255, 255, 255, 0.1)",
+										border: `1px solid ${lines.default}`,
 										borderRadius: 2,
 										display: "flex",
 										alignItems: "center",

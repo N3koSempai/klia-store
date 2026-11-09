@@ -9,6 +9,7 @@ import {
 } from "../../components/AppGridCard";
 import { KLIA_APP_IDS } from "../../data/kliaApps";
 import { useKliaApps } from "../../hooks/useKliaApps";
+import { lines, neutral } from "../../theme/tokens";
 import type { CategoryApp } from "../../types";
 
 interface KliaProps {
@@ -25,7 +26,7 @@ export const Klia = ({ onBack, onAppSelect }: KliaProps) => {
 			sx={{
 				width: "100%",
 				minHeight: "100vh",
-				bgcolor: "#0D1117",
+				bgcolor: neutral[50],
 				p: 4,
 				fontFamily: '"Inter", sans-serif',
 			}}
@@ -36,7 +37,7 @@ export const Klia = ({ onBack, onAppSelect }: KliaProps) => {
 				sx={{
 					color: "text.primary",
 					mb: 2,
-					"&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+					"&:hover": { bgcolor: lines.default },
 				}}
 			>
 				<ArrowBack fontSize="large" />
@@ -53,7 +54,7 @@ export const Klia = ({ onBack, onAppSelect }: KliaProps) => {
 					p: { xs: 3, md: 5 },
 					mb: 5,
 					borderRadius: "16px",
-					border: "1px solid rgba(255, 255, 255, 0.1)",
+					border: `1px solid ${lines.default}`,
 					background: (theme) =>
 						`radial-gradient(circle at 15% 20%, ${alpha(theme.palette.primary.main, 0.18)}, transparent 55%), ${theme.palette.background.paper}`,
 				}}
@@ -95,7 +96,12 @@ export const Klia = ({ onBack, onAppSelect }: KliaProps) => {
 				{isLoading
 					? KLIA_APP_IDS.map((id) => <AppGridCardSkeleton key={id} />)
 					: apps.map((app) => (
-							<AppGridCard key={app.app_id} app={app} onClick={onAppSelect} />
+							<AppGridCard
+								key={app.app_id}
+								app={app}
+								onClick={onAppSelect}
+								showDeveloper={false}
+							/>
 						))}
 			</Box>
 		</Box>
