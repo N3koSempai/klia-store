@@ -7,6 +7,7 @@ import {
 	createSemanticTokens,
 	neutral,
 	radius,
+	solidButtonColors,
 	status,
 } from "./tokens";
 
@@ -145,6 +146,29 @@ export function createAppTheme(prefs?: Partial<AccessibilityPrefs>) {
 					sizeLarge: buttonSize(controlHeight.lg, "1rem", 28),
 				},
 				variants: [
+					// Contained: fondo/texto con contraste AA (ver solidButtonColors).
+					...(
+						[
+							"primary",
+							"secondary",
+							"error",
+							"success",
+							"warning",
+							"info",
+						] as const
+					).map((color) => ({
+						props: { variant: "contained" as const, color },
+						style: ({ theme }: { theme: import("@mui/material").Theme }) => {
+							const { background, text } = solidButtonColors(
+								theme.palette[color].main,
+							);
+							return {
+								color: text,
+								backgroundColor: background,
+								"&:hover": { backgroundColor: alpha(background, 0.88) },
+							};
+						},
+					})),
 					// Soft: terciario con peso visual (fondo tintado, sin borde).
 					...(
 						[
@@ -174,9 +198,9 @@ export function createAppTheme(prefs?: Partial<AccessibilityPrefs>) {
 						props: { variant: "outlined" as const, color: "neutral" as const },
 						style: {
 							color: tokens.text.primary,
-							borderColor: tokens.border.default,
+							borderColor: tokens.border.control,
 							"&:hover": {
-								borderColor: tokens.border.strong,
+								borderColor: tokens.text.secondary,
 								backgroundColor: alpha(neutral[600], 0.12),
 							},
 						},
@@ -310,11 +334,11 @@ export function createAppTheme(prefs?: Partial<AccessibilityPrefs>) {
 						borderRadius: radius.md,
 						backgroundColor: tokens.surface.sunken,
 						"& .MuiOutlinedInput-notchedOutline": {
-							borderColor: tokens.border.default,
+							borderColor: tokens.border.control,
 							transition: "border-color .15s",
 						},
 						"&:hover .MuiOutlinedInput-notchedOutline": {
-							borderColor: tokens.border.strong,
+							borderColor: tokens.text.secondary,
 						},
 						"&.Mui-focused .MuiOutlinedInput-notchedOutline": {
 							borderWidth: 2,

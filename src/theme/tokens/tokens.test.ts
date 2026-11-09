@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { contrastRatio } from "./contrast.ts";
-import { colorBlindPalettes, createSemanticTokens } from "./index.ts";
+import {
+	colorBlindPalettes,
+	createSemanticTokens,
+	solidButtonColors,
+	status,
+} from "./index.ts";
 
 const MODES = Object.keys(colorBlindPalettes) as Array<
 	keyof typeof colorBlindPalettes
@@ -30,6 +35,30 @@ for (const highContrast of [false, true]) {
 		test(`texto atenuado cumple AA sobre superficies (${label})`, () => {
 			for (const surface of surfaces) {
 				assert.ok(contrastRatio(tokens.text.muted, surface) >= 4.5);
+			}
+		});
+
+		test(`el borde de controles es distinguible (>=3:1) (${label})`, () => {
+			for (const surface of surfaces) {
+				assert.ok(contrastRatio(tokens.border.control, surface) >= 3);
+			}
+		});
+
+		test(`botones rellenos cumplen AA texto/fondo (${label})`, () => {
+			const { primary, secondary, error, info } = colorBlindPalettes[mode];
+			for (const color of [
+				primary,
+				secondary,
+				error,
+				info,
+				status.success,
+				status.warning,
+			]) {
+				const { background, text } = solidButtonColors(color);
+				assert.ok(
+					contrastRatio(text, background) >= 4.5,
+					`${color} → ${background}/${text}`,
+				);
 			}
 		});
 

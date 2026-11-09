@@ -7,6 +7,7 @@
 //   3. componente  → viven en `theme.ts` (overrides de MUI), no aquí.
 
 import type { ColorBlindMode } from "../../store/accessibilityStore";
+import { contrastRatio, parseColor } from "./contrast.ts";
 
 // ------------------------------------------------------------- Primitivos
 
@@ -60,7 +61,9 @@ export const status = {
 
 export interface SemanticTokens {
 	surface: { base: string; raised: string; overlay: string; sunken: string };
-	border: { subtle: string; default: string; strong: string };
+	// `control` delimita inputs y botones con contorno: >= 3:1 (WCAG 1.4.11).
+	// subtle/default/strong son decorativos (cards, divisores).
+	border: { subtle: string; default: string; strong: string; control: string };
 	text: { primary: string; secondary: string; muted: string };
 	// Sombras de dos capas: core (anillo oscuro y estrecho) + cast (amplia y
 	// suave). Nunca blancas ni hacia arriba en modo oscuro (cap. 5).
@@ -84,6 +87,7 @@ export const createSemanticTokens = (opts: {
 			subtle: hc ? "rgba(240, 246, 252, 0.22)" : "rgba(240, 246, 252, 0.08)",
 			default: hc ? "rgba(240, 246, 252, 0.4)" : "rgba(240, 246, 252, 0.14)",
 			strong: hc ? "rgba(240, 246, 252, 0.6)" : "rgba(240, 246, 252, 0.24)",
+			control: hc ? "rgba(240, 246, 252, 0.6)" : "rgba(240, 246, 252, 0.42)",
 		},
 		text: {
 			primary: hc ? neutral[1000] : neutral[800],
@@ -196,4 +200,34 @@ export const colorBlindPalettes: Record<
 		error: "#E05C5C",
 		info: "#2BB5A0",
 	},
+};
+
+// ------------------------------------------------- Botón relleno accesible
+
+const WHITE = "#FFFFFF";
+const toHex = (rgb: number[]) =>
+	`#${rgb.map((c) => Math.round(c).toString(16).padStart(2, "0")).join("")}`;
+
+// Par fondo/texto para un botón relleno que cumple AA (4.5:1) sin cambiar el
+// matiz. Colores medios (azul de marca) se oscurecen para conservar texto
+// blanco; los claros (amarillo, verde, rojo) mantienen su tono con texto oscuro.
+export const solidButtonColors = (
+	main: string,
+): { background: string; text: string } => {
+	if (contrastRatio(WHITE, main) >= 4.5)
+		return { background: main, text: WHITE };
+	if (
+		contrastRatio(WHITE, main) < 3 &&
+		contrastRatio(neutral[50], main) >= 4.5
+	) {
+		return { background: main, text: neutral[50] };
+	}
+	const { rgb } = parseColor(main);
+	for (let k = 0.95; k > 0.3; k -= 0.025) {
+		const background = toHex(rgb.map((c) => c * k));
+		if (contrastRatio(WHITE, background) >= 4.5) {
+			return { background, text: WHITE };
+		}
+	}
+	return { background: neutral[50], text: WHITE };
 };
