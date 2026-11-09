@@ -33,15 +33,15 @@ interface PromotedAppCardData {
 // Marrón del badge "beta" que acompaña al chip de promocionado.
 const BETA_BROWN = hues.brown;
 
-const KLIA_SCALER_PLAYER_APP_ID = "io.github.N3kosempai.klia-scaler-player";
-const kliaScalerPlayerData = OFF_FLATHUB_APPS[KLIA_SCALER_PLAYER_APP_ID];
+const KLIA_IPCAM_APP_ID = "io.github.N3kosempai.klia-ipcam";
+const kliaIpcamData = OFF_FLATHUB_APPS[KLIA_IPCAM_APP_ID];
 
-const KLIA_SCALER_PLAYER_PROMO: PromotedAppCardData = {
-	appId: KLIA_SCALER_PLAYER_APP_ID,
-	name: kliaScalerPlayerData.name,
-	summary: kliaScalerPlayerData.summary,
-	icon: kliaScalerPlayerData.icon,
-	categoryApp: kliaScalerPlayerData,
+const KLIA_IPCAM_PROMO: PromotedAppCardData = {
+	appId: KLIA_IPCAM_APP_ID,
+	name: kliaIpcamData.name,
+	summary: kliaIpcamData.summary,
+	icon: kliaIpcamData.icon,
+	categoryApp: kliaIpcamData,
 };
 
 export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
@@ -49,7 +49,7 @@ export const FeaturedSection = ({ onAppSelect }: FeaturedSectionProps) => {
 	const theme = useTheme();
 	const { data: appOfTheDay, isLoading, error } = useAppOfTheDay();
 
-	const promotedApp = KLIA_SCALER_PLAYER_PROMO;
+	const promotedApp = KLIA_IPCAM_PROMO;
 
 	// Carousel state - includes backend app and optional promoted app
 	const [activeSlide, setActiveSlide] = useState(0);

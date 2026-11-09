@@ -7,9 +7,15 @@ import { CachedImage } from "./CachedImage";
 interface AppGridCardProps {
 	app: CategoryApp;
 	onClick: (app: CategoryApp) => void;
+	// Oculta el desarrollador donde ya es evidente (p. ej. la sección Klia).
+	showDeveloper?: boolean;
 }
 
-export const AppGridCard = ({ app, onClick }: AppGridCardProps) => {
+export const AppGridCard = ({
+	app,
+	onClick,
+	showDeveloper = true,
+}: AppGridCardProps) => {
 	const { t } = useTranslation();
 
 	return (
@@ -116,16 +122,18 @@ export const AppGridCard = ({ app, onClick }: AppGridCardProps) => {
 							>
 								{app.name}
 							</Typography>
-							<Typography
-								variant="caption"
-								sx={{
-									fontFamily: '"Inter", sans-serif',
-									color: "text.secondary",
-								}}
-								noWrap
-							>
-								{app.developer_name}
-							</Typography>
+							{showDeveloper && (
+								<Typography
+									variant="caption"
+									sx={{
+										fontFamily: '"Inter", sans-serif',
+										color: "text.secondary",
+									}}
+									noWrap
+								>
+									{app.developer_name}
+								</Typography>
+							)}
 						</Box>
 					</Box>
 

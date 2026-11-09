@@ -96,7 +96,12 @@ export const Klia = ({ onBack, onAppSelect }: KliaProps) => {
 				{isLoading
 					? KLIA_APP_IDS.map((id) => <AppGridCardSkeleton key={id} />)
 					: apps.map((app) => (
-							<AppGridCard key={app.app_id} app={app} onClick={onAppSelect} />
+							<AppGridCard
+								key={app.app_id}
+								app={app}
+								onClick={onAppSelect}
+								showDeveloper={false}
+							/>
 						))}
 			</Box>
 		</Box>
