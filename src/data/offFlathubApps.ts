@@ -1,3 +1,4 @@
+import kliaIpcamLogo from "../assets/internalPromo/klia_ipcam_logo.png";
 import kliaKompressLogo from "../assets/internalPromo/klia_kompress_logo.png";
 import kliaScalerPlayerLogo from "../assets/internalPromo/klia_scaler_player_logo.png";
 import kliaTranscribeLogo from "../assets/internalPromo/klia_transcribe_logo.webp";
@@ -221,6 +222,50 @@ export const OFF_FLATHUB_APPS: Record<string, CategoryApp> = {
 		urls: {
 			homepage: "https://github.com/N3koSempai/klia-scaler-player",
 			vcs_browser: "https://github.com/N3koSempai/klia-scaler-player",
+		},
+	},
+	"io.github.N3kosempai.klia-ipcam": {
+		app_id: "io.github.N3kosempai.klia-ipcam",
+		name: "Klia IPCam",
+		summary: "All your IP cameras on a single screen",
+		description:
+			"Klia IPCam shows all your ONVIF and RTSP cameras together in one grid, with smooth GPU-accelerated video. It finds the cameras on your network, lets you expand any of them to full quality and control PTZ cameras. Your cameras and passwords stay on your computer: no accounts, no telemetry, no cloud.",
+		id: "io.github.N3kosempai.klia-ipcam",
+		type: "desktop-application",
+		translations: {},
+		project_license: "LicenseRef-proprietary",
+		is_free_license: false,
+		icon: kliaIpcamLogo,
+		main_categories: "AudioVideo",
+		sub_categories: [],
+		developer_name: "N3koSempai",
+		verification_verified: true,
+		verification_method: "none",
+		verification_login_name: "N3koSempai",
+		verification_login_provider: "github",
+		verification_login_is_organization: null,
+		verification_website: null,
+		verification_timestamp: null,
+		runtime: "org.freedesktop.Platform/x86_64/25.08",
+		updated_at: 1794182400,
+		arches: ["x86_64"],
+		added_at: 1794182400,
+		trending: 0,
+		installs_last_month: 0,
+		isMobileFriendly: false,
+		keywords: [
+			"camera",
+			"ipcam",
+			"onvif",
+			"rtsp",
+			"ptz",
+			"surveillance",
+			"cctv",
+		],
+		screenshots: [],
+		urls: {
+			homepage: "https://github.com/N3koSempai/ipcam",
+			vcs_browser: "https://github.com/N3koSempai/ipcam",
 		},
 	},
 };

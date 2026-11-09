@@ -7,6 +7,7 @@ export const KLIA_APP_IDS = [
 	"io.github.N3kosempai.klia-kompress",
 	"io.github.N3kosempai.klia-transcribe",
 	"io.github.N3kosempai.klia-scaler-player",
+	"io.github.N3kosempai.klia-ipcam",
 	"io.github.N3kosempai.hetairos-ai",
 ];
 
