@@ -184,7 +184,7 @@ export const UpdatePhaseDialog = memo(
 										display: "flex",
 										alignItems: "center",
 										justifyContent: "center",
-										border: `2px solid ${updateErrorCount > 0 ? "${brand.secondary}" : "${hues.green}"}`,
+										border: `2px solid ${updateErrorCount > 0 ? brand.secondary : hues.green}`,
 									}}
 								>
 									<Typography

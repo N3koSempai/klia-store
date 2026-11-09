@@ -22,7 +22,9 @@ interface CachedImageProps {
 // Limited to 20 entries (LRU) - the on-disk cache in imageCache.ts handles the rest
 const MAX_IMAGE_MEMORY_CACHE_SIZE = 20;
 const failedImagesCache = new LruSet<string>(MAX_IMAGE_MEMORY_CACHE_SIZE);
-const loadedImagesCache = new LruMap<string, string>(MAX_IMAGE_MEMORY_CACHE_SIZE);
+const loadedImagesCache = new LruMap<string, string>(
+	MAX_IMAGE_MEMORY_CACHE_SIZE,
+);
 
 export const CachedImage = ({
 	appId,

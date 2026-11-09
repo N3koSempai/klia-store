@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type ColorBlindMode = "none" | "deuteranopia" | "protanopia" | "tritanopia";
+export type ColorBlindMode =
+	| "none"
+	| "deuteranopia"
+	| "protanopia"
+	| "tritanopia";
 
 export interface AccessibilityPrefs {
 	colorBlindMode: ColorBlindMode;

@@ -611,7 +611,7 @@ export const DataCube = ({
 								permissionFilter === "storage"
 									? "rgba(88, 166, 255, 0.2)"
 									: "transparent",
-							border: `1px solid ${permissionFilter === "storage" ? "${status.info}" : "${neutral[300]}"}`,
+							border: `1px solid ${permissionFilter === "storage" ? status.info : neutral[300]}`,
 							color:
 								permissionFilter === "storage" ? status.info : neutral[600],
 							fontFamily: "monospace",
@@ -644,7 +644,7 @@ export const DataCube = ({
 								permissionFilter === "camera"
 									? "rgba(88, 166, 255, 0.2)"
 									: "transparent",
-							border: `1px solid ${permissionFilter === "camera" ? "${status.info}" : "${neutral[300]}"}`,
+							border: `1px solid ${permissionFilter === "camera" ? status.info : neutral[300]}`,
 							color: permissionFilter === "camera" ? status.info : neutral[600],
 							fontFamily: "monospace",
 							fontSize: "0.7rem",
@@ -676,7 +676,7 @@ export const DataCube = ({
 								permissionFilter === "files"
 									? "rgba(88, 166, 255, 0.2)"
 									: "transparent",
-							border: `1px solid ${permissionFilter === "files" ? "${status.info}" : "${neutral[300]}"}`,
+							border: `1px solid ${permissionFilter === "files" ? status.info : neutral[300]}`,
 							color: permissionFilter === "files" ? status.info : neutral[600],
 							fontFamily: "monospace",
 							fontSize: "0.7rem",

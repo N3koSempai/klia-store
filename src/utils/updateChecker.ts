@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { reportNetworkFailure, reportNetworkSuccess } from "../store/connectivityStore";
+import {
+	reportNetworkFailure,
+	reportNetworkSuccess,
+} from "../store/connectivityStore";
 import type { UpdateAvailableInfo } from "../store/installedAppsStore";
 import { isNetworkError } from "./networkError";
 

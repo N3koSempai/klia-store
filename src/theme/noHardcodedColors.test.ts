@@ -38,3 +38,22 @@ test("no hay colores hexadecimales fuera de src/theme", () => {
 		`Usa tokens de src/theme/tokens en vez de hex:\n${offenders.join("\n")}`,
 	);
 });
+
+// Un token entre comillas ("${brand.x}") es texto literal, no interpolación:
+// el color no se aplicaría. Suele venir de migrar un hex dentro de un template.
+const QUOTED_TOKEN = /["']\$\{(brand|hues|neutral|status|lines)[.[]/;
+
+test("ningún token de color quedó como texto literal entre comillas", () => {
+	const offenders: string[] = [];
+	for (const file of walk(SRC)) {
+		if (file.endsWith(".test.ts")) continue;
+		readFileSync(file, "utf8")
+			.split("\n")
+			.forEach((line, i) => {
+				if (QUOTED_TOKEN.test(line)) {
+					offenders.push(`${file.replace(SRC, "src/")}:${i + 1}`);
+				}
+			});
+	}
+	assert.deepEqual(offenders, []);
+});

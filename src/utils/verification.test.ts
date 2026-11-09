@@ -46,7 +46,10 @@ test("unsupported platform flag", () => {
 			.isUnsupportedPlatform,
 		true,
 	);
-	assert.equal(classifyVerification({ sources: [] }).isUnsupportedPlatform, false);
+	assert.equal(
+		classifyVerification({ sources: [] }).isUnsupportedPlatform,
+		false,
+	);
 });
 
 test("clean result has no flags", () => {

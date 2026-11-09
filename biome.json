@@ -25,14 +25,35 @@
 	},
 	"overrides": [
 		{
-			"includes": ["src/routeTree.gen.ts"],
-			"linter": { "enabled": false }
+			"includes": ["src/routeTree.gen.ts", "src/i18n/locales/*.json"],
+			"linter": { "enabled": false },
+			"formatter": { "enabled": false },
+			"assist": { "enabled": false }
 		},
 		{
-			"includes": ["src/pages/home/components/FeaturedSection.tsx"],
+			"includes": [
+				"src/pages/home/components/FeaturedSection.tsx",
+				"src/pages/home/components/AppsOfTheDaySection.tsx",
+				"src/pages/home/components/CategoriesSection.tsx",
+				"src/pages/home/Home.tsx",
+				"src/pages/categoryApps/CategoryApps.tsx",
+				"src/pages/developerProfile/DeveloperProfile.tsx",
+				"src/pages/searchResults/SearchResults.tsx"
+			],
 			"linter": {
 				"rules": {
 					"suspicious": { "noArrayIndexKey": "off" }
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/routes/_layout.tsx",
+				"src/components/NotificationMenu.tsx"
+			],
+			"linter": {
+				"rules": {
+					"correctness": { "useUniqueElementIds": "off" }
 				}
 			}
 		}

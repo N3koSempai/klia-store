@@ -17,7 +17,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootComponent() {
-	const { colorBlindMode, reducedMotion, highContrast } = useAccessibilityStore();
+	const { colorBlindMode, reducedMotion, highContrast } =
+		useAccessibilityStore();
 	const { i18n } = useTranslation();
 
 	// Keep <html lang> in sync with active i18next language
