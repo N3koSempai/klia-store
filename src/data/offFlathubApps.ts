@@ -11,6 +11,8 @@ const TRANSCRIBE_GITHUB_RAW =
 // Este repo usa `master` como rama por defecto.
 const SCALER_GITHUB_RAW =
 	"https://raw.githubusercontent.com/N3koSempai/klia-scaler-player/master";
+const IPCAM_GITHUB_RAW =
+	"https://raw.githubusercontent.com/N3koSempai/ipcam/main";
 
 export const OFF_FLATHUB_APPS: Record<string, CategoryApp> = {
 	"io.github.N3kosempai.klia-kompress": {
@@ -262,7 +264,28 @@ export const OFF_FLATHUB_APPS: Record<string, CategoryApp> = {
 			"surveillance",
 			"cctv",
 		],
-		screenshots: [],
+		screenshots: [
+			{
+				sizes: [
+					{
+						width: "1280",
+						height: "596",
+						scale: "1",
+						src: `${IPCAM_GITHUB_RAW}/screenshots/grid.png`,
+					},
+				],
+			},
+			{
+				sizes: [
+					{
+						width: "1280",
+						height: "720",
+						scale: "1",
+						src: `${IPCAM_GITHUB_RAW}/screenshots/wizard.png`,
+					},
+				],
+			},
+		],
 		urls: {
 			homepage: "https://github.com/N3koSempai/ipcam",
 			vcs_browser: "https://github.com/N3koSempai/ipcam",

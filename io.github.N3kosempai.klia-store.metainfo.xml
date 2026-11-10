@@ -47,6 +47,11 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.18.1" date="2026-11-10">
+      <description>
+        <p>Updated to the GNOME 51 runtime and fixed a startup freeze caused by system fonts. Added screenshots for Klia IPCam.</p>
+      </description>
+    </release>
     <release version="2.18.0" date="2026-11-08">
       <description>
         <p>A fresh new look. Klia Store has been redesigned from the ground up: cleaner cards, sharper buttons and dialogs, and a consistent style across every screen. Destructive actions now stand out in red, text and controls are easier to read, and it all works with the color-blind and high-contrast modes.</p>
