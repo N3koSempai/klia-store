@@ -1,0 +1,29 @@
+#!/bin/sh
+# Workaround para el bucle infinito de WebKitGTK/Skia en fontconfig (runtime GNOME 51).
+# 1) El flatpak redirige XDG_CACHE_HOME a un directorio vacío, lo que obliga a
+#    reescanear todas las fuentes del host en cada resolución de fuente.
+# 2) Las fuentes WOFF del host hacen que la enumeración nunca termine.
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/fontconfig"
+if ! find "$cache_dir" -name '*.cache-*' 2>/dev/null | grep -q .; then
+  fc-cache -f >/dev/null 2>&1 || true
+fi
+
+conf_dir="${XDG_CONFIG_HOME:-$HOME/.config}/fontconfig"
+if [ ! -e "$conf_dir/fonts.conf" ]; then
+  mkdir -p "$conf_dir" 2>/dev/null && cat > "$conf_dir/fonts.conf" <<'CONF' || true
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+<fontconfig>
+  <selectfont>
+    <rejectfont>
+      <glob>/run/host/fonts/woff/*</glob>
+      <glob>/run/host/fonts/woff2/*</glob>
+      <glob>*.woff</glob>
+      <glob>*.woff2</glob>
+    </rejectfont>
+  </selectfont>
+</fontconfig>
+CONF
+fi
+
+exec /app/bin/klia-store-bin "$@"
