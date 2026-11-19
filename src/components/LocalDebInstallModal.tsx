@@ -1,5 +1,4 @@
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
@@ -33,9 +32,12 @@ import {
 	useRef,
 	useState,
 } from "react";
+import errorAnim from "../assets/animations/Error.lottie";
+import successAnim from "../assets/animations/success.lottie";
 import { appendPtyLine, stripAnsi } from "../pages/appDetails/utils/ptyOutput";
 import { refreshInstalledPackages } from "../services/installedPackages";
 import { brand, hues, lines, neutral, status } from "../theme/tokens";
+import { LazyLottie } from "./LazyLottie";
 import { Terminal } from "./Terminal";
 
 // Mirrors `DebLocalInfo` in src-tauri/src/local_deb.rs (snake_case over IPC).
@@ -603,6 +605,120 @@ function StepIndicator({ phase }: { phase: Phase }) {
 	);
 }
 
+// Final state of the flow. Same shape as the install screen in AppDetails: the
+// animation is the indicator, one line says what happened, one line says what it
+// means, and the console is folded away behind a "Logs" button instead of
+// owning the screen. The book's "Cards → Designing Cards" puts the critical
+// content first and keeps the rest out of the way; its "Buttons → Button
+// Placement" keeps the advancing action on the right.
+function FeedbackScreen({
+	outcome,
+	title,
+	detail,
+	logs,
+	actionLabel,
+	onAction,
+}: {
+	outcome: "success" | "failure";
+	title: string;
+	detail: string;
+	logs: string[];
+	actionLabel: string;
+	onAction: () => void;
+}) {
+	const [showLogs, setShowLogs] = useState(false);
+	const accent = outcome === "success" ? hues.greenMaterial : hues.red;
+	return (
+		<Box
+			sx={{
+				px: 3,
+				py: 4,
+				display: "flex",
+				flexDirection: "column",
+				alignItems: "center",
+			}}
+		>
+			<Box sx={{ width: 200, height: 200 }}>
+				<LazyLottie
+					key={outcome}
+					src={outcome === "success" ? successAnim : errorAnim}
+					loop={false}
+					autoplay={true}
+				/>
+			</Box>
+
+			<Typography
+				sx={{
+					fontFamily: "IBM Plex Sans, sans-serif",
+					fontWeight: 600,
+					fontSize: "1.25rem",
+					color: accent,
+					textAlign: "center",
+					mt: 1,
+				}}
+			>
+				{title}
+			</Typography>
+
+			<Typography
+				sx={{
+					fontSize: "0.8125rem",
+					color: "rgba(255,255,255,0.55)",
+					textAlign: "center",
+					lineHeight: 1.6,
+					mt: 1,
+					maxWidth: 460,
+				}}
+			>
+				{detail}
+			</Typography>
+
+			<Stack direction="row" spacing={1.5} sx={{ mt: 3 }}>
+				{logs.length > 0 && (
+					<Button
+						variant="outlined"
+						color="neutral"
+						onClick={() => setShowLogs((v) => !v)}
+						endIcon={
+							showLogs ? (
+								<ExpandLessIcon sx={{ fontSize: "1rem" }} />
+							) : (
+								<ExpandMoreIcon sx={{ fontSize: "1rem" }} />
+							)
+						}
+						sx={{ minHeight: 36 }}
+					>
+						Logs
+					</Button>
+				)}
+				<Button
+					variant="contained"
+					color={outcome === "success" ? "success" : "neutral"}
+					onClick={onAction}
+					sx={{ minHeight: 36 }}
+				>
+					{actionLabel}
+				</Button>
+			</Stack>
+
+			{logs.length > 0 && (
+				<Collapse in={showLogs} sx={{ width: "100%" }}>
+					<Box
+						sx={{
+							mt: 2,
+							borderRadius: 1.5,
+							overflow: "hidden",
+							border: "1px solid rgba(255,255,255,0.08)",
+						}}
+					>
+						<Terminal output={logs} isRunning={false} />
+					</Box>
+				</Collapse>
+			)}
+		</Box>
+	);
+}
+
 // Raw output surface. Deliberately not pure black on dark: the book's
 // "Colors → Why Pure Black Isn't Ideal" warns about halation, and its dark-mode
 // rule is to use a lighter tint of the background instead of a black hole. The
@@ -1078,24 +1194,16 @@ export function LocalDebInstallModal({
 					</Box>
 				)}
 
-				{/* Error while analyzing */}
+				{/* Error while analyzing: same feedback screen, no log to offer */}
 				{phase === "error" && !info && (
-					<Box sx={{ px: 3, py: 4, textAlign: "center" }}>
-						<ErrorOutlineIcon
-							sx={{ color: hues.red, fontSize: "2.5rem", mb: 1.5 }}
-						/>
-						<Typography sx={{ color: hues.red, fontWeight: 600, mb: 1 }}>
-							Could not read package
-						</Typography>
-						<Typography
-							sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8125rem" }}
-						>
-							{loadError}
-						</Typography>
-						<Button onClick={onClose} color="neutral" sx={{ mt: 3 }}>
-							Close
-						</Button>
-					</Box>
+					<FeedbackScreen
+						outcome="failure"
+						title="Could not read package"
+						detail={loadError ?? "The file could not be inspected."}
+						logs={[]}
+						actionLabel="Close"
+						onAction={onClose}
+					/>
 				)}
 
 				{/* Review */}
@@ -1500,136 +1608,94 @@ export function LocalDebInstallModal({
 					</Box>
 				)}
 
-				{/* Installing / done / failed */}
-				{(phase === "installing" ||
-					phase === "done" ||
-					(phase === "error" && info)) && (
-					<Box>
-						<Box sx={{ px: 3, py: 3 }}>
-							<Stack
-								direction="row"
-								spacing={1.5}
-								alignItems="center"
-								sx={{ mb: 2 }}
-							>
-								{phase === "installing" && (
-									<CircularProgress size={18} sx={{ color: brand.primary }} />
-								)}
-								{phase === "done" && (
-									<CheckCircleIcon
-										sx={{ color: hues.greenMaterial, fontSize: "1.25rem" }}
-									/>
-								)}
-								{phase === "error" && (
-									<ErrorOutlineIcon
-										sx={{ color: hues.red, fontSize: "1.25rem" }}
-									/>
-								)}
-								<Typography
-									sx={{
-										fontFamily: "IBM Plex Sans, sans-serif",
-										fontWeight: 600,
-										fontSize: "0.875rem",
-										color:
-											phase === "done"
-												? hues.greenMaterial
-												: phase === "error"
-													? hues.red
-													: neutral[1000],
-									}}
-								>
-									{phase === "installing"
-										? `Installing ${info?.package ?? ""}…`
-										: phase === "done"
-											? "Installation complete"
-											: (installError ?? "Installation failed")}
-								</Typography>
-							</Stack>
-
-							{phase === "installing" && (
-								<LinearProgress
-									sx={{
-										mb: 2,
-										borderRadius: 1,
-										backgroundColor: "rgba(74,134,207,0.15)",
-										"& .MuiLinearProgress-bar": {
-											backgroundColor: brand.primary,
-										},
-									}}
-								/>
-							)}
-
-							<Button
-								onClick={() => setShowTerminal((v) => !v)}
-								size="small"
-								color="neutral"
-								endIcon={
-									showTerminal ? (
-										<ExpandLessIcon sx={{ fontSize: "1rem" }} />
-									) : (
-										<ExpandMoreIcon sx={{ fontSize: "1rem" }} />
-									)
-								}
+				{/* Installing: progress now, console one click away */}
+				{phase === "installing" && (
+					<Box sx={{ px: 3, py: 3 }}>
+						<Stack
+							direction="row"
+							spacing={1.5}
+							alignItems="center"
+							sx={{ mb: 2 }}
+						>
+							<CircularProgress size={18} sx={{ color: brand.primary }} />
+							<Typography
 								sx={{
-									fontFamily: "JetBrains Mono, monospace",
-									minHeight: 36,
+									fontFamily: "IBM Plex Sans, sans-serif",
+									fontWeight: 600,
+									fontSize: "0.875rem",
+									color: neutral[1000],
 								}}
 							>
-								{showTerminal ? "Hide output" : "Show output"}
-							</Button>
+								{`Installing ${info?.package ?? ""}…`}
+							</Typography>
+						</Stack>
 
-							<Collapse in={showTerminal}>
-								<Box
-									sx={{
-										mt: 1.5,
-										borderRadius: 1.5,
-										overflow: "hidden",
-										border: "1px solid rgba(255,255,255,0.08)",
-									}}
-								>
-									<Terminal
-										output={terminalLines}
-										isRunning={phase === "installing"}
-									/>
-								</Box>
-							</Collapse>
-						</Box>
+						<LinearProgress
+							sx={{
+								mb: 2,
+								borderRadius: 1,
+								backgroundColor: "rgba(74,134,207,0.15)",
+								"& .MuiLinearProgress-bar": {
+									backgroundColor: brand.primary,
+								},
+							}}
+						/>
 
-						{phase === "done" && (
-							<>
-								<Divider sx={{ borderColor: lines.subtle }} />
-								<Box
-									sx={{
-										px: 3,
-										py: 2,
-										display: "flex",
-										justifyContent: "flex-end",
-									}}
-								>
-									<Button onClick={onClose} variant="contained" color="success">
-										Done
-									</Button>
-								</Box>
-							</>
-						)}
-						{phase === "error" && (
-							<>
-								<Divider sx={{ borderColor: lines.subtle }} />
-								<Box
-									sx={{
-										px: 3,
-										py: 2,
-										display: "flex",
-										justifyContent: "flex-end",
-									}}
-								>
-									<Button onClick={onClose} variant="contained" color="neutral">
-										Close
-									</Button>
-								</Box>
-							</>
-						)}
+						<Button
+							onClick={() => setShowTerminal((v) => !v)}
+							size="small"
+							color="neutral"
+							endIcon={
+								showTerminal ? (
+									<ExpandLessIcon sx={{ fontSize: "1rem" }} />
+								) : (
+									<ExpandMoreIcon sx={{ fontSize: "1rem" }} />
+								)
+							}
+							sx={{ minHeight: 36 }}
+						>
+							Logs
+						</Button>
+
+						<Collapse in={showTerminal}>
+							<Box
+								sx={{
+									mt: 1.5,
+									borderRadius: 1.5,
+									overflow: "hidden",
+									border: "1px solid rgba(255,255,255,0.08)",
+								}}
+							>
+								<Terminal output={terminalLines} isRunning={true} />
+							</Box>
+						</Collapse>
 					</Box>
+				)}
+
+				{/* Done: feedback, not a log dump */}
+				{phase === "done" && (
+					<FeedbackScreen
+						outcome="success"
+						title="Installation complete"
+						detail={`${info?.package ?? "The package"}${
+							info?.version ? ` ${info.version}` : ""
+						} is installed.`}
+						logs={terminalLines}
+						actionLabel="Done"
+						onAction={onClose}
+					/>
+				)}
+
+				{/* Failed: same screen, with the reason and the log behind Logs */}
+				{phase === "error" && info && (
+					<FeedbackScreen
+						outcome="failure"
+						title="Installation failed"
+						detail={installError ?? "apt could not complete the installation."}
+						logs={terminalLines}
+						actionLabel="Close"
+						onAction={onClose}
+					/>
 				)}
 			</DialogContent>
 		</Dialog>

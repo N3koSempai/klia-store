@@ -65,6 +65,12 @@ Cada regla cita la sección del libro de la que sale.
 - **Contenedores (cards).** "Cards → Designing Cards": jerarquía visual con lo
   crítico arriba, contenido conciso, enmarcado consistente. Aplicado a las filas
   de hallazgos: mismo padding, mismo radio, mismo borde.
+- **Pantalla final de feedback.** "Cards → Designing Cards" (lo crítico arriba,
+  contenido conciso) más "FAQs → Design Guidelines" (la consola se pliega tras un
+  control con icono): el desenlace es una pantalla centrada con animación de
+  éxito/error, un titular y una línea que explica qué significa; la consola queda
+  detrás del botón "Logs" en vez de ocupar la pantalla. Mismo patrón que la
+  instalación en AppDetails (`InstallProgressPanel`).
 - **60-30-10.** "Colors → Crafting a Harmonious Color Palette, Step 5": 60%
   dominante neutro, 30% secundario, 10% acento. El acento se reserva para la
   acción principal y el estado activo, no para decorar cada bloque.
