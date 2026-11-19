@@ -19,6 +19,7 @@
 		"os:default",
 		"shell:allow-execute",
 		"dialog:allow-save",
+		"dialog:allow-open",
 		"fs:allow-write-text-file",
 		"fs:allow-read-file",
 		"fs:scope-appdata",

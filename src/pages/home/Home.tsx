@@ -1,6 +1,7 @@
 import BackupOutlinedIcon from "@mui/icons-material/BackupOutlined";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import {
 	alpha,
@@ -16,6 +17,8 @@ import {
 	Typography,
 	useTheme,
 } from "@mui/material";
+import { emit } from "@tauri-apps/api/event";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import kliaSoftwareLogo from "../../assets/internalPromo/klia-software.png";
@@ -87,6 +90,23 @@ export const Home = ({
 
 	const handleAppClick = (categoryApp: CategoryApp) => {
 		onAppSelect(categoryApp, searchQuery, searchResults);
+	};
+
+	// TEMPORARY dev entry point. The real flow is the .deb file association
+	// (double-click in the file manager, or `klia-store file.deb`). This picker
+	// exists only to exercise the local-package modal without rebuilding the
+	// Flatpak; remove the button and this handler once the association has been
+	// verified in a packaged build.
+	const handlePickLocalDeb = async () => {
+		const selected = await open({
+			multiple: false,
+			directory: false,
+			filters: [{ name: "Debian package", extensions: ["deb"] }],
+		});
+		if (typeof selected === "string") {
+			// Same event the backend emits when the app is launched with a file.
+			await emit("open-local-deb", selected);
+		}
 	};
 
 	const showSearchResults = searchQuery.trim().length > 0;
@@ -199,6 +219,22 @@ export const Home = ({
 						}}
 					>
 						<BarChartIcon />
+					</IconButton>
+
+					{/* TEMPORARY: picks a local .deb to test the association flow. */}
+					<IconButton
+						aria-label="Install local .deb (temporary)"
+						title="Install local .deb (temporary)"
+						onClick={handlePickLocalDeb}
+						sx={{
+							color: "text.secondary",
+							"&:hover": {
+								color: "primary.main",
+								bgcolor: alpha(theme.palette.primary.main, 0.1),
+							},
+						}}
+					>
+						<ScienceOutlinedIcon />
 					</IconButton>
 
 					<IconButton

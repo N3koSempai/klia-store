@@ -3,6 +3,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LocalDebInstallModal } from "../components/LocalDebInstallModal";
 import { LocalFlatpakInstallModal } from "../components/LocalFlatpakInstallModal";
 import TitleBar from "../components/TitleBar";
 import { useAppInitialization } from "../hooks/useAppInitialization";
@@ -20,6 +21,7 @@ function LayoutComponent() {
 	const { isFirstLaunch, isInitializing, error } = useAppInitialization();
 	const [showWelcome, setShowWelcome] = useState(true);
 	const [localFlatpakFile, setLocalFlatpakFile] = useState<string | null>(null);
+	const [localDebFile, setLocalDebFile] = useState<string | null>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 	// Load installed apps on startup (non-blocking)
@@ -27,17 +29,22 @@ function LayoutComponent() {
 	// Check GitHub-sourced app updates independently from Flathub
 	useGitHubUpdates();
 
-	// Listen for open-local-flatpak events emitted by Tauri when the app
-	// is launched with a .flatpak or .flatpakref file as argument.
+	// Listen for open-local-flatpak / open-local-deb events emitted by Tauri when
+	// the app is launched with a bundle or package file as argument.
 	useEffect(() => {
-		let unlisten: (() => void) | undefined;
+		const unlisteners: Array<() => void> = [];
 		listen<string>("open-local-flatpak", (event) => {
 			setLocalFlatpakFile(event.payload);
 		}).then((fn) => {
-			unlisten = fn;
+			unlisteners.push(fn);
+		});
+		listen<string>("open-local-deb", (event) => {
+			setLocalDebFile(event.payload);
+		}).then((fn) => {
+			unlisteners.push(fn);
 		});
 		return () => {
-			unlisten?.();
+			for (const fn of unlisteners) fn();
 		};
 	}, []);
 
@@ -139,6 +146,10 @@ function LayoutComponent() {
 			<LocalFlatpakInstallModal
 				filePath={localFlatpakFile}
 				onClose={() => setLocalFlatpakFile(null)}
+			/>
+			<LocalDebInstallModal
+				filePath={localDebFile}
+				onClose={() => setLocalDebFile(null)}
 			/>
 		</>
 	);
