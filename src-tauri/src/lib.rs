@@ -4,6 +4,7 @@ mod backup;
 mod donations;
 mod analytics;
 mod debs;
+mod local_deb;
 mod http;
 mod image_cache;
 mod verify;
@@ -2015,24 +2016,69 @@ async fn check_pty_process(
     }
 }
 
+// The app is registered as a handler for local package files (`MimeType=` in
+// the desktop entry), so the desktop environment launches it with the opened
+// file as an argument. This classifies that argument, tolerating `file://`
+// URIs, any extension case, and the `@@`/`@@u` markers that flatpak's
+// file-forwarding syntax leaves in `Exec` when the launcher does not consume
+// them (the desktop entry uses plain `%f`, so they normally never arrive).
+fn classify_local_file_arg(arg: &str) -> Option<&'static str> {
+    let trimmed = arg.trim();
+    if trimmed.is_empty() || trimmed.starts_with('-') || trimmed.starts_with("@@") {
+        return None;
+    }
+    let lower = trimmed.to_ascii_lowercase();
+    let lower = lower.strip_prefix("file://").unwrap_or(&lower);
+    if lower.ends_with(".flatpak") || lower.ends_with(".flatpakref") {
+        Some("flatpak")
+    } else if lower.ends_with(".deb") {
+        Some("deb")
+    } else {
+        None
+    }
+}
+
+/// Turns the opened-file argument into a plain path.
+fn normalize_file_arg(arg: &str) -> String {
+    let trimmed = arg.trim();
+    match trimmed.strip_prefix("file://") {
+        // `%20` is the only escape a double-clicked package normally carries.
+        Some(path) => path.replace("%20", " "),
+        None => trimmed.to_string(),
+    }
+}
+
+/// Picks the first recognized package file among the startup arguments. The
+/// desktop entry passes exactly one (`%f`), but scanning is tolerant of
+/// launchers that prepend flags.
+fn local_file_argument(args: &[String]) -> Option<(&'static str, String)> {
+    args.iter()
+        .skip(1)
+        .find_map(|arg| classify_local_file_arg(arg).map(|kind| (kind, normalize_file_arg(arg))))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(ProcessMap::default())
         .setup(|app| {
-            // If the app was opened with a .flatpak or .flatpakref file as argument,
-            // emit an event so the frontend can show the local install dialog.
+            // Registered handler for local package files: the desktop entry declares
+            // `MimeType=` for .flatpak/.flatpakref/.deb and passes the opened file
+            // as an argument. Emit the matching event so the frontend opens the
+            // local-install dialog, exactly as it does for a Flathub bundle.
             let args: Vec<String> = std::env::args().collect();
-            if let Some(file_path) = args.get(1) {
-                let fp = file_path.clone();
-                if fp.ends_with(".flatpak") || fp.ends_with(".flatpakref") {
-                    let handle = app.handle().clone();
-                    // Delay slightly so the frontend has time to mount listeners
-                    std::thread::spawn(move || {
-                        std::thread::sleep(std::time::Duration::from_millis(800));
-                        let _ = handle.emit("open-local-flatpak", fp);
-                    });
-                }
+            if let Some((kind, file_path)) = local_file_argument(&args) {
+                let event = if kind == "deb" {
+                    "open-local-deb"
+                } else {
+                    "open-local-flatpak"
+                };
+                let handle = app.handle().clone();
+                // Delay slightly so the frontend has time to mount listeners
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(800));
+                    let _ = handle.emit(event, file_path);
+                });
             }
             Ok(())
         })
@@ -2058,6 +2104,9 @@ pub fn run() {
             debs::get_installed_debs,
             debs::cache_deb_icon,
             debs::uninstall_deb_package,
+            local_deb::inspect_local_deb,
+            local_deb::check_local_deb_dependencies,
+            local_deb::install_local_deb,
             get_install_dependencies,
             get_app_remote_metadata,
             get_installable_extensions,
@@ -2145,5 +2194,39 @@ mod helper_tests {
         assert!(build_flatpak_interactive_cmd(true, "a.b.c").contains("flatpak-spawn --host"));
         assert!(!build_flatpak_interactive_cmd(false, "a.b.c").contains("flatpak-spawn"));
         assert!(build_flatpak_dependency_check_cmd(true, "a.b.c").contains("flatpak-spawn --host"));
+    }
+
+    #[test]
+    fn classifies_opened_package_files() {
+        assert_eq!(classify_local_file_arg("/tmp/app.deb"), Some("deb"));
+        assert_eq!(classify_local_file_arg("/tmp/APP.DEB"), Some("deb"));
+        assert_eq!(classify_local_file_arg("file:///tmp/app.deb"), Some("deb"));
+        assert_eq!(classify_local_file_arg("/tmp/app.flatpak"), Some("flatpak"));
+        assert_eq!(classify_local_file_arg("/tmp/app.flatpakref"), Some("flatpak"));
+        // Launcher noise and non-package files are ignored.
+        assert_eq!(classify_local_file_arg("--gapplication-service"), None);
+        assert_eq!(classify_local_file_arg("@@u"), None);
+        assert_eq!(classify_local_file_arg(""), None);
+        assert_eq!(classify_local_file_arg("/tmp/app.tar.gz"), None);
+    }
+
+    #[test]
+    fn decodes_file_uri_arguments() {
+        assert_eq!(normalize_file_arg("file:///tmp/my%20app.deb"), "/tmp/my app.deb");
+        assert_eq!(normalize_file_arg("/tmp/my app.deb"), "/tmp/my app.deb");
+    }
+
+    #[test]
+    fn picks_the_package_file_among_arguments() {
+        let args: Vec<String> = ["klia-store", "--flag", "/tmp/pkg.deb"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(
+            local_file_argument(&args),
+            Some(("deb", "/tmp/pkg.deb".to_string()))
+        );
+        let args: Vec<String> = ["klia-store"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(local_file_argument(&args), None);
     }
 }

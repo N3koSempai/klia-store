@@ -14,6 +14,7 @@
       <li>Visualize your installed apps and their permissions (storage, camera, file access) in an interactive view</li>
       <li>Audit installed apps by verifying their source manifest against Flathub, helping protect against supply-chain tampering</li>
       <li>Review requested permissions and a risk assessment before installing a local .flatpak file</li>
+      <li>Inspect a local .deb package before installing it: what it runs as root, what it installs on your system, and the dependency plan</li>
       <li>Available in multiple languages, with automatic detection of your system language</li>
     </ul>
   </description>
@@ -47,6 +48,15 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.19.0" date="2026-11-18">
+      <description>
+        <p>Klia Store can now install .deb packages that live on your disk, the same way it already installs local .flatpak files. Double-click a .deb in your file manager, or open it with Klia Store, and the app first shows you a review of the package. Nothing is installed until you confirm it.</p>
+        <p>The review is built around what a .deb really is. A Flatpak is sandboxed, so its permissions describe what it can reach; a .deb is not, it can write anywhere on your system and its installation scripts run as root. So instead of a permission list you get what the package will run as root and what it will put on your system: the maintainer scripts (preinst, postinst, prerm, postrm, config, triggers), flagged when their content looks dangerous, the setuid and setgid binaries it ships, and every write to a persistence path such as systemd units, cron jobs, autostart entries, sudoers or polkit rules. The package's identity, installed size and SHA-256 fingerprint are shown alongside.</p>
+        <p>Dependencies are not guessed. "Check dependencies" resolves the package's requirements against your configured repositories with apt, and your desktop asks for the password through its own authentication agent, so Klia Store never sees it. If you cancel the prompt, or your session has no authentication agent, the app says so instead of inventing a plan. When the requirements cannot be satisfied, the failure names the missing pieces rather than echoing apt's raw output.</p>
+        <p>The install itself runs the same apt install your terminal would use, so dependencies are resolved in the same pass. Four situations are refused and keep the Install button disabled: a package built for a different architecture, a package marked Essential, a package from the metapackages section, and any installation whose dependency plan would remove an essential package. Downgrading over a newer installed version is allowed only after you explicitly accept it.</p>
+        <p>All the inspection runs as your user, never as root: the dpkg-deb manual treats untrusted .deb files as a security boundary. When the installation finishes, the result is shown as its own screen — installed, install failed, or file could not be read — with the full log one click away.</p>
+      </description>
+    </release>
     <release version="2.18.1" date="2026-11-10">
       <description>
         <p>Updated to the GNOME 51 runtime and fixed a startup freeze caused by system fonts. Added screenshots for Klia IPCam.</p>
