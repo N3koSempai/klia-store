@@ -36,12 +36,25 @@ pub fn clear_old_cache(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+// FNV-1a 64-bit. Cache filenames only need a stable, collision-resistant
+// mapping from URL to filename (not a cryptographic hash), and this avoids
+// pulling in the xxhash-rust crate for a single call site.
+const FNV_OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
+const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+
+fn fnv1a_64(bytes: &[u8]) -> u64 {
+    let mut hash = FNV_OFFSET_BASIS;
+    for &byte in bytes {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
+}
+
 // Shared by every cache-image command: picks the hashing key (cacheKey takes
 // priority over the raw URL when provided and different) and the extension
 // inferred from the image URL, then returns the resulting cache filename.
 fn compute_cache_filename(cache_key: &str, image_url: &str) -> String {
-    use xxhash_rust::xxh3::xxh3_64;
-
     let key_to_hash = if !cache_key.is_empty() && cache_key != image_url {
         cache_key
     } else {
@@ -62,7 +75,7 @@ fn compute_cache_filename(cache_key: &str, image_url: &str) -> String {
         "png" // default
     };
 
-    let hash = xxh3_64(key_to_hash.as_bytes());
+    let hash = fnv1a_64(key_to_hash.as_bytes());
     format!("{:x}.{}", hash, extension)
 }
 
@@ -167,5 +180,13 @@ mod tests {
         let a = compute_cache_filename("k1", "https://x/y.png");
         assert_eq!(a, compute_cache_filename("k1", "https://x/y.png"));
         assert_ne!(a, compute_cache_filename("k2", "https://x/y.png"));
+    }
+
+    #[test]
+    fn fnv1a_64_matches_reference_vectors() {
+        // Canonical FNV-1a 64-bit test vectors.
+        assert_eq!(fnv1a_64(b""), 0xcbf2_9ce4_8422_2325);
+        assert_eq!(fnv1a_64(b"a"), 0xaf63_dc4c_8601_ec8c);
+        assert_eq!(fnv1a_64(b"foobar"), 0x85944171f73967e8);
     }
 }

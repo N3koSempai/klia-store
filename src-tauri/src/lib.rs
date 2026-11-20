@@ -9,13 +9,12 @@ mod http;
 mod image_cache;
 mod verify;
 
-use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use tauri::{Emitter, Manager, State};
 use tauri_plugin_shell::ShellExt;
 
@@ -211,7 +210,7 @@ fn build_flatpak_dependency_check_cmd(is_flatpak: bool, app_id: &str) -> String 
 // Flatpak app/extension IDs follow reverse-DNS notation (e.g. org.mozilla.firefox).
 // Validating against this before interpolating into a shell string closes the
 // command-injection vector without needing to escape shell metacharacters.
-static APP_ID_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+static APP_ID_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9][A-Za-z0-9_-]*)+$").unwrap()
 });
 
@@ -221,6 +220,40 @@ fn is_valid_app_id(app_id: &str) -> bool {
 
 fn is_running_in_flatpak() -> bool {
     std::env::var("FLATPAK_ID").is_ok()
+}
+
+/// Picks the locale from the POSIX/glibc precedence chain (LC_ALL, then
+/// LC_MESSAGES, then LANG), skipping empty values and the "C"/"POSIX"
+/// pseudo-locales (they mean "no locale"). Returns `None` when nothing usable
+/// is set so the caller can fall back to English.
+fn locale_from_vars(
+    lc_all: Option<&str>,
+    lc_messages: Option<&str>,
+    lang: Option<&str>,
+) -> Option<String> {
+    for value in [lc_all, lc_messages, lang] {
+        if let Some(value) = value {
+            let value = value.trim();
+            if !value.is_empty() && value != "C" && value != "POSIX" {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Returns the system locale as reported by the environment (for example
+/// "es_ES.UTF-8" or "zh_CN.UTF-8"), or `None` when nothing usable is set.
+/// Replaces the tauri-plugin-os `locale()` call: on Linux (WebKitGTK),
+/// `navigator.language` only follows LC_ALL and ignores LANG, so the frontend
+/// needs the raw environment value to pick the right translation.
+#[tauri::command]
+fn get_system_locale() -> Option<String> {
+    locale_from_vars(
+        std::env::var("LC_ALL").ok().as_deref(),
+        std::env::var("LC_MESSAGES").ok().as_deref(),
+        std::env::var("LANG").ok().as_deref(),
+    )
 }
 
 /// Runs a flatpak subcommand via the Tauri shell plugin, transparently going
@@ -2088,12 +2121,12 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             check_first_launch,
             initialize_app,
             get_app_data_path,
+            get_system_locale,
             image_cache::get_cache_image_dir,
             image_cache::clear_old_cache,
             image_cache::download_and_cache_image,
@@ -2177,6 +2210,51 @@ mod helper_tests {
         assert!(!is_valid_app_id("firefox"));
         assert!(!is_valid_app_id("org.mozilla.firefox; rm -rf ~"));
         assert!(!is_valid_app_id("org..firefox"));
+    }
+
+    #[test]
+    fn resolves_locale_by_glibc_precedence() {
+        // LC_ALL wins over LC_MESSAGES and LANG.
+        assert_eq!(
+            locale_from_vars(Some("fr_FR.UTF-8"), Some("de_DE.UTF-8"), Some("es_ES.UTF-8")).as_deref(),
+            Some("fr_FR.UTF-8")
+        );
+        // LC_MESSAGES wins over LANG when LC_ALL is unset.
+        assert_eq!(
+            locale_from_vars(None, Some("de_DE.UTF-8"), Some("es_ES.UTF-8")).as_deref(),
+            Some("de_DE.UTF-8")
+        );
+        // LANG is the last resort.
+        assert_eq!(
+            locale_from_vars(None, None, Some("es_ES.UTF-8")).as_deref(),
+            Some("es_ES.UTF-8")
+        );
+    }
+
+    #[test]
+    fn skips_empty_and_pseudo_locales() {
+        // "C"/"POSIX" mean "no locale" and must not win the chain; the next
+        // real value is used instead.
+        assert_eq!(
+            locale_from_vars(Some("C"), Some("POSIX"), Some("fr_FR.UTF-8")).as_deref(),
+            Some("fr_FR.UTF-8")
+        );
+        // "C.UTF-8" is a real locale (UTF-8 encoding of C); it is returned as
+        // is and the frontend resolves it to the English fallback.
+        assert_eq!(
+            locale_from_vars(Some("C"), Some("POSIX"), Some("C.UTF-8")).as_deref(),
+            Some("C.UTF-8")
+        );
+        // All pseudo-locales -> None (frontend falls back to English).
+        assert_eq!(locale_from_vars(Some("C"), Some("POSIX"), Some("C")), None);
+        // Blank values are ignored, the next one is used.
+        assert_eq!(
+            locale_from_vars(Some("   "), None, Some("es_ES.UTF-8")).as_deref(),
+            Some("es_ES.UTF-8")
+        );
+        // Nothing set -> None.
+        assert_eq!(locale_from_vars(None, None, None), None);
+        assert_eq!(locale_from_vars(Some(""), Some(""), Some("")), None);
     }
 
     #[test]

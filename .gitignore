@@ -38,3 +38,6 @@ flathub-pr/
 repo
 builddir/
 repo/
+
+# Docs (local only)
+docs/

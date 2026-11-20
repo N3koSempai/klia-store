@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useDebouncedCallback } from "use-debounce";
+import { useDebouncedCallback } from "../hooks/useDebouncedCallback";
 import { apiService } from "../services/api";
 import { lines } from "../theme/tokens";
 import type { CategoryApp } from "../types";

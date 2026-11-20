@@ -48,6 +48,11 @@
     <binary>klia-store</binary>
   </provides>
   <releases>
+    <release version="2.20.0" date="2026-11-20">
+      <description>
+        <p>Klia Store is now available in French, with the whole app translated: menus, app pages, permissions, installs, backups and the .deb review. As with every other language, the store follows your system language automatically, so there is nothing to configure.</p>
+      </description>
+    </release>
     <release version="2.19.0" date="2026-11-18">
       <description>
         <p>Klia Store can now install .deb packages that live on your disk, the same way it already installs local .flatpak files. Double-click a .deb in your file manager, or open it with Klia Store, and the app first shows you a review of the package. Nothing is installed until you confirm it.</p>
