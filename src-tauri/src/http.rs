@@ -3,19 +3,19 @@
 //! (batch verification hits the same hosts dozens of times). Cloning a client
 //! is cheap: it is a handle to the shared pool.
 
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use tauri_plugin_http::reqwest::Client;
 
-static DEFAULT: Lazy<Client> = Lazy::new(Client::new);
+static DEFAULT: LazyLock<Client> = LazyLock::new(Client::new);
 
-static GITHUB_API: Lazy<Client> = Lazy::new(|| {
+static GITHUB_API: LazyLock<Client> = LazyLock::new(|| {
     Client::builder()
         .user_agent("klia-store")
         .build()
         .expect("failed to build HTTP client")
 });
 
-static VERIFICATION: Lazy<Client> = Lazy::new(|| {
+static VERIFICATION: LazyLock<Client> = LazyLock::new(|| {
     Client::builder()
         .timeout(std::time::Duration::from_secs(30))
         .build()

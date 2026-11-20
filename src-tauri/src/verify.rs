@@ -1,19 +1,19 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use tauri_plugin_http::reqwest;
 
 // Regex compilado una sola vez para extraer owner/repo
-static GITHUB_HTTPS_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+static GITHUB_HTTPS_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"https?://github\.com/([^/]+)/([^/]+?)(?:\.git)?$").unwrap()
 });
-static GITHUB_SSH_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+static GITHUB_SSH_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"git@github\.com:([^/]+)/([^/]+?)(?:\.git)?$").unwrap()
 });
-static GITLAB_HTTPS_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+static GITLAB_HTTPS_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     // Support any GitLab instance (gitlab.com, gitlab.gnome.org, gitlab.freedesktop.org, etc.)
     // Captures: (1) domain, (2) full path
     regex::Regex::new(r"https?://(gitlab\.[^/]+)/(.+?)(?:\.git)?$").unwrap()
 });
-static GITLAB_SSH_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+static GITLAB_SSH_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     // Support any GitLab instance via SSH
     // Captures: (1) domain, (2) full path
     regex::Regex::new(r"git@(gitlab\.[^:]+):(.+?)(?:\.git)?$").unwrap()
@@ -21,21 +21,21 @@ static GITLAB_SSH_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
 
 // Regex used by extract_release_info, compiled once instead of per-call
 // (that function runs on every hash verification triggered from the frontend).
-static GITHUB_RELEASE_ASSET_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+static GITHUB_RELEASE_ASSET_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(.+)$")
         .unwrap()
 });
-static GITHUB_RELEASE_ARCHIVE_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+static GITHUB_RELEASE_ARCHIVE_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"https://github\.com/([^/]+)/([^/]+)/archive/refs/tags/([^/]+)/(.+)$")
         .unwrap()
 });
-static GITLAB_RELEASE_ASSET_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+static GITLAB_RELEASE_ASSET_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(
         r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/releases/([^/]+)/downloads/(.+)$",
     )
     .unwrap()
 });
-static GITLAB_RELEASE_ARCHIVE_REGEX: Lazy<regex::Regex> = Lazy::new(|| {
+static GITLAB_RELEASE_ARCHIVE_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"https://(gitlab\.[^/]+)/([^/]+(?:/[^/]+)*?)/-/archive/([^/]+)/(.+)$")
         .unwrap()
 });
