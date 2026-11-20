@@ -1,6 +1,6 @@
 [package]
 name = "klia-store"
-version = "2.19.0"
+version = "2.20.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
