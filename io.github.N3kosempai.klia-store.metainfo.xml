@@ -6,16 +6,18 @@
   <name>Klia Store</name>
   <summary>Browse, install and manage your Flatpak applications</summary>
   <description>
-    <p>Klia Store is a modern, fast application store built specifically for managing Flatpak applications on Linux. Beyond browsing and installing apps, it gives you tools to keep your system organized and under control.</p>
-    <p>Features:</p>
+    <p>Klia Store is a fast, modern app store for Linux. Browse and install Flatpak apps, keep everything up to date, and stay in control of what runs on your system.</p>
     <ul>
-      <li>Browse, install and update Flatpak applications, all from one place</li>
-      <li>Back up and restore your installed applications, including their data and runtimes</li>
-      <li>Visualize your installed apps and their permissions (storage, camera, file access) in an interactive view</li>
-      <li>Audit installed apps by verifying their source manifest against Flathub, helping protect against supply-chain tampering</li>
-      <li>Review requested permissions and a risk assessment before installing a local .flatpak file</li>
-      <li>Inspect a local .deb package before installing it: what it runs as root, what it installs on your system, and the dependency plan</li>
-      <li>Available in multiple languages, with automatic detection of your system language</li>
+      <li>Install and update Flatpak apps, all at once or one by one</li>
+      <li>See what an app can do before you install it, with a privacy badge for file access, system access, age rating and in-app purchases</li>
+      <li>Manage your Flatpak and .deb apps in one place, and choose whether to keep or delete an app's data when you uninstall</li>
+      <li>Install and update Klia apps and other apps published on GitHub</li>
+      <li>Back up and restore your apps, including their data and runtimes</li>
+      <li>Explore your installed apps and their permissions in an interactive 3D view</li>
+      <li>Verify installed apps against Flathub's source manifest to detect tampering</li>
+      <li>Review local .flatpak and .deb files before installing: permissions and risk for Flatpak; root scripts, installed files and dependencies for .deb</li>
+      <li>Keeps working offline with the content you already had</li>
+      <li>Available in 8 languages, following your system language</li>
     </ul>
   </description>
   <launchable type="desktop-id">io.github.N3kosempai.klia-store.desktop</launchable>
@@ -28,19 +30,19 @@
   <url type="donation">https://n3kosempai.github.io/KliaStore/bitcoin/donate?wallet=bc1qaq220dfa4dwc2eg0s76t4uzmrf28med2nr3fz0</url>
   <screenshots>
     <screenshot type="default">
-      <caption>Main application window showing start page</caption>
+      <caption>Home with promoted apps, apps of the week and categories</caption>
       <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot1.webp</image>
     </screenshot>
     <screenshot>
-      <caption>Application home screen</caption>
+      <caption>My Apps: browse, update and remove your installed apps</caption>
       <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot2.webp</image>
     </screenshot>
     <screenshot>
-      <caption>search functionality in the home view</caption>
+      <caption>System Analytics with a 3D view of your installed apps</caption>
       <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot3.webp</image>
     </screenshot>
     <screenshot>
-      <caption>Modal for install an specific application</caption>
+      <caption>Backups: save and restore your Flatpak apps, with or without data</caption>
       <image>https://raw.githubusercontent.com/N3koSempai/klia-store/master/screenshots/screenshot4.webp</image>
     </screenshot>
   </screenshots>
